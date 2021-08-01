@@ -237,7 +237,7 @@ namespace Smdn.Net.MuninNode {
       return false;
     }
 
-    private Task ProcessCommandAsync(Socket client, string command)
+    private ValueTask ProcessCommandAsync(Socket client, string command)
     {
       if (ExpectCommand(command, "fetch", out var fetchArguments))
         return ProcessCommandFetchAsync(client, command, fetchArguments);
@@ -249,7 +249,11 @@ namespace Smdn.Net.MuninNode {
         return ProcessCommandConfigAsync(client, command, configArguments);
       else if (ExpectCommand(command, "quit", out _) || command.Equals(".")) {
         client.Close();
-        return Task.CompletedTask;
+#if NET5_0_OR_GREATER
+        return ValueTask.CompletedTask;
+#else
+        return default(ValueTask);
+#endif
       }
       else if (ExpectCommand(command, "cap", out var capArguments))
         return ProcessCommandCapAsync(client, command, capArguments);
@@ -261,10 +265,10 @@ namespace Smdn.Net.MuninNode {
 
     private static readonly byte[] endOfLine = new[] { (byte)'\n' };
 
-    private static Task SendResponseAsync(Socket client, string responseLine)
+    private static ValueTask SendResponseAsync(Socket client, string responseLine)
       => SendResponseAsync(client, Enumerable.Repeat(responseLine, 1));
 
-    private static async Task SendResponseAsync(Socket client, IEnumerable<string> responseLines)
+    private static async ValueTask SendResponseAsync(Socket client, IEnumerable<string> responseLines)
     {
       if (responseLines == null)
         throw new ArgumentNullException(nameof(responseLines));
@@ -277,7 +281,7 @@ namespace Smdn.Net.MuninNode {
       }
     }
 
-    private Task ProcessCommandNodesAsync(Socket client, string command)
+    private ValueTask ProcessCommandNodesAsync(Socket client, string command)
     {
       return SendResponseAsync(
         client,
@@ -288,7 +292,7 @@ namespace Smdn.Net.MuninNode {
       );
     }
 
-    private Task ProcessCommandVersionAsync(Socket client, string command)
+    private ValueTask ProcessCommandVersionAsync(Socket client, string command)
     {
       return SendResponseAsync(
         client,
@@ -296,7 +300,7 @@ namespace Smdn.Net.MuninNode {
       );
     }
 
-    private Task ProcessCommandCapAsync(Socket client, string command, string arguments)
+    private ValueTask ProcessCommandCapAsync(Socket client, string command, string arguments)
     {
       // TODO: multigraph (http://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
       // TODO: dirtyconfig (http://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html)
@@ -307,7 +311,7 @@ namespace Smdn.Net.MuninNode {
       );
     }
 
-    private Task ProcessCommandListAsync(Socket client, string command, string arguments)
+    private ValueTask ProcessCommandListAsync(Socket client, string command, string arguments)
     {
       // XXX: ignore [node] arguments
       return SendResponseAsync(
@@ -316,7 +320,7 @@ namespace Smdn.Net.MuninNode {
       );
     }
 
-    private Task ProcessCommandFetchAsync(Socket client, string command, string arguments)
+    private ValueTask ProcessCommandFetchAsync(Socket client, string command, string arguments)
     {
       var plugin = Plugins.FirstOrDefault(plugin => string.Equals(arguments, plugin.Name, StringComparison.Ordinal));
 
@@ -336,7 +340,7 @@ namespace Smdn.Net.MuninNode {
       );
     }
 
-    private Task ProcessCommandConfigAsync(Socket client, string command, string arguments)
+    private ValueTask ProcessCommandConfigAsync(Socket client, string command, string arguments)
     {
       var plugin = Plugins.FirstOrDefault(plugin => string.Equals(arguments, plugin.Name, StringComparison.Ordinal));
 
