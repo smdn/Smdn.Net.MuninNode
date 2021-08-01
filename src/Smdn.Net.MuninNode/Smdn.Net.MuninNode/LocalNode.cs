@@ -180,7 +180,7 @@ namespace Smdn.Net.MuninNode {
 
           try {
             while (TryReadLine(ref buffer, out var line)) {
-              await ProcessCommandAsync(socket, ToString(line).TrimEnd()).ConfigureAwait(false);
+              await ProcessCommandAsync(socket, line).ConfigureAwait(false);
             }
           }
           catch (Exception ex) {
@@ -199,64 +199,85 @@ namespace Smdn.Net.MuninNode {
 
       static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
       {
-        var endOfLine = buffer.PositionOf((byte)'\n');
+        var reader = new SequenceReader<byte>(buffer);
+        const byte LF = (byte)'\n';
 
-        if (endOfLine == null) {
+        if (
+          !reader.TryReadTo(out line, delimiter: CRLF.Span, advancePastDelimiter: true) &&
+          !reader.TryReadTo(out line, delimiter: LF, advancePastDelimiter: true)
+        ) {
           line = default;
           return false;
         }
 
-        line = buffer.Slice(0, endOfLine.Value); // may contain '\r' if ends with '\r\n'
-        buffer = buffer.Slice(buffer.GetPosition(1, endOfLine.Value));
+#if NET5_0_OR_GREATER
+        buffer = reader.UnreadSequence;
+#else
+        buffer = reader.Sequence.Slice(sequenceReader.Position);
+#endif
 
         return true;
       }
-
-      static string ToString(ReadOnlySequence<byte> sequence)
-      {
-        return string.Create((int)sequence.Length, sequence, (span, seq) => {
-          var index = 0;
-          var position = seq.Start;
-
-          while (seq.TryGet(ref position, out var memory, advance: true)) {
-            var s = memory.Span;
-
-            for (var i = 0; i < s.Length && index < span.Length; i++, index++) {
-              span[index] = (char)s[i];
-            }
-          }
-        });
-      }
     }
 
-    private static bool ExpectCommand(string command, string expectedCommand, out string arguments)
-    {
-      arguments = string.Empty;
+    private static readonly ReadOnlyMemory<byte> CRLF = Encoding.ASCII.GetBytes("\r\n");
 
-      if (command.Length == expectedCommand.Length) {
-        // <command> <LF>
-        return command.Equals(expectedCommand, StringComparison.Ordinal);
+    private static bool ExpectCommand(
+      ReadOnlySequence<byte> commandLine,
+      ReadOnlySpan<byte> expectedCommand,
+      out ReadOnlySequence<byte> arguments
+    )
+    {
+      arguments = default;
+
+      var reader = new SequenceReader<byte>(commandLine);
+
+      if (!reader.IsNext(expectedCommand, advancePast: true))
+        return false;
+
+      const byte SP = (byte)' ';
+
+      if (reader.Remaining == 0) {
+        // <command> <EOL>
+        arguments = default;
+        return true;
       }
-      else if (expectedCommand.Length < command.Length && command[expectedCommand.Length] == ' ') {
-        // <command> <SP> <arguments> <LF>
-        arguments = command.Substring(expectedCommand.Length + 1);
-        return command.StartsWith(expectedCommand, StringComparison.Ordinal);
+      else if (reader.IsNext(SP, advancePast: true)) {
+        // <command> <SP> <arguments> <EOL>
+#if NET5_0_OR_GREATER
+        arguments = reader.UnreadSequence;
+#else
+        arguments = reader.Sequence.Slice(sequenceReader.Position);
+#endif
+        return true;
       }
 
       return false;
     }
 
-    private ValueTask ProcessCommandAsync(Socket client, string command)
+    private static readonly ReadOnlyMemory<byte> commandFetch       = Encoding.ASCII.GetBytes("fetch");
+    private static readonly ReadOnlyMemory<byte> commandNodes       = Encoding.ASCII.GetBytes("nodes");
+    private static readonly ReadOnlyMemory<byte> commandList        = Encoding.ASCII.GetBytes("list");
+    private static readonly ReadOnlyMemory<byte> commandConfig      = Encoding.ASCII.GetBytes("config");
+    private static readonly ReadOnlyMemory<byte> commandQuit        = Encoding.ASCII.GetBytes("quit");
+    private static readonly ReadOnlyMemory<byte> commandCap         = Encoding.ASCII.GetBytes("cap");
+    private static readonly ReadOnlyMemory<byte> commandVersion     = Encoding.ASCII.GetBytes("version");
+    private static readonly byte commandQuitShort = (byte)'.';
+
+    private ValueTask ProcessCommandAsync(Socket client, ReadOnlySequence<byte> commandLine)
     {
-      if (ExpectCommand(command, "fetch", out var fetchArguments))
-        return ProcessCommandFetchAsync(client, command, fetchArguments);
-      else if (ExpectCommand(command, "nodes", out _))
-        return ProcessCommandNodesAsync(client, command);
-      else if (ExpectCommand(command, "list", out var listArguments))
-        return ProcessCommandListAsync(client, command, listArguments);
-      else if (ExpectCommand(command, "config", out var configArguments))
-        return ProcessCommandConfigAsync(client, command, configArguments);
-      else if (ExpectCommand(command, "quit", out _) || command.Equals(".")) {
+      if (ExpectCommand(commandLine, commandFetch.Span, out var fetchArguments))
+        return ProcessCommandFetchAsync(client, fetchArguments);
+      else if (ExpectCommand(commandLine, commandNodes.Span, out _))
+        return ProcessCommandNodesAsync(client);
+      else if (ExpectCommand(commandLine, commandList.Span, out var listArguments))
+        return ProcessCommandListAsync(client, listArguments);
+      else if (ExpectCommand(commandLine, commandConfig.Span, out var configArguments))
+        return ProcessCommandConfigAsync(client, configArguments);
+      else if (
+        ExpectCommand(commandLine, commandQuit.Span, out _) ||
+        (commandLine.Length == 1 && commandLine.FirstSpan[0] == commandQuitShort)
+      ) {
         client.Close();
 #if NET5_0_OR_GREATER
         return ValueTask.CompletedTask;
@@ -264,10 +285,10 @@ namespace Smdn.Net.MuninNode {
         return default(ValueTask);
 #endif
       }
-      else if (ExpectCommand(command, "cap", out var capArguments))
-        return ProcessCommandCapAsync(client, command, capArguments);
-      else if (ExpectCommand(command, "version", out _))
-        return ProcessCommandVersionAsync(client, command);
+      else if (ExpectCommand(commandLine, commandCap.Span, out var capArguments))
+        return ProcessCommandCapAsync(client, capArguments);
+      else if (ExpectCommand(commandLine, commandVersion.Span, out _))
+        return ProcessCommandVersionAsync(client);
       else
         return SendResponseAsync(client, "# Unknown command. Try cap, list, nodes, config, fetch, version or quit");
     }
@@ -290,7 +311,7 @@ namespace Smdn.Net.MuninNode {
       }
     }
 
-    private ValueTask ProcessCommandNodesAsync(Socket client, string command)
+    private ValueTask ProcessCommandNodesAsync(Socket client)
     {
       return SendResponseAsync(
         client,
@@ -301,7 +322,7 @@ namespace Smdn.Net.MuninNode {
       );
     }
 
-    private ValueTask ProcessCommandVersionAsync(Socket client, string command)
+    private ValueTask ProcessCommandVersionAsync(Socket client)
     {
       return SendResponseAsync(
         client,
@@ -309,7 +330,7 @@ namespace Smdn.Net.MuninNode {
       );
     }
 
-    private ValueTask ProcessCommandCapAsync(Socket client, string command, string arguments)
+    private ValueTask ProcessCommandCapAsync(Socket client, ReadOnlySequence<byte> arguments)
     {
       // TODO: multigraph (http://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
       // TODO: dirtyconfig (http://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html)
@@ -320,7 +341,7 @@ namespace Smdn.Net.MuninNode {
       );
     }
 
-    private ValueTask ProcessCommandListAsync(Socket client, string command, string arguments)
+    private ValueTask ProcessCommandListAsync(Socket client, ReadOnlySequence<byte> arguments)
     {
       // XXX: ignore [node] arguments
       return SendResponseAsync(
@@ -329,9 +350,9 @@ namespace Smdn.Net.MuninNode {
       );
     }
 
-    private ValueTask ProcessCommandFetchAsync(Socket client, string command, string arguments)
+    private ValueTask ProcessCommandFetchAsync(Socket client, ReadOnlySequence<byte> arguments)
     {
-      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(arguments, plugin.Name, StringComparison.Ordinal));
+      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(Encoding.ASCII.GetString(arguments), plugin.Name, StringComparison.Ordinal));
 
       if (plugin == null) {
         return SendResponseAsync(
@@ -349,9 +370,9 @@ namespace Smdn.Net.MuninNode {
       );
     }
 
-    private ValueTask ProcessCommandConfigAsync(Socket client, string command, string arguments)
+    private ValueTask ProcessCommandConfigAsync(Socket client, ReadOnlySequence<byte> arguments)
     {
-      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(arguments, plugin.Name, StringComparison.Ordinal));
+      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(Encoding.ASCII.GetString(arguments), plugin.Name, StringComparison.Ordinal));
 
       if (plugin == null) {
         return SendResponseAsync(
