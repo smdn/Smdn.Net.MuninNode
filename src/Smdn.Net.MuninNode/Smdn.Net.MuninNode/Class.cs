@@ -3,7 +3,7 @@
 
 using System;
 
-namespace Smdn.Template.Namespace {
+namespace Smdn.Net.MuninNode {
   public class Class {
     public int Method(int n)
     {

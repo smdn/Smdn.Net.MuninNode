@@ -10,7 +10,7 @@ SPDX-License-Identifier: MIT
 
   <PropertyGroup Label="metadata">
     <Description>
-<![CDATA[Smdn.Template.Library is a .NET library template.
+<![CDATA[Smdn.Net.MuninNode is a .NET implementation of Munin-Node and Munin-Plugin.
 ]]>
     </Description>
   </PropertyGroup>

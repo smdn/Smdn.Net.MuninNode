@@ -1,2 +1,2 @@
-# Smdn.Template.Library
-Smdn.Template.Library is a .NET library template.
+# Smdn.Net.MuninNode
+Smdn.Net.MuninNode is a .NET implementation of Munin-Node and Munin-Plugin.
