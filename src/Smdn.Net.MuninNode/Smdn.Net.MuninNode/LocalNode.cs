@@ -213,7 +213,7 @@ namespace Smdn.Net.MuninNode {
 #if NET5_0_OR_GREATER
         buffer = reader.UnreadSequence;
 #else
-        buffer = reader.Sequence.Slice(sequenceReader.Position);
+        buffer = reader.Sequence.Slice(reader.Position);
 #endif
 
         return true;
@@ -247,7 +247,7 @@ namespace Smdn.Net.MuninNode {
 #if NET5_0_OR_GREATER
         arguments = reader.UnreadSequence;
 #else
-        arguments = reader.Sequence.Slice(sequenceReader.Position);
+        arguments = reader.Sequence.Slice(reader.Position);
 #endif
         return true;
       }
