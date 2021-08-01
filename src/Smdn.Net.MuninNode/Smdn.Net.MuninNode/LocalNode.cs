@@ -91,9 +91,13 @@ namespace Smdn.Net.MuninNode {
 
     public void Start()
     {
+      logger?.LogInformation($"starting (end point: {LocalEndPoint})");
+
       server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
       server.Bind(LocalEndPoint);
       server.Listen(maxClients);
+
+      logger?.LogInformation($"started");
     }
 
     public async Task AcceptClientAsync()
