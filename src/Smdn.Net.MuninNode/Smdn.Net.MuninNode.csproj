@@ -13,6 +13,7 @@ SPDX-License-Identifier: MIT
 <![CDATA[Smdn.Net.MuninNode is a .NET implementation of Munin-Node and Munin-Plugin.
 ]]>
     </Description>
+    <PackageTags>Munin,Munin-Node,Munin-Plugin</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
