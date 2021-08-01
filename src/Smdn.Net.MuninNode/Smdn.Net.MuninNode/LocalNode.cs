@@ -23,8 +23,6 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode {
   public class LocalNode : IDisposable {
-    public const int DefaultAlternativePortNumber = 44693;
-
     private static readonly int maxClients = 1;
     private static readonly Version defaultNodeVersion = new Version(1, 0, 0, 0);
 
