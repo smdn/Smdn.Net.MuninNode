@@ -1,0 +1,17 @@
+<!--
+SPDX-FileCopyrightText: 2021 smdn <smdn@smdn.jp>
+SPDX-License-Identifier: MIT
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <VersionPrefix>0.1</VersionPrefix>
+    <VersionSuffix>template</VersionSuffix>
+  </PropertyGroup>
+
+  <PropertyGroup Label="metadata">
+    <Description>
+<![CDATA[Smdn.Template.Library is a .NET library template.
+]]>
+    </Description>
+  </PropertyGroup>
+</Project>
