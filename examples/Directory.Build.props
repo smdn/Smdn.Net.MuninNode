@@ -1,0 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2021 smdn <smdn@smdn.jp>
+SPDX-License-Identifier: MIT
+-->
+<Project>
+  <PropertyGroup>
+    <LibrarySourceDirectory>$(MSBuildThisFileDirectory)\..\src\</LibrarySourceDirectory>
+  </PropertyGroup>
+</Project>
