@@ -16,6 +16,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
 using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode {
@@ -31,6 +34,7 @@ namespace Smdn.Net.MuninNode {
     public IPEndPoint LocalEndPoint { get; }
 
     private readonly Version nodeVersion;
+    private readonly ILogger logger;
     private Socket server;
 
     public LocalNode(
@@ -38,7 +42,8 @@ namespace Smdn.Net.MuninNode {
       string hostName,
       TimeSpan timeout,
       int portNumber,
-      Version nodeVersion = null
+      Version nodeVersion = null,
+      IServiceProvider serviceProvider = null
     )
     {
       this.Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
@@ -71,6 +76,8 @@ namespace Smdn.Net.MuninNode {
         SocketType.Stream,
         ProtocolType.Tcp
       );
+
+      this.logger = serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<LocalNode>();
     }
 
     void IDisposable.Dispose()
@@ -91,7 +98,7 @@ namespace Smdn.Net.MuninNode {
 
     public async Task AcceptClient()
     {
-      Console.WriteLine("<munin-node> accepting...");
+      logger?.LogInformation("accepting...");
 
       var client = await server.AcceptAsync().ConfigureAwait(false);
 
@@ -99,16 +106,16 @@ namespace Smdn.Net.MuninNode {
         var remoteEndPoint = client.RemoteEndPoint as IPEndPoint;
 
         if (remoteEndPoint == null) {
-          Console.WriteLine($"<munin-node> cannot accept: {client.RemoteEndPoint.AddressFamily}");
+          logger?.LogWarning($"cannot accept: {client.RemoteEndPoint.AddressFamily}");
           return;
         }
 
         if (!IPAddress.IsLoopback(remoteEndPoint.Address)) {
-          Console.WriteLine($"<munin-node> access refused: {client.RemoteEndPoint}");
+          logger?.LogWarning($"access refused: {client.RemoteEndPoint}");
           return;
         }
 
-        Console.WriteLine($"<munin-node> session started (master: {client.RemoteEndPoint})");
+        logger?.LogInformation($"session started (master: {client.RemoteEndPoint})");
 
         await SendResponseAsync(client, $"# munin node at {HostName}").ConfigureAwait(false);
 
@@ -120,15 +127,15 @@ namespace Smdn.Net.MuninNode {
           ReadAsync(client, pipe.Reader)
         ).ConfigureAwait(false);
 
-        Console.WriteLine("<munin-node> session ending");
+        logger?.LogInformation($"session ending");
       }
       finally {
         client.Close();
 
-        Console.WriteLine("<munin-node> connection closed");
+        logger?.LogInformation($"connection closed");
       }
 
-      static async Task FillAsync(Socket socket, PipeWriter writer)
+      async Task FillAsync(Socket socket, PipeWriter writer)
       {
         const int minimumBufferSize = 256;
 
@@ -150,7 +157,7 @@ namespace Smdn.Net.MuninNode {
             break; // expected exception (125: Operation canceled)
           }
           catch (Exception ex) {
-            Console.Error.WriteLine(ex);
+            logger?.LogError("unexpected exception", ex);
             break;
           }
 
@@ -177,7 +184,7 @@ namespace Smdn.Net.MuninNode {
           catch (Exception ex) {
             if (socket.Connected)
               socket.Close();
-            Console.Error.WriteLine(ex);
+            logger?.LogError("unexpected exception", ex);
             break;
           }
 
