@@ -30,8 +30,8 @@ SPDX-License-Identifier: MIT
     <!-- NuGet -->
     <PackageIcon>$(MSBuildProjectName).png</PackageIcon>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/smdn/Smdn.Template.Library</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/smdn/Smdn.Template.Library</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/smdn/Smdn.Net.MuninNode</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/smdn/Smdn.Net.MuninNode</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 </Project>
