@@ -96,7 +96,7 @@ namespace Smdn.Net.MuninNode {
       server.Listen(maxClients);
     }
 
-    public async Task AcceptClient()
+    public async Task AcceptClientAsync()
     {
       logger?.LogInformation("accepting...");
 
