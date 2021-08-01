@@ -350,9 +350,18 @@ namespace Smdn.Net.MuninNode {
       );
     }
 
+    private static string ToString(ReadOnlySequence<byte> sequence)
+    {
+#if NET5_0_OR_GREATER
+      return Encoding.ASCII.GetString(sequence);
+#else
+      return Encoding.ASCII.GetString(sequence.ToArray()); // XXX: allocation
+#endif
+    }
+
     private ValueTask ProcessCommandFetchAsync(Socket client, ReadOnlySequence<byte> arguments)
     {
-      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(Encoding.ASCII.GetString(arguments), plugin.Name, StringComparison.Ordinal));
+      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(ToString(arguments), plugin.Name, StringComparison.Ordinal));
 
       if (plugin == null) {
         return SendResponseAsync(
@@ -372,7 +381,7 @@ namespace Smdn.Net.MuninNode {
 
     private ValueTask ProcessCommandConfigAsync(Socket client, ReadOnlySequence<byte> arguments)
     {
-      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(Encoding.ASCII.GetString(arguments), plugin.Name, StringComparison.Ordinal));
+      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(ToString(arguments), plugin.Name, StringComparison.Ordinal));
 
       if (plugin == null) {
         return SendResponseAsync(
