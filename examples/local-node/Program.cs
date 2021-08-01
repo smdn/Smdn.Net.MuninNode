@@ -10,7 +10,8 @@ using Microsoft.Extensions.Logging.Console;
 using Smdn.Net.MuninNode;
 using Smdn.Net.MuninPlugin;
 
-const string hostName = "test.munin-node.localhost";
+const string localNodeHostName = "test.munin-node.localhost";
+const int localNodePort = 14949;
 
 var plugins = new[] {
   new Plugin(
@@ -24,7 +25,7 @@ var plugins = new[] {
       arguments: "--base 1000 --lower-limit 0"
     ),
     fieldConfiguration: new UptimeFieldConfiguration(
-      label: hostName,
+      label: localNodeHostName,
       startAt: DateTime.Now
     )
   ),
@@ -40,8 +41,8 @@ services.AddLogging(
 
 using var localNode = new LocalNode(
   plugins: plugins,
-  hostName: hostName,
-  portNumber: 14949,
+  hostName: localNodeHostName,
+  portNumber: localNodePort,
   timeout: TimeSpan.FromSeconds(10),
   serviceProvider: services.BuildServiceProvider()
 );
