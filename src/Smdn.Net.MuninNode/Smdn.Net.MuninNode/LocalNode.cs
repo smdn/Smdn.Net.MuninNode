@@ -373,7 +373,7 @@ namespace Smdn.Net.MuninNode {
 
       return SendResponseAsync(
         client,
-        plugin.FieldConfiguration.FetchFields().Select(f => $"{f.ID}.value {f.Value}").Append(".")
+        plugin.FieldConfiguration.FetchFields().Select(f => $"{f.ID}.value {f.FormattedValueString}").Append(".")
       );
     }
 
