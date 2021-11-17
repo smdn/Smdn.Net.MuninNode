@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace Smdn.Net.MuninPlugin {
   public readonly struct PluginField {
-    public string ID { get; }
+    public string Name { get; }
     public string Label { get; }
     /// <summary>A value for plugin field.</summary>
     /// <remarks/>Reports 'UNKNOWN' as a plugin field value if <see cref="Value"/> is <see langword="null"/>.<remarks>
@@ -22,19 +22,19 @@ namespace Smdn.Net.MuninPlugin {
       string graphStyle = null
     )
       => new(
-        id: GetDefaultIDFromLabel(label),
+        name: GetDefaultNameFromLabel(label),
         label: label,
         value: (double?)null,
         graphStyle: graphStyle
       );
 
     public static PluginField CreateUnknownValueField(
-      string id,
+      string name,
       string label,
       string graphStyle = null
     )
       => new(
-        id: id,
+        name: name,
         label: label,
         value: (double?)null,
         graphStyle
@@ -45,34 +45,34 @@ namespace Smdn.Net.MuninPlugin {
       double value,
       string graphStyle
     )
-      : this(GetDefaultIDFromLabel(label), label, (double?)value, graphStyle)
+      : this(GetDefaultNameFromLabel(label), label, (double?)value, graphStyle)
     {
     }
 
     public PluginField(
-      string id,
+      string name,
       string label,
       double value,
       string graphStyle = null
     )
-      : this(id, label, (double?)value, graphStyle)
+      : this(name, label, (double?)value, graphStyle)
     {
     }
 
     private PluginField(
-      string id,
+      string name,
       string label,
       double? value,
       string graphStyle = null
     )
     {
-      if (id == null)
-        throw new ArgumentNullException(nameof(id));
-      if (id.Length == 0)
-        throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(id));
+      if (name == null)
+        throw new ArgumentNullException(nameof(name));
+      if (name.Length == 0)
+        throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(name));
 
-      this.ID = id;
-      this.Label = label ?? id;
+      this.Name = name;
+      this.Label = label ?? name;
       this.Value = value;
       this.GraphStyle = graphStyle;
     }
@@ -82,7 +82,7 @@ namespace Smdn.Net.MuninPlugin {
       options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
     );
 
-    private static string GetDefaultIDFromLabel(string label)
+    private static string GetDefaultNameFromLabel(string label)
     {
       if (label == null)
         throw new ArgumentNullException(nameof(label));

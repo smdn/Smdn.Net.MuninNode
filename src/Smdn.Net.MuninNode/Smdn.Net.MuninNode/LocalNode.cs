@@ -373,7 +373,7 @@ namespace Smdn.Net.MuninNode {
 
       return SendResponseAsync(
         client,
-        plugin.FieldConfiguration.FetchFields().Select(f => $"{f.ID}.value {f.FormattedValueString}").Append(".")
+        plugin.FieldConfiguration.FetchFields().Select(f => $"{f.Name}.value {f.FormattedValueString}").Append(".")
       );
     }
 
@@ -406,7 +406,7 @@ namespace Smdn.Net.MuninNode {
         responseLines.Add($"graph_height {plugin.GraphConfiguration.Height.Value}");
 
       foreach (var field in plugin.FieldConfiguration.FetchFields()) {
-        responseLines.Add($"{field.ID}.label {field.Label}");
+        responseLines.Add($"{field.Name}.label {field.Label}");
 
         var draw = field.GraphStyle;
 
@@ -414,14 +414,14 @@ namespace Smdn.Net.MuninNode {
           draw = plugin.FieldConfiguration.DefaultGraphStyle;
 
         if (!string.IsNullOrEmpty(draw))
-          responseLines.Add($"{field.ID}.draw {draw}");
+          responseLines.Add($"{field.Name}.draw {draw}");
 
         // TODO: add support for "field.warning integer" and "field.warning integer:integer"
 #if false
         if (plugin.FieldConfiguration.WarningValue.HasValue) {
           var warningRange = plugin.FieldConfiguration.WarningValue.Value;
 
-          responseLines.Add($"{field.ID}.warning {warningRange.Start}:{warningRange.End}");
+          responseLines.Add($"{field.Name}.warning {warningRange.Start}:{warningRange.End}");
         }
         if (plugin.FieldConfiguration.CriticalValue.HasValue) {
           var criticalRange = plugin.FieldConfiguration.CriticalValue.Value;
