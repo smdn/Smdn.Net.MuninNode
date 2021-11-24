@@ -41,6 +41,7 @@ namespace Smdn.Net.MuninNode {
     private readonly Version nodeVersion;
     private readonly ILogger logger;
     private Socket server;
+    private readonly Encoding encoding = Encoding.Default;
 
     public LocalNode(
       IReadOnlyList<Plugin> plugins,
@@ -126,7 +127,11 @@ namespace Smdn.Net.MuninNode {
 
         logger?.LogInformation($"session started (master: {client.RemoteEndPoint})");
 
-        await SendResponseAsync(client, $"# munin node at {HostName}").ConfigureAwait(false);
+        await SendResponseAsync(
+          client,
+          encoding,
+          $"# munin node at {HostName}"
+        ).ConfigureAwait(false);
 
         // https://docs.microsoft.com/ja-jp/dotnet/standard/io/pipelines
         var pipe = new Pipe();
@@ -297,21 +302,25 @@ namespace Smdn.Net.MuninNode {
       else if (ExpectCommand(commandLine, commandVersion.Span, out _))
         return ProcessCommandVersionAsync(client);
       else
-        return SendResponseAsync(client, "# Unknown command. Try cap, list, nodes, config, fetch, version or quit");
+        return SendResponseAsync(
+          client,
+          encoding,
+          "# Unknown command. Try cap, list, nodes, config, fetch, version or quit"
+        );
     }
 
     private static readonly byte[] endOfLine = new[] { (byte)'\n' };
 
-    private static ValueTask SendResponseAsync(Socket client, string responseLine)
-      => SendResponseAsync(client, Enumerable.Repeat(responseLine, 1));
+    private static ValueTask SendResponseAsync(Socket client, Encoding encoding, string responseLine)
+      => SendResponseAsync(client, encoding, Enumerable.Repeat(responseLine, 1));
 
-    private static async ValueTask SendResponseAsync(Socket client, IEnumerable<string> responseLines)
+    private static async ValueTask SendResponseAsync(Socket client, Encoding encoding, IEnumerable<string> responseLines)
     {
       if (responseLines == null)
         throw new ArgumentNullException(nameof(responseLines));
 
       foreach (var responseLine in responseLines) {
-        var resp = Encoding.ASCII.GetBytes(responseLine);
+        var resp = encoding.GetBytes(responseLine);
 
         await client.SendAsync(resp, SocketFlags.None).ConfigureAwait(false);
         await client.SendAsync(endOfLine, SocketFlags.None).ConfigureAwait(false);
@@ -322,6 +331,7 @@ namespace Smdn.Net.MuninNode {
     {
       return SendResponseAsync(
         client,
+        encoding,
         new[] {
           HostName,
           "."
@@ -333,6 +343,7 @@ namespace Smdn.Net.MuninNode {
     {
       return SendResponseAsync(
         client,
+        encoding,
         $"munins node on {HostName} version: {nodeVersion}"
       );
     }
@@ -344,6 +355,7 @@ namespace Smdn.Net.MuninNode {
       // XXX: ignores capability arguments
       return SendResponseAsync(
         client,
+        encoding,
         "cap"
       );
     }
@@ -353,17 +365,19 @@ namespace Smdn.Net.MuninNode {
       // XXX: ignore [node] arguments
       return SendResponseAsync(
         client,
+        encoding,
         string.Join(" ", Plugins.Select(plugin => plugin.Name))
       );
     }
 
     private ValueTask ProcessCommandFetchAsync(Socket client, ReadOnlySequence<byte> arguments)
     {
-      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(Encoding.ASCII.GetString(arguments), plugin.Name, StringComparison.Ordinal));
+      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal));
 
       if (plugin == null) {
         return SendResponseAsync(
           client,
+          encoding,
           new[] {
             "# Unknown service",
             ".",
@@ -373,17 +387,19 @@ namespace Smdn.Net.MuninNode {
 
       return SendResponseAsync(
         client,
+        encoding,
         plugin.FieldConfiguration.FetchFields().Select(f => $"{f.Name}.value {f.FormattedValueString}").Append(".")
       );
     }
 
     private ValueTask ProcessCommandConfigAsync(Socket client, ReadOnlySequence<byte> arguments)
     {
-      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(Encoding.ASCII.GetString(arguments), plugin.Name, StringComparison.Ordinal));
+      var plugin = Plugins.FirstOrDefault(plugin => string.Equals(encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal));
 
       if (plugin == null) {
         return SendResponseAsync(
           client,
+          encoding,
           new[] {
             "# Unknown service",
             ".",
@@ -435,6 +451,7 @@ namespace Smdn.Net.MuninNode {
 
       return SendResponseAsync(
         client,
+        encoding,
         responseLines
       );
     }
