@@ -70,6 +70,17 @@ namespace Smdn.Net.MuninPlugin {
         throw new ArgumentNullException(nameof(name));
       if (name.Length == 0)
         throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(name));
+      if (!regexValidFieldName.IsMatch(name))
+        throw new ArgumentException($"'{name}' is invalid for field name. The value of {nameof(name)} must match the following regular expression: '{regexValidFieldName}'", nameof(name));
+
+      label ??= name;
+
+      if (label == null)
+        throw new ArgumentNullException(nameof(label));
+      if (label.Length == 0)
+        throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(label));
+      if (!regexValidFieldLabel.IsMatch(label))
+        throw new ArgumentException($"'{label}' is invalid for field name. The value of {nameof(label)} must match the following regular expression: '{regexValidFieldLabel}'", nameof(label));
 
       this.Name = name;
       this.Label = label ?? name;
@@ -77,8 +88,29 @@ namespace Smdn.Net.MuninPlugin {
       this.GraphStyle = graphStyle;
     }
 
-    private static readonly Regex regexSpecialChars = new Regex(
-      pattern: $@"[{Regex.Escape("-+/\\~_ ")}]+",
+    // http://guide.munin-monitoring.org/en/latest/reference/plugin.html#field-name-attributes
+    // Field name attributes
+    //   Attribute:	{fieldname}.label
+    //   Value:	anything except # and \
+    private static readonly Regex regexValidFieldLabel = new(
+      pattern: $@"^[^{Regex.Escape("#\\")}]+$",
+      options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
+    );
+
+    // http://guide.munin-monitoring.org/en/latest/reference/plugin.html#notes-on-field-names
+    // Notes on field names
+    //   The characters must be [a-zA-Z0-9_], while the first character must be [a-zA-Z_].
+    private static readonly Regex regexValidFieldName = new(
+      pattern: $@"^[a-zA-Z_][a-zA-Z0-9_]*$",
+      options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
+    );
+
+    private static readonly Regex regexInvalidFieldNamePrefix = new(
+      pattern: $@"^[0-9_]+",
+      options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
+    );
+    private static readonly Regex regexInvalidFieldNameChars = new(
+      pattern: $@"[^a-zA-Z0-9_]",
       options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
     );
 
@@ -89,7 +121,10 @@ namespace Smdn.Net.MuninPlugin {
       if (label.Length == 0)
         throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(label));
 
-      return regexSpecialChars.Replace(label, "_").ToLowerInvariant();
+      return regexInvalidFieldNameChars.Replace(
+        regexInvalidFieldNamePrefix.Replace(label, string.Empty),
+        string.Empty
+      );
     }
   }
 }
