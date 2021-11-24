@@ -43,7 +43,7 @@ namespace Smdn.Net.MuninPlugin {
     public PluginField(
       string label,
       double value,
-      string graphStyle
+      string graphStyle = null
     )
       : this(GetDefaultNameFromLabel(label), label, (double?)value, graphStyle)
     {
