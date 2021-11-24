@@ -171,7 +171,7 @@ namespace Smdn.Net.MuninNode {
             break; // expected exception (125: Operation canceled)
           }
           catch (Exception ex) {
-            logger?.LogError("unexpected exception", ex);
+            logger?.LogCritical(ex, "unexpected exception");
             break;
           }
 
@@ -198,7 +198,7 @@ namespace Smdn.Net.MuninNode {
           catch (Exception ex) {
             if (socket.Connected)
               socket.Close();
-            logger?.LogError("unexpected exception", ex);
+            logger?.LogCritical(ex, "unexpected exception");
             break;
           }
 
