@@ -21,8 +21,8 @@ public class Plugin {
     if (name.Length == 0)
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(name));
 
-    this.Name = name;
-    this.GraphConfiguration = graphConfiguration ?? throw new ArgumentNullException(nameof(graphConfiguration));
-    this.FieldConfiguration = fieldConfiguration ?? throw new ArgumentNullException(nameof(fieldConfiguration));
+    Name = name;
+    GraphConfiguration = graphConfiguration ?? throw new ArgumentNullException(nameof(graphConfiguration));
+    FieldConfiguration = fieldConfiguration ?? throw new ArgumentNullException(nameof(fieldConfiguration));
   }
 }

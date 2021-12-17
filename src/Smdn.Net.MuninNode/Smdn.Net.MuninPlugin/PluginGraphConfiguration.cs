@@ -47,17 +47,17 @@ public class PluginGraphConfiguration {
     if (height.HasValue && height.Value <= 0)
       throw ExceptionUtils.CreateArgumentMustBeGreaterThan(0, nameof(height), height);
 
-    this.Title = title;
-    this.Category = category;
-    this.Arguments = arguments;
-    this.Scale = scale;
-    this.VerticalLabel = verticalLabel;
-    this.Width = width;
-    this.Height = height;
+    Title = title;
+    Category = category;
+    Arguments = arguments;
+    Scale = scale;
+    VerticalLabel = verticalLabel;
+    Width = width;
+    Height = height;
 
     if (updateRate < TimeSpan.FromSeconds(1.0))
       throw new ArgumentOutOfRangeException(nameof(updateRate), updateRate, "must be at least 1 seconds");
 
-    this.UpdateRate = updateRate;
+    UpdateRate = updateRate;
   }
 }

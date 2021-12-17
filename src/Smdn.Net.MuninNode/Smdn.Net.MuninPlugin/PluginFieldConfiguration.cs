@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 namespace Smdn.Net.MuninPlugin;
 
@@ -18,9 +17,9 @@ public abstract class PluginFieldConfiguration {
     Range? criticalValueRange = null
   )
   {
-    this.DefaultGraphStyle = defaultGraphStyle;
-    this.WarningValueRange = warningValueRange;
-    this.CriticalValueRange = criticalValueRange;
+    DefaultGraphStyle = defaultGraphStyle;
+    WarningValueRange = warningValueRange;
+    CriticalValueRange = criticalValueRange;
   }
 
   public abstract IEnumerable<PluginField> FetchFields();

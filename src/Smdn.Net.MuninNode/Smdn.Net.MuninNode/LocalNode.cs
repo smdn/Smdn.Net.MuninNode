@@ -11,13 +11,11 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -32,7 +30,7 @@ namespace Smdn.Net.MuninNode;
 
 public class LocalNode : IDisposable {
   private static readonly int maxClients = 1;
-  private static readonly Version defaultNodeVersion = new Version(1, 0, 0, 0);
+  private static readonly Version defaultNodeVersion = new(1, 0, 0, 0);
 
   public IReadOnlyList<Plugin> Plugins { get; }
   public string HostName { get; }
@@ -53,42 +51,55 @@ public class LocalNode : IDisposable {
     IServiceProvider serviceProvider = null
   )
   {
-    this.Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
+    Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
 
     if (hostName == null)
       throw new ArgumentNullException(nameof(hostName));
     if (hostName.Length == 0)
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(hostName));
 
-    this.HostName = hostName;
-    this.Timeout = timeout;
+    HostName = hostName;
+    Timeout = timeout;
 
-    this.LocalEndPoint = new IPEndPoint(
+    LocalEndPoint = new IPEndPoint(
+#pragma warning disable SA1114
 #if ENABLE_IPv6
       IPAddress.IPv6Loopback,
 #else
       IPAddress.Loopback,
 #endif
+#pragma warning restore SA1114
       portNumber
     );
 
     this.nodeVersion = nodeVersion ?? defaultNodeVersion;
 
-    this.server = new Socket(
+    server = new Socket(
+#pragma warning disable SA1114
 #if ENABLE_IPv6
       AddressFamily.InterNetworkV6,
 #else
       AddressFamily.InterNetwork,
 #endif
+#pragma warning restore SA1114
       SocketType.Stream,
       ProtocolType.Tcp
     );
 
-    this.logger = serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<LocalNode>();
+    logger = serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<LocalNode>();
   }
 
-  void IDisposable.Dispose()
+  public void Dispose()
   {
+    Dispose(true);
+    GC.SuppressFinalize(this);
+  }
+
+  protected virtual void Dispose(bool disposing)
+  {
+    if (!disposing)
+      return;
+
     server?.Disconnect(true);
     server?.Dispose();
     server = null;
@@ -114,9 +125,7 @@ public class LocalNode : IDisposable {
     var client = await server.AcceptAsync().ConfigureAwait(false);
 
     try {
-      var remoteEndPoint = client.RemoteEndPoint as IPEndPoint;
-
-      if (remoteEndPoint == null) {
+      if (client.RemoteEndPoint is not IPEndPoint remoteEndPoint) {
         logger?.LogWarning($"cannot accept: {client.RemoteEndPoint.AddressFamily}");
         return;
       }
@@ -154,7 +163,7 @@ public class LocalNode : IDisposable {
     {
       const int minimumBufferSize = 256;
 
-      for (;;) {
+      for (; ; ) {
         var memory = writer.GetMemory(minimumBufferSize);
 
         try {
@@ -187,7 +196,7 @@ public class LocalNode : IDisposable {
 
     async Task ReadAsync(Socket socket, PipeReader reader)
     {
-      for (;;) {
+      for (; ; ) {
         var result = await reader.ReadAsync().ConfigureAwait(false);
         var buffer = result.Buffer;
 
@@ -279,14 +288,18 @@ public class LocalNode : IDisposable {
 
   private ValueTask ProcessCommandAsync(Socket client, ReadOnlySequence<byte> commandLine)
   {
-    if (ExpectCommand(commandLine, commandFetch.Span, out var fetchArguments))
+    if (ExpectCommand(commandLine, commandFetch.Span, out var fetchArguments)) {
       return ProcessCommandFetchAsync(client, fetchArguments);
-    else if (ExpectCommand(commandLine, commandNodes.Span, out _))
+    }
+    else if (ExpectCommand(commandLine, commandNodes.Span, out _)) {
       return ProcessCommandNodesAsync(client);
-    else if (ExpectCommand(commandLine, commandList.Span, out var listArguments))
+    }
+    else if (ExpectCommand(commandLine, commandList.Span, out var listArguments)) {
       return ProcessCommandListAsync(client, listArguments);
-    else if (ExpectCommand(commandLine, commandConfig.Span, out var configArguments))
+    }
+    else if (ExpectCommand(commandLine, commandConfig.Span, out var configArguments)) {
       return ProcessCommandConfigAsync(client, configArguments);
+    }
     else if (
       ExpectCommand(commandLine, commandQuit.Span, out _) ||
       (commandLine.Length == 1 && commandLine.FirstSpan[0] == commandQuitShort)
@@ -295,19 +308,22 @@ public class LocalNode : IDisposable {
 #if NET5_0_OR_GREATER
       return ValueTask.CompletedTask;
 #else
-      return default(ValueTask);
+      return default;
 #endif
     }
-    else if (ExpectCommand(commandLine, commandCap.Span, out var capArguments))
+    else if (ExpectCommand(commandLine, commandCap.Span, out var capArguments)) {
       return ProcessCommandCapAsync(client, capArguments);
-    else if (ExpectCommand(commandLine, commandVersion.Span, out _))
+    }
+    else if (ExpectCommand(commandLine, commandVersion.Span, out _)) {
       return ProcessCommandVersionAsync(client);
-    else
+    }
+    else {
       return SendResponseAsync(
         client,
         encoding,
         "# Unknown command. Try cap, list, nodes, config, fetch, version or quit"
       );
+    }
   }
 
   private static readonly byte[] endOfLine = new[] { (byte)'\n' };
@@ -335,7 +351,7 @@ public class LocalNode : IDisposable {
       encoding,
       new[] {
         HostName,
-        "."
+        ".",
       }
     );
   }
@@ -349,7 +365,12 @@ public class LocalNode : IDisposable {
     );
   }
 
-  private ValueTask ProcessCommandCapAsync(Socket client, ReadOnlySequence<byte> arguments)
+  private ValueTask ProcessCommandCapAsync(
+    Socket client,
+#pragma warning disable IDE0060
+    ReadOnlySequence<byte> arguments
+#pragma warning restore IDE0060
+  )
   {
     // TODO: multigraph (http://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
     // TODO: dirtyconfig (http://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html)
@@ -361,7 +382,12 @@ public class LocalNode : IDisposable {
     );
   }
 
-  private ValueTask ProcessCommandListAsync(Socket client, ReadOnlySequence<byte> arguments)
+  private ValueTask ProcessCommandListAsync(
+    Socket client,
+#pragma warning disable IDE0060
+    ReadOnlySequence<byte> arguments
+#pragma warning restore IDE0060
+  )
   {
     // XXX: ignore [node] arguments
     return SendResponseAsync(

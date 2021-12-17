@@ -9,13 +9,14 @@ namespace Smdn.Net.MuninPlugin;
 public readonly struct PluginField {
   public string Name { get; }
   public string Label { get; }
-  /// <summary>A value for plugin field.</summary>
-  /// <remarks/>Reports 'UNKNOWN' as a plugin field value if <see cref="Value"/> is <see langword="null"/>.<remarks>
+
+  /// <summary>Gets a value for plugin field.</summary>
+  /// <remarks>Reports 'UNKNOWN' as a plugin field value if <see cref="Value"/> is <see langword="null"/>.</remarks>
   public double? Value { get; }
   public string GraphStyle { get; }
 
   internal string FormattedValueString => Value.HasValue
-    ? Value.Value.ToString() // TODO: format specifier
+    ? Value.Value.ToString(provider: null) // TODO: format specifier
     : "U" /* UNKNOWN */;
 
   public static PluginField CreateUnknownValueField(
@@ -25,7 +26,7 @@ public readonly struct PluginField {
     => new(
       name: GetDefaultNameFromLabel(label),
       label: label,
-      value: (double?)null,
+      value: null,
       graphStyle: graphStyle
     );
 
@@ -37,7 +38,7 @@ public readonly struct PluginField {
     => new(
       name: name,
       label: label,
-      value: (double?)null,
+      value: null,
       graphStyle
     );
 
@@ -83,16 +84,16 @@ public readonly struct PluginField {
     if (!regexValidFieldLabel.IsMatch(label))
       throw new ArgumentException($"'{label}' is invalid for field name. The value of {nameof(label)} must match the following regular expression: '{regexValidFieldLabel}'", nameof(label));
 
-    this.Name = name;
-    this.Label = label ?? name;
-    this.Value = value;
-    this.GraphStyle = graphStyle;
+    Name = name;
+    Label = label ?? name;
+    Value = value;
+    GraphStyle = graphStyle;
   }
 
   // http://guide.munin-monitoring.org/en/latest/reference/plugin.html#field-name-attributes
   // Field name attributes
-  //   Attribute:	{fieldname}.label
-  //   Value:	anything except # and \
+  //   Attribute: {fieldname}.label
+  //   Value: anything except # and \
   private static readonly Regex regexValidFieldLabel = new(
     pattern: $@"^[^{Regex.Escape("#\\")}]+$",
     options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
