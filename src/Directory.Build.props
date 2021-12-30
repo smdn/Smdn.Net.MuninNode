@@ -21,6 +21,17 @@ SPDX-License-Identifier: MIT
     <None Include="$(MSBuildThisFileDirectory)package-icon.png" Pack="true" Visible="false" PackagePath="\$(MSBuildProjectName).png"/>
   </ItemGroup>
 
+  <ItemGroup Label="API list generator">
+    <PackageReference Include="Smdn.Reflection.ReverseGenerating.ListApi.MSBuild.Tasks" Version="1.0.2" Condition=" '$(Configuration)' == 'Release' ">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <PropertyGroup Label="API list generator">
+    <APIListOutputBaseDirectory>$(MSBuildThisFileDirectory)..\doc\api-list\</APIListOutputBaseDirectory>
+  </PropertyGroup>
+
   <PropertyGroup Label="metadata">
     <Authors>smdn</Authors>
     <CopyrightYear>2021</CopyrightYear>
