@@ -1,7 +1,7 @@
-// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-1.0beta2 (netstandard2.1))
+// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-1.0beta3 (netstandard2.1))
 //   Name: Smdn.Net.MuninNode
 //   AssemblyVersion: 1.0.0.0
-//   InformationalVersion: 1.0beta2 (netstandard2.1)
+//   InformationalVersion: 1.0beta3 (netstandard2.1)
 //   TargetFramework: .NETStandard,Version=v2.1
 //   Configuration: Release
 
@@ -61,13 +61,16 @@ namespace Smdn.Net.MuninPlugin {
   }
 
   public readonly struct PluginField {
-    public PluginField(string id, string label, double @value, string graphStyle = null) {}
-    public PluginField(string label, double @value, string graphStyle) {}
+    public PluginField(string label, double @value, string graphStyle = null) {}
+    public PluginField(string name, string label, double @value, string graphStyle = null) {}
 
     public string GraphStyle { get; }
-    public string ID { get; }
     public string Label { get; }
-    public double Value { get; }
+    public string Name { get; }
+    public double? Value { get; }
+
+    public static PluginField CreateUnknownValueField(string label, string graphStyle = null) {}
+    public static PluginField CreateUnknownValueField(string name, string label, string graphStyle = null) {}
   }
 }
 
