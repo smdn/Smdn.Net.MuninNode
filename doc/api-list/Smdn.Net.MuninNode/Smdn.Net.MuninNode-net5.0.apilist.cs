@@ -1,7 +1,7 @@
-// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode)
+// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-1.0beta2 (net5.0))
 //   Name: Smdn.Net.MuninNode
 //   AssemblyVersion: 1.0.0.0
-//   InformationalVersion: 1.0beta1 (net5.0)
+//   InformationalVersion: 1.0beta2 (net5.0)
 //   TargetFramework: .NETCoreApp,Version=v5.0
 //   Configuration: Release
 

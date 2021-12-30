@@ -1,7 +1,7 @@
-// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode)
+// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-1.0beta2 (netstandard2.1))
 //   Name: Smdn.Net.MuninNode
 //   AssemblyVersion: 1.0.0.0
-//   InformationalVersion: 1.0beta1 (netstandard2.1)
+//   InformationalVersion: 1.0beta2 (netstandard2.1)
 //   TargetFramework: .NETStandard,Version=v2.1
 //   Configuration: Release
 
