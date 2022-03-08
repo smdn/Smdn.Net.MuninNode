@@ -115,7 +115,7 @@ public class LocalNode : IDisposable {
     server.Bind(LocalEndPoint);
     server.Listen(maxClients);
 
-    logger?.LogInformation($"started");
+    logger?.LogInformation("started");
   }
 
   public async Task AcceptClientAsync()
@@ -151,12 +151,12 @@ public class LocalNode : IDisposable {
         ReadAsync(client, pipe.Reader)
       ).ConfigureAwait(false);
 
-      logger?.LogInformation($"session ending");
+      logger?.LogInformation("session ending");
     }
     finally {
       client.Close();
 
-      logger?.LogInformation($"connection closed");
+      logger?.LogInformation("connection closed");
     }
 
     async Task FillAsync(Socket socket, PipeWriter writer)
