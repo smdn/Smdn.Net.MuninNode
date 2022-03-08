@@ -4,19 +4,25 @@ SPDX-License-Identifier: MIT
 -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFrameworks>netstandard2.1;net5.0</TargetFrameworks>
     <VersionPrefix>1.0</VersionPrefix>
     <VersionSuffix>beta3</VersionSuffix>
+    <!-- <PackageValidationBaselineVersion>1.0.0</PackageValidationBaselineVersion> -->
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' " Label="Required properties to generate API list">
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
-  <PropertyGroup Label="metadata">
+  <PropertyGroup Label="assembly attributes">
     <Description>
 <![CDATA[Smdn.Net.MuninNode is a .NET implementation of Munin-Node and Munin-Plugin.
 ]]>
     </Description>
+    <CopyrightYear>2021</CopyrightYear>
+  </PropertyGroup>
+
+  <PropertyGroup Label="package properties">
     <PackageTags>Munin,Munin-Node,Munin-Plugin</PackageTags>
   </PropertyGroup>
 
