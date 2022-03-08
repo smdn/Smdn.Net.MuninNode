@@ -2,7 +2,7 @@
 //   Name: Smdn.Net.MuninNode
 //   AssemblyVersion: 1.0.0.0
 //   InformationalVersion: 1.0.0-beta4+74ac45a2d17aefc7af0d7f2108fee3bf66ef7192
-//   TargetFramework: .NETCoreApp,Version=v5.0
+//   TargetFramework: .NETCoreApp,Version=v6.0
 //   Configuration: Release
 
 using System;
