@@ -1,7 +1,7 @@
-// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-1.0beta3 (netstandard2.1))
+// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-1.0.0-beta4)
 //   Name: Smdn.Net.MuninNode
 //   AssemblyVersion: 1.0.0.0
-//   InformationalVersion: 1.0beta3 (netstandard2.1)
+//   InformationalVersion: 1.0.0-beta4+74ac45a2d17aefc7af0d7f2108fee3bf66ef7192
 //   TargetFramework: .NETStandard,Version=v2.1
 //   Configuration: Release
 
@@ -23,8 +23,9 @@ namespace Smdn.Net.MuninNode {
     [AsyncStateMachine]
     public Task AcceptClientAsync() {}
     public void Close() {}
+    protected virtual void Dispose(bool disposing) {}
+    public void Dispose() {}
     public void Start() {}
-    void IDisposable.Dispose() {}
   }
 }
 
