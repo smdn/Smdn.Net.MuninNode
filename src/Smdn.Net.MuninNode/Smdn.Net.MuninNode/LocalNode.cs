@@ -8,10 +8,6 @@
 #define ENABLE_IPv6
 #undef ENABLE_IPv6
 
-#if NET5_0_OR_GREATER
-#define SYSTEM_TEXT_ENCODINGEXTENSIONS
-#endif
-
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -245,7 +241,7 @@ public class LocalNode : IDisposable {
         return false;
       }
 
-#if NET5_0_OR_GREATER
+#if SYSTEM_BUFFERS_SEQUENCEREADER_UNREADSEQUENCE
       buffer = reader.UnreadSequence;
 #else
       buffer = reader.Sequence.Slice(reader.Position);
@@ -279,7 +275,7 @@ public class LocalNode : IDisposable {
     }
     else if (reader.IsNext(SP, advancePast: true)) {
       // <command> <SP> <arguments> <EOL>
-#if NET5_0_OR_GREATER
+#if SYSTEM_BUFFERS_SEQUENCEREADER_UNREADSEQUENCE
       arguments = reader.UnreadSequence;
 #else
       arguments = reader.Sequence.Slice(reader.Position);
@@ -318,7 +314,7 @@ public class LocalNode : IDisposable {
       (commandLine.Length == 1 && commandLine.FirstSpan[0] == commandQuitShort)
     ) {
       client.Close();
-#if NET5_0_OR_GREATER
+#if SYSTEM_THREADING_TASKS_VALUETASK_COMPLETEDTASK
       return ValueTask.CompletedTask;
 #else
       return default;
