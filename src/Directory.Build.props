@@ -10,7 +10,6 @@ SPDX-License-Identifier: MIT
 
   <ImportGroup Label="project assets">
     <Import Project="$(MSBuildThisFileDirectory)ProjectAssets.props" />
-    <Import Project="$(SmdnProjectAssets_PropsImports)" />
   </ImportGroup>
 
   <PropertyGroup Label="package properties">
