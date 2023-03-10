@@ -4,6 +4,10 @@ SPDX-License-Identifier: MIT
 -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <TargetFrameworks Condition=" '$(EnableTargetFrameworkDotNet)' == 'true' ">net6.0</TargetFrameworks>
     <TargetFrameworks Condition=" '$(EnableTargetFrameworkDotNet)' == 'true' and $([MSBuild]::VersionGreaterThanOrEquals('$(NETCoreSdkVersion)', '7.0.0'))">net7.0;$(TargetFrameworks)</TargetFrameworks>
     <TargetFrameworks Condition=" '$(EnableTargetFrameworkNetCoreApp)' == 'true' ">netcoreapp3.1;$(TargetFrameworks)</TargetFrameworks>

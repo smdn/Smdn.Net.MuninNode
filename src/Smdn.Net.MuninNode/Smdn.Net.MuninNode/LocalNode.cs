@@ -38,7 +38,7 @@ public class LocalNode : IDisposable {
   public IPEndPoint LocalEndPoint { get; }
 
   private readonly Version nodeVersion;
-  private readonly ILogger logger;
+  private readonly ILogger? logger;
   private Socket server;
   private readonly Encoding encoding = Encoding.Default;
 
@@ -47,8 +47,8 @@ public class LocalNode : IDisposable {
     string hostName,
     TimeSpan timeout,
     int portNumber,
-    Version nodeVersion = null,
-    IServiceProvider serviceProvider = null
+    Version? nodeVersion = null,
+    IServiceProvider? serviceProvider = null
   )
   {
     Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
@@ -102,7 +102,7 @@ public class LocalNode : IDisposable {
 
     server?.Disconnect(true);
     server?.Dispose();
-    server = null;
+    server = null!;
   }
 
   public void Close() => (this as IDisposable).Dispose();
@@ -126,7 +126,7 @@ public class LocalNode : IDisposable {
 
     try {
       if (client.RemoteEndPoint is not IPEndPoint remoteEndPoint) {
-        logger?.LogWarning($"cannot accept: {client.RemoteEndPoint.AddressFamily}");
+        logger?.LogWarning($"cannot accept: {client.RemoteEndPoint?.AddressFamily}");
         return;
       }
 

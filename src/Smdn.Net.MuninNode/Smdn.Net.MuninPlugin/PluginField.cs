@@ -13,7 +13,7 @@ public readonly struct PluginField {
   /// <summary>Gets a value for plugin field.</summary>
   /// <remarks>Reports 'UNKNOWN' as a plugin field value if <see cref="Value"/> is <see langword="null"/>.</remarks>
   public double? Value { get; }
-  public string GraphStyle { get; }
+  public string? GraphStyle { get; }
 
   internal string FormattedValueString => Value.HasValue
     ? Value.Value.ToString(provider: null) // TODO: format specifier
@@ -21,7 +21,7 @@ public readonly struct PluginField {
 
   public static PluginField CreateUnknownValueField(
     string label,
-    string graphStyle = null
+    string? graphStyle = null
   )
     => new(
       name: GetDefaultNameFromLabel(label),
@@ -33,7 +33,7 @@ public readonly struct PluginField {
   public static PluginField CreateUnknownValueField(
     string name,
     string label,
-    string graphStyle = null
+    string? graphStyle = null
   )
     => new(
       name: name,
@@ -45,7 +45,7 @@ public readonly struct PluginField {
   public PluginField(
     string label,
     double value,
-    string graphStyle = null
+    string? graphStyle = null
   )
     : this(GetDefaultNameFromLabel(label), label, (double?)value, graphStyle)
   {
@@ -55,7 +55,7 @@ public readonly struct PluginField {
     string name,
     string label,
     double value,
-    string graphStyle = null
+    string? graphStyle = null
   )
     : this(name, label, (double?)value, graphStyle)
   {
@@ -65,7 +65,7 @@ public readonly struct PluginField {
     string name,
     string label,
     double? value,
-    string graphStyle = null
+    string? graphStyle = null
   )
   {
     if (name == null)
