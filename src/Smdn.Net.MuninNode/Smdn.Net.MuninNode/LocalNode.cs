@@ -181,11 +181,20 @@ public class LocalNode : IDisposable {
 
           writer.Advance(bytesRead);
         }
-        catch (SocketException ex) when (ex.ErrorCode == 125) {
-          break; // expected exception (125: Operation canceled)
+        catch (SocketException ex) when (
+          ex.SocketErrorCode is
+            SocketError.OperationAborted or // ECANCELED (125)
+            SocketError.ConnectionReset // ECONNRESET (104)
+        ) {
+          logger?.LogWarning($"socket exception ({(int)ex.SocketErrorCode} {ex.SocketErrorCode})");
+          break; // expected exception
+        }
+        catch (ObjectDisposedException) {
+          logger?.LogWarning("socket has been disposed");
+          break; // expected exception
         }
         catch (Exception ex) {
-          logger?.LogCritical(ex, "unexpected exception");
+          logger?.LogCritical(ex, "unexpected exception while receiving");
           break;
         }
 
@@ -212,7 +221,7 @@ public class LocalNode : IDisposable {
         catch (Exception ex) {
           if (socket.Connected)
             socket.Close();
-          logger?.LogCritical(ex, "unexpected exception");
+          logger?.LogCritical(ex, "unexpected exception while processing command");
           break;
         }
 
