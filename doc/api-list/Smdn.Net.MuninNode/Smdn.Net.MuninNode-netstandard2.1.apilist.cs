@@ -1,7 +1,7 @@
-// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-1.0.0-beta4)
+// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-1.0.0-beta5)
 //   Name: Smdn.Net.MuninNode
 //   AssemblyVersion: 1.0.0.0
-//   InformationalVersion: 1.0.0-beta4+74ac45a2d17aefc7af0d7f2108fee3bf66ef7192
+//   InformationalVersion: 1.0.0-beta5+9c35db93d2d4c37becbd2bed7ecdb74bc254a9ad
 //   TargetFramework: .NETStandard,Version=v2.1
 //   Configuration: Release
 //   Referenced assemblies:
@@ -11,6 +11,7 @@
 //     Smdn.Fundamental.Exception, Version=3.0.0.0, Culture=neutral
 //     System.IO.Pipelines, Version=6.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51
 //     netstandard, Version=2.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51
+#nullable enable annotations
 
 using System;
 using System.Collections.Generic;
@@ -20,7 +21,7 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode {
   public class LocalNode : IDisposable {
-    public LocalNode(IReadOnlyList<Plugin> plugins, string hostName, TimeSpan timeout, int portNumber, Version nodeVersion = null, IServiceProvider serviceProvider = null) {}
+    public LocalNode(IReadOnlyList<Plugin> plugins, string hostName, TimeSpan timeout, int portNumber, Version? nodeVersion = null, IServiceProvider? serviceProvider = null) {}
 
     public string HostName { get; }
     public IPEndPoint LocalEndPoint { get; }
@@ -68,13 +69,13 @@ namespace Smdn.Net.MuninPlugin {
   }
 
   public readonly struct PluginField {
-    public static PluginField CreateUnknownValueField(string label, string graphStyle = null) {}
-    public static PluginField CreateUnknownValueField(string name, string label, string graphStyle = null) {}
+    public static PluginField CreateUnknownValueField(string label, string? graphStyle = null) {}
+    public static PluginField CreateUnknownValueField(string name, string label, string? graphStyle = null) {}
 
-    public PluginField(string label, double @value, string graphStyle = null) {}
-    public PluginField(string name, string label, double @value, string graphStyle = null) {}
+    public PluginField(string label, double @value, string? graphStyle = null) {}
+    public PluginField(string name, string label, double @value, string? graphStyle = null) {}
 
-    public string GraphStyle { get; }
+    public string? GraphStyle { get; }
     public string Label { get; }
     public string Name { get; }
     public double? Value { get; }
