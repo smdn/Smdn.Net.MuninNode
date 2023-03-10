@@ -3,36 +3,30 @@ SPDX-FileCopyrightText: 2021 smdn <smdn@smdn.jp>
 SPDX-License-Identifier: MIT
 -->
 <Project>
-  <PropertyGroup>
-    <TargetFrameworks>net6.0;netcoreapp3.1</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
-    <Deterministic>true</Deterministic>
-    <IsPackable>false</IsPackable>
+  <!-- This is required to restore Smdn.MSBuild.ProjectAssets.* when test projects are attempted to built directly. (ex: on CI) -->
+  <ImportGroup Label="project assets">
+    <Import Project="$(MSBuildThisFileDirectory)..\src\ProjectAssets.props" />
+  </ImportGroup>
 
-    <!-- configure code analysis mode -->
-    <!-- ref: https://docs.microsoft.com/ja-jp/dotnet/core/project-sdk/msbuild-props#code-analysis-properties -->
-    <AnalysisMode>None</AnalysisMode>
-    <AnalysisModeInteroperability>Recommended</AnalysisModeInteroperability>
-    <AnalysisModeReliability>Recommended</AnalysisModeReliability>
-    <AnalysisModeSecurity>Recommended</AnalysisModeSecurity>
-    <AnalysisModeUsage>Recommended</AnalysisModeUsage>
+  <PropertyGroup Condition=" '$(IsTestProject)' == 'true' ">
+    <Nullable>warnings</Nullable>
 
-    <!-- determines the test target project name from the test project name (Smdn.Fundamentals.*.Tests -> Smdn.Fundamentals.*) -->
-    <TestTargetProjectName
-      Condition="$(MSBuildProjectFile.EndsWith('.Tests.csproj'))"
-    >$(MSBuildProjectFile.Replace('.Tests.csproj', ''))</TestTargetProjectName>
+    <SmdnTestTargetProjectDirectory
+      Condition=" '$(SmdnTestTargetProjectName)' != '' "
+    >$(MSBuildThisFileDirectory)..\src\$(SmdnTestTargetProjectName)\</SmdnTestTargetProjectDirectory>
+    <SmdnTestTargetProjectFullPath
+      Condition=" '$(SmdnTestTargetProjectName)' != '' "
+    >$(SmdnTestTargetProjectDirectory)$(SmdnTestTargetProjectName).csproj</SmdnTestTargetProjectFullPath>
   </PropertyGroup>
 
-  <ItemGroup>
+  <Import
+    Condition=" '$(IsTestProject)' == 'true' "
+    Project="$(MSBuildThisFileDirectory)TargetFrameworks.props"
+  />
+
+  <ItemGroup Condition=" '$(IsTestProject)' == 'true' ">
     <PackageReference Include="NUnit" Version="3.13.2" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0"/>
-  </ItemGroup>
-
-  <ItemGroup Label="add test target project reference">
-    <ProjectReference
-      Condition="'$(TestTargetProjectName)' != ''"
-      Include="$(MSBuildThisFileDirectory)..\src\$(TestTargetProjectName)\$(TestTargetProjectName).csproj"
-    />
   </ItemGroup>
 </Project>
