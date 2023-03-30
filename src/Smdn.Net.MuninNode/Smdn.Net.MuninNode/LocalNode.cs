@@ -232,7 +232,7 @@ public class LocalNode : IDisposable {
           break;
       }
 
-      await writer.CompleteAsync();
+      await writer.CompleteAsync().ConfigureAwait(false);
     }
 
     async Task ReadAsync(
