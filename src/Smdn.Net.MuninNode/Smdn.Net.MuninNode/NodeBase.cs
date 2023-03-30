@@ -3,7 +3,6 @@
 
 // TODO: use LoggerMessage.Define
 #pragma warning disable CA1848 // For improved performance, use the LoggerMessage delegates instead of calling 'LoggerExtensions.LogInformation(ILogger, string?, params object?[])'
-#pragma warning disable CA2254 // The logging message template should not vary between calls to 'LoggerExtensions.LogInformation(ILogger, string?, params object?[])'
 
 #if NET6_0_OR_GREATER
 #define SYSTEM_NET_SOCKETS_SOCKET_ACCEPTASYNC_CANCELLATIONTOKEN
