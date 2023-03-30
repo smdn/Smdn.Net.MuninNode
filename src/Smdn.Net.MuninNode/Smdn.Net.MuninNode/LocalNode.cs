@@ -233,13 +233,20 @@ public class LocalNode : IDisposable {
       var reader = new SequenceReader<byte>(buffer);
       const byte LF = (byte)'\n';
 
+#pragma warning disable SA1003
       if (
-        !reader.TryReadTo(out line, delimiter: CRLF.Span, advancePastDelimiter: true) &&
+#if LANG_VERSION_11_OR_GREATER
+        !reader.TryReadTo(out line, delimiter: "\r\n"u8, advancePastDelimiter: true)
+#else
+        !reader.TryReadTo(out line, delimiter: CRLF.Span, advancePastDelimiter: true)
+#endif
+        &&
         !reader.TryReadTo(out line, delimiter: LF, advancePastDelimiter: true)
       ) {
         line = default;
         return false;
       }
+#pragma warning restore SA1003
 
 #if SYSTEM_BUFFERS_SEQUENCEREADER_UNREADSEQUENCE
       buffer = reader.UnreadSequence;
@@ -251,7 +258,9 @@ public class LocalNode : IDisposable {
     }
   }
 
+#if !LANG_VERSION_11_OR_GREATER
   private static readonly ReadOnlyMemory<byte> CRLF = Encoding.ASCII.GetBytes("\r\n");
+#endif
 
   private static bool ExpectCommand(
     ReadOnlySequence<byte> commandLine,
@@ -286,6 +295,49 @@ public class LocalNode : IDisposable {
     return false;
   }
 
+  private static readonly byte commandQuitShort = (byte)'.';
+
+#if LANG_VERSION_11_OR_GREATER
+  private ValueTask ProcessCommandAsync(Socket client, ReadOnlySequence<byte> commandLine)
+  {
+    if (ExpectCommand(commandLine, "fetch"u8, out var fetchArguments)) {
+      return ProcessCommandFetchAsync(client, fetchArguments);
+    }
+    else if (ExpectCommand(commandLine, "nodes"u8, out _)) {
+      return ProcessCommandNodesAsync(client);
+    }
+    else if (ExpectCommand(commandLine, "list"u8, out var listArguments)) {
+      return ProcessCommandListAsync(client, listArguments);
+    }
+    else if (ExpectCommand(commandLine, "config"u8, out var configArguments)) {
+      return ProcessCommandConfigAsync(client, configArguments);
+    }
+    else if (
+      ExpectCommand(commandLine, "quit"u8, out _) ||
+      (commandLine.Length == 1 && commandLine.FirstSpan[0] == commandQuitShort)
+    ) {
+      client.Close();
+#if SYSTEM_THREADING_TASKS_VALUETASK_COMPLETEDTASK
+      return ValueTask.CompletedTask;
+#else
+      return default;
+#endif
+    }
+    else if (ExpectCommand(commandLine, "cap"u8, out var capArguments)) {
+      return ProcessCommandCapAsync(client, capArguments);
+    }
+    else if (ExpectCommand(commandLine, "version"u8, out _)) {
+      return ProcessCommandVersionAsync(client);
+    }
+    else {
+      return SendResponseAsync(
+        client,
+        encoding,
+        "# Unknown command. Try cap, list, nodes, config, fetch, version or quit"
+      );
+    }
+  }
+#else
   private static readonly ReadOnlyMemory<byte> commandFetch       = Encoding.ASCII.GetBytes("fetch");
   private static readonly ReadOnlyMemory<byte> commandNodes       = Encoding.ASCII.GetBytes("nodes");
   private static readonly ReadOnlyMemory<byte> commandList        = Encoding.ASCII.GetBytes("list");
@@ -293,7 +345,6 @@ public class LocalNode : IDisposable {
   private static readonly ReadOnlyMemory<byte> commandQuit        = Encoding.ASCII.GetBytes("quit");
   private static readonly ReadOnlyMemory<byte> commandCap         = Encoding.ASCII.GetBytes("cap");
   private static readonly ReadOnlyMemory<byte> commandVersion     = Encoding.ASCII.GetBytes("version");
-  private static readonly byte commandQuitShort = (byte)'.';
 
   private ValueTask ProcessCommandAsync(Socket client, ReadOnlySequence<byte> commandLine)
   {
@@ -334,8 +385,11 @@ public class LocalNode : IDisposable {
       );
     }
   }
+#endif
 
-  private static readonly byte[] endOfLine = new[] { (byte)'\n' };
+#pragma warning disable IDE0230
+  private static readonly ReadOnlyMemory<byte> endOfLine = new[] { (byte)'\n' };
+#pragma warning restore IDE0230
 
   private static ValueTask SendResponseAsync(Socket client, Encoding encoding, string responseLine)
     => SendResponseAsync(client, encoding, Enumerable.Repeat(responseLine, 1));

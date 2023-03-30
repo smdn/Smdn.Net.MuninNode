@@ -9,6 +9,9 @@ SPDX-License-Identifier: MIT
     <VersionSuffix>beta5</VersionSuffix>
     <!-- <PackageValidationBaselineVersion>1.0.0</PackageValidationBaselineVersion> -->
     <Nullable>enable</Nullable>
+    <DefineConstants
+      Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(NETCoreSdkVersion)', '7.0.0'))"
+    >$(DefineConstants);LANG_VERSION_11_OR_GREATER</DefineConstants> <!-- required to use the UTF-8 string literals in C# 11 -->
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' " Label="Required properties to generate API list">
