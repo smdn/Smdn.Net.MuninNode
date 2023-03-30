@@ -456,7 +456,7 @@ public class LocalNode : IDisposable {
     return SendResponseAsync(
       client,
       encoding,
-      string.Join(" ", Plugins.Select(plugin => plugin.Name))
+      string.Join(" ", Plugins.Select(static plugin => plugin.Name))
     );
   }
 
@@ -478,7 +478,7 @@ public class LocalNode : IDisposable {
     return SendResponseAsync(
       client,
       encoding,
-      plugin.FieldConfiguration.FetchFields().Select(f => $"{f.Name}.value {f.FormattedValueString}").Append(".")
+      plugin.FieldConfiguration.FetchFields().Select(static f => $"{f.Name}.value {f.FormattedValueString}").Append(".")
     );
   }
 
