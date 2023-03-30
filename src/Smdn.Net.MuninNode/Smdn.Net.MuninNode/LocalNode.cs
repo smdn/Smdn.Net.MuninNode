@@ -5,6 +5,10 @@
 #pragma warning disable CA1848 // For improved performance, use the LoggerMessage delegates instead of calling 'LoggerExtensions.LogInformation(ILogger, string?, params object?[])'
 #pragma warning disable CA2254 // The logging message template should not vary between calls to 'LoggerExtensions.LogInformation(ILogger, string?, params object?[])'
 
+#if NET6_0_OR_GREATER
+#define SYSTEM_NET_SOCKETS_SOCKET_ACCEPTASYNC_CANCELLATIONTOKEN
+#endif
+
 #define ENABLE_IPv6
 #undef ENABLE_IPv6
 
@@ -16,6 +20,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -118,13 +123,23 @@ public class LocalNode : IDisposable {
     logger?.LogInformation("started");
   }
 
-  public async ValueTask AcceptClientAsync()
+  public async ValueTask AcceptClientAsync(
+    CancellationToken cancellationToken = default
+  )
   {
     logger?.LogInformation("accepting...");
 
-    var client = await server.AcceptAsync().ConfigureAwait(false);
+    var client = await server
+#if SYSTEM_NET_SOCKETS_SOCKET_ACCEPTASYNC_CANCELLATIONTOKEN
+      .AcceptAsync(cancellationToken: cancellationToken)
+#else
+      .AcceptAsync()
+#endif
+      .ConfigureAwait(false);
 
     try {
+      cancellationToken.ThrowIfCancellationRequested();
+
       if (client.RemoteEndPoint is not IPEndPoint remoteEndPoint) {
         logger?.LogWarning($"cannot accept: {client.RemoteEndPoint?.AddressFamily}");
         return;
@@ -135,20 +150,25 @@ public class LocalNode : IDisposable {
         return;
       }
 
+      cancellationToken.ThrowIfCancellationRequested();
+
       logger?.LogInformation($"session started (master: {client.RemoteEndPoint})");
 
       await SendResponseAsync(
         client,
         encoding,
-        $"# munin node at {HostName}"
+        $"# munin node at {HostName}",
+        cancellationToken
       ).ConfigureAwait(false);
+
+      cancellationToken.ThrowIfCancellationRequested();
 
       // https://docs.microsoft.com/ja-jp/dotnet/standard/io/pipelines
       var pipe = new Pipe();
 
       await Task.WhenAll(
-        FillAsync(client, pipe.Writer),
-        ReadAsync(client, pipe.Reader)
+        FillAsync(client, pipe.Writer, cancellationToken),
+        ReadAsync(client, pipe.Reader, cancellationToken)
       ).ConfigureAwait(false);
 
       logger?.LogInformation("session ending");
@@ -159,18 +179,28 @@ public class LocalNode : IDisposable {
       logger?.LogInformation("connection closed");
     }
 
-    async Task FillAsync(Socket socket, PipeWriter writer)
+    async Task FillAsync(
+      Socket socket,
+      PipeWriter writer,
+      CancellationToken cancellationToken
+    )
     {
       const int minimumBufferSize = 256;
 
       for (; ; ) {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var memory = writer.GetMemory(minimumBufferSize);
 
         try {
           if (!socket.Connected)
             break;
 
-          var bytesRead = await socket.ReceiveAsync(memory, SocketFlags.None).ConfigureAwait(false);
+          var bytesRead = await socket.ReceiveAsync(
+            buffer: memory,
+            socketFlags: SocketFlags.None,
+            cancellationToken: cancellationToken
+          ).ConfigureAwait(false);
 
           if (bytesRead == 0)
             break;
@@ -194,7 +224,9 @@ public class LocalNode : IDisposable {
           break;
         }
 
-        var result = await writer.FlushAsync().ConfigureAwait(false);
+        var result = await writer.FlushAsync(
+          cancellationToken: cancellationToken
+        ).ConfigureAwait(false);
 
         if (result.IsCompleted)
           break;
@@ -203,15 +235,27 @@ public class LocalNode : IDisposable {
       await writer.CompleteAsync();
     }
 
-    async Task ReadAsync(Socket socket, PipeReader reader)
+    async Task ReadAsync(
+      Socket socket,
+      PipeReader reader,
+      CancellationToken cancellationToken
+    )
     {
       for (; ; ) {
-        var result = await reader.ReadAsync().ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var result = await reader.ReadAsync(
+          cancellationToken: cancellationToken
+        ).ConfigureAwait(false);
         var buffer = result.Buffer;
 
         try {
           while (TryReadLine(ref buffer, out var line)) {
-            await ProcessCommandAsync(socket, line).ConfigureAwait(false);
+            await ProcessCommandAsync(
+              client: socket,
+              commandLine: line,
+              cancellationToken: cancellationToken
+            ).ConfigureAwait(false);
           }
         }
         catch (Exception ex) {
@@ -298,19 +342,23 @@ public class LocalNode : IDisposable {
   private static readonly byte commandQuitShort = (byte)'.';
 
 #if LANG_VERSION_11_OR_GREATER
-  private ValueTask ProcessCommandAsync(Socket client, ReadOnlySequence<byte> commandLine)
+  private ValueTask ProcessCommandAsync(
+    Socket client,
+    ReadOnlySequence<byte> commandLine,
+    CancellationToken cancellationToken
+  )
   {
     if (ExpectCommand(commandLine, "fetch"u8, out var fetchArguments)) {
-      return ProcessCommandFetchAsync(client, fetchArguments);
+      return ProcessCommandFetchAsync(client, fetchArguments, cancellationToken);
     }
     else if (ExpectCommand(commandLine, "nodes"u8, out _)) {
-      return ProcessCommandNodesAsync(client);
+      return ProcessCommandNodesAsync(client, cancellationToken);
     }
     else if (ExpectCommand(commandLine, "list"u8, out var listArguments)) {
-      return ProcessCommandListAsync(client, listArguments);
+      return ProcessCommandListAsync(client, listArguments, cancellationToken);
     }
     else if (ExpectCommand(commandLine, "config"u8, out var configArguments)) {
-      return ProcessCommandConfigAsync(client, configArguments);
+      return ProcessCommandConfigAsync(client, configArguments, cancellationToken);
     }
     else if (
       ExpectCommand(commandLine, "quit"u8, out _) ||
@@ -324,10 +372,10 @@ public class LocalNode : IDisposable {
 #endif
     }
     else if (ExpectCommand(commandLine, "cap"u8, out var capArguments)) {
-      return ProcessCommandCapAsync(client, capArguments);
+      return ProcessCommandCapAsync(client, capArguments, cancellationToken);
     }
     else if (ExpectCommand(commandLine, "version"u8, out _)) {
-      return ProcessCommandVersionAsync(client);
+      return ProcessCommandVersionAsync(client, cancellationToken);
     }
     else {
       return SendResponseAsync(
@@ -346,19 +394,25 @@ public class LocalNode : IDisposable {
   private static readonly ReadOnlyMemory<byte> commandCap         = Encoding.ASCII.GetBytes("cap");
   private static readonly ReadOnlyMemory<byte> commandVersion     = Encoding.ASCII.GetBytes("version");
 
-  private ValueTask ProcessCommandAsync(Socket client, ReadOnlySequence<byte> commandLine)
+  private ValueTask ProcessCommandAsync(
+    Socket client,
+    ReadOnlySequence<byte> commandLine,
+    CancellationToken cancellationToken
+  )
   {
+    cancellationToken.ThrowIfCancellationRequested();
+
     if (ExpectCommand(commandLine, commandFetch.Span, out var fetchArguments)) {
-      return ProcessCommandFetchAsync(client, fetchArguments);
+      return ProcessCommandFetchAsync(client, fetchArguments, cancellationToken);
     }
     else if (ExpectCommand(commandLine, commandNodes.Span, out _)) {
-      return ProcessCommandNodesAsync(client);
+      return ProcessCommandNodesAsync(client, cancellationToken);
     }
     else if (ExpectCommand(commandLine, commandList.Span, out var listArguments)) {
-      return ProcessCommandListAsync(client, listArguments);
+      return ProcessCommandListAsync(client, listArguments, cancellationToken);
     }
     else if (ExpectCommand(commandLine, commandConfig.Span, out var configArguments)) {
-      return ProcessCommandConfigAsync(client, configArguments);
+      return ProcessCommandConfigAsync(client, configArguments, cancellationToken);
     }
     else if (
       ExpectCommand(commandLine, commandQuit.Span, out _) ||
@@ -372,16 +426,17 @@ public class LocalNode : IDisposable {
 #endif
     }
     else if (ExpectCommand(commandLine, commandCap.Span, out var capArguments)) {
-      return ProcessCommandCapAsync(client, capArguments);
+      return ProcessCommandCapAsync(client, capArguments, cancellationToken);
     }
     else if (ExpectCommand(commandLine, commandVersion.Span, out _)) {
-      return ProcessCommandVersionAsync(client);
+      return ProcessCommandVersionAsync(client, cancellationToken);
     }
     else {
       return SendResponseAsync(
-        client,
-        encoding,
-        "# Unknown command. Try cap, list, nodes, config, fetch, version or quit"
+        client: client,
+        encoding: encoding,
+        responseLine: "# Unknown command. Try cap, list, nodes, config, fetch, version or quit",
+        cancellationToken: cancellationToken
       );
     }
   }
@@ -391,76 +446,118 @@ public class LocalNode : IDisposable {
   private static readonly ReadOnlyMemory<byte> endOfLine = new[] { (byte)'\n' };
 #pragma warning restore IDE0230
 
-  private static ValueTask SendResponseAsync(Socket client, Encoding encoding, string responseLine)
-    => SendResponseAsync(client, encoding, Enumerable.Repeat(responseLine, 1));
+  private static ValueTask SendResponseAsync(
+    Socket client,
+    Encoding encoding,
+    string responseLine,
+    CancellationToken cancellationToken
+  )
+    => SendResponseAsync(
+      client: client,
+      encoding: encoding,
+      responseLines: Enumerable.Repeat(responseLine, 1),
+      cancellationToken: cancellationToken
+    );
 
-  private static async ValueTask SendResponseAsync(Socket client, Encoding encoding, IEnumerable<string> responseLines)
+  private static async ValueTask SendResponseAsync(
+    Socket client,
+    Encoding encoding,
+    IEnumerable<string> responseLines,
+    CancellationToken cancellationToken
+  )
   {
     if (responseLines == null)
       throw new ArgumentNullException(nameof(responseLines));
 
+    cancellationToken.ThrowIfCancellationRequested();
+
     foreach (var responseLine in responseLines) {
       var resp = encoding.GetBytes(responseLine);
 
-      await client.SendAsync(resp, SocketFlags.None).ConfigureAwait(false);
-      await client.SendAsync(endOfLine, SocketFlags.None).ConfigureAwait(false);
+      await client.SendAsync(
+        buffer: resp,
+        socketFlags: SocketFlags.None,
+        cancellationToken: cancellationToken
+      ).ConfigureAwait(false);
+
+      await client.SendAsync(
+        buffer: endOfLine,
+        socketFlags: SocketFlags.None,
+        cancellationToken: cancellationToken
+      ).ConfigureAwait(false);
     }
   }
 
-  private ValueTask ProcessCommandNodesAsync(Socket client)
+  private ValueTask ProcessCommandNodesAsync(
+    Socket client,
+    CancellationToken cancellationToken
+  )
   {
     return SendResponseAsync(
-      client,
-      encoding,
-      new[] {
+      client: client,
+      encoding: encoding,
+      responseLines: new[] {
         HostName,
         ".",
-      }
+      },
+      cancellationToken: cancellationToken
     );
   }
 
-  private ValueTask ProcessCommandVersionAsync(Socket client)
+  private ValueTask ProcessCommandVersionAsync(
+    Socket client,
+    CancellationToken cancellationToken
+  )
   {
     return SendResponseAsync(
-      client,
-      encoding,
-      $"munins node on {HostName} version: {nodeVersion}"
+      client: client,
+      encoding: encoding,
+      responseLine: $"munins node on {HostName} version: {nodeVersion}",
+      cancellationToken: cancellationToken
     );
   }
 
   private ValueTask ProcessCommandCapAsync(
     Socket client,
 #pragma warning disable IDE0060
-    ReadOnlySequence<byte> arguments
+    ReadOnlySequence<byte> arguments,
 #pragma warning restore IDE0060
+    CancellationToken cancellationToken
   )
   {
     // TODO: multigraph (http://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
     // TODO: dirtyconfig (http://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html)
     // XXX: ignores capability arguments
     return SendResponseAsync(
-      client,
-      encoding,
-      "cap"
+      client: client,
+      encoding: encoding,
+      responseLine: "cap",
+      cancellationToken: cancellationToken
     );
   }
 
   private ValueTask ProcessCommandListAsync(
     Socket client,
 #pragma warning disable IDE0060
-    ReadOnlySequence<byte> arguments
+    ReadOnlySequence<byte> arguments,
 #pragma warning restore IDE0060
+    CancellationToken cancellationToken
   )
   {
     // XXX: ignore [node] arguments
     return SendResponseAsync(
-      client,
-      encoding,
-      string.Join(" ", Plugins.Select(static plugin => plugin.Name))
+      client: client,
+      encoding: encoding,
+      responseLine: string.Join(" ", Plugins.Select(static plugin => plugin.Name)),
+      cancellationToken: cancellationToken
     );
   }
 
-  private ValueTask ProcessCommandFetchAsync(Socket client, ReadOnlySequence<byte> arguments)
+  private ValueTask ProcessCommandFetchAsync(
+    Socket client,
+    ReadOnlySequence<byte> arguments,
+    CancellationToken cancellationToken
+  )
   {
     var plugin = Plugins.FirstOrDefault(plugin => string.Equals(encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal));
 
@@ -471,18 +568,28 @@ public class LocalNode : IDisposable {
         new[] {
           "# Unknown service",
           ".",
-        }
+        },
+        cancellationToken
       );
     }
 
     return SendResponseAsync(
-      client,
-      encoding,
-      plugin.FieldConfiguration.FetchFields().Select(static f => $"{f.Name}.value {f.FormattedValueString}").Append(".")
+      client: client,
+      encoding: encoding,
+      responseLines: plugin
+        .FieldConfiguration
+        .FetchFields()
+        .Select(static f => $"{f.Name}.value {f.FormattedValueString}")
+        .Append("."),
+      cancellationToken: cancellationToken
     );
   }
 
-  private ValueTask ProcessCommandConfigAsync(Socket client, ReadOnlySequence<byte> arguments)
+  private ValueTask ProcessCommandConfigAsync(
+    Socket client,
+    ReadOnlySequence<byte> arguments,
+    CancellationToken cancellationToken
+  )
   {
     var plugin = Plugins.FirstOrDefault(plugin => string.Equals(encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal));
 
@@ -493,7 +600,8 @@ public class LocalNode : IDisposable {
         new[] {
           "# Unknown service",
           ".",
-        }
+        },
+        cancellationToken
       );
     }
 
@@ -540,9 +648,10 @@ public class LocalNode : IDisposable {
     responseLines.Add(".");
 
     return SendResponseAsync(
-      client,
-      encoding,
-      responseLines
+      client: client,
+      encoding: encoding,
+      responseLines: responseLines,
+      cancellationToken: cancellationToken
     );
   }
 }
