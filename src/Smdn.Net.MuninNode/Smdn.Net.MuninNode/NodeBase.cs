@@ -356,7 +356,8 @@ public abstract class NodeBase : IDisposable {
       return SendResponseAsync(
         client,
         Encoding,
-        "# Unknown command. Try cap, list, nodes, config, fetch, version or quit"
+        "# Unknown command. Try cap, list, nodes, config, fetch, version or quit",
+        cancellationToken
       );
     }
   }
