@@ -8,9 +8,6 @@
 #define SYSTEM_NET_SOCKETS_SOCKET_ACCEPTASYNC_CANCELLATIONTOKEN
 #endif
 
-#define ENABLE_IPv6
-#undef ENABLE_IPv6
-
 using System;
 using System.Buffers;
 using System.Collections.Generic;
