@@ -118,7 +118,7 @@ public class LocalNode : IDisposable {
     logger?.LogInformation("started");
   }
 
-  public async Task AcceptClientAsync()
+  public async ValueTask AcceptClientAsync()
   {
     logger?.LogInformation("accepting...");
 
