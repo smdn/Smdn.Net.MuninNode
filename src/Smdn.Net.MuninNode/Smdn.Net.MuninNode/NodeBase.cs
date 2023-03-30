@@ -22,8 +22,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Smdn.Net.MuninPlugin;
@@ -33,27 +31,22 @@ using Smdn.Text.Encodings;
 
 namespace Smdn.Net.MuninNode;
 
-public class LocalNode : IDisposable {
-  private static readonly int maxClients = 1;
+public abstract class NodeBase : IDisposable {
   private static readonly Version defaultNodeVersion = new(1, 0, 0, 0);
 
   public IReadOnlyList<Plugin> Plugins { get; }
   public string HostName { get; }
-  public TimeSpan Timeout { get; }
-  public IPEndPoint LocalEndPoint { get; }
 
-  private readonly Version nodeVersion;
+  public virtual Version NodeVersion => defaultNodeVersion;
+  public virtual Encoding Encoding => Encoding.Default;
+
   private readonly ILogger? logger;
   private Socket? server;
-  private readonly Encoding encoding = Encoding.Default;
 
-  public LocalNode(
+  public NodeBase(
     IReadOnlyList<Plugin> plugins,
     string hostName,
-    TimeSpan timeout,
-    int portNumber,
-    Version? nodeVersion = null,
-    IServiceProvider? serviceProvider = null
+    ILogger? logger
   )
   {
     Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
@@ -64,22 +57,8 @@ public class LocalNode : IDisposable {
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(hostName));
 
     HostName = hostName;
-    Timeout = timeout;
 
-    LocalEndPoint = new IPEndPoint(
-#pragma warning disable SA1114
-#if ENABLE_IPv6
-      IPAddress.IPv6Loopback,
-#else
-      IPAddress.Loopback,
-#endif
-#pragma warning restore SA1114
-      portNumber
-    );
-
-    this.nodeVersion = nodeVersion ?? defaultNodeVersion;
-
-    logger = serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<LocalNode>();
+    this.logger = logger;
   }
 
   public void Dispose()
@@ -100,31 +79,21 @@ public class LocalNode : IDisposable {
 
   public void Close() => (this as IDisposable).Dispose();
 
+  protected abstract Socket CreateServerSocket();
+
   public void Start()
   {
     if (server is not null)
       throw new InvalidOperationException("already started");
 
-    logger?.LogInformation($"starting (end point: {LocalEndPoint})");
+    logger?.LogInformation($"starting");
 
-    server = new Socket(
-#pragma warning disable SA1114
-#if ENABLE_IPv6
-      AddressFamily.InterNetworkV6,
-#else
-      AddressFamily.InterNetwork,
-#endif
-#pragma warning restore SA1114
-      SocketType.Stream,
-      ProtocolType.Tcp
-    );
+    server = CreateServerSocket() ?? throw new InvalidOperationException("cannot start server");
 
-    server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-    server.Bind(LocalEndPoint);
-    server.Listen(maxClients);
-
-    logger?.LogInformation("started");
+    logger?.LogInformation("started (end point: {LocalEndPoint})", server.LocalEndPoint);
   }
+
+  protected abstract bool IsClientAcceptable(IPEndPoint remoteEndPoint);
 
   public async ValueTask AcceptClientAsync(
     CancellationToken cancellationToken = default
@@ -151,7 +120,7 @@ public class LocalNode : IDisposable {
         return;
       }
 
-      if (!IPAddress.IsLoopback(remoteEndPoint.Address)) {
+      if (!IsClientAcceptable(remoteEndPoint)) {
         logger?.LogWarning($"access refused: {client.RemoteEndPoint}");
         return;
       }
@@ -162,7 +131,7 @@ public class LocalNode : IDisposable {
 
       await SendResponseAsync(
         client,
-        encoding,
+        Encoding,
         $"# munin node at {HostName}",
         cancellationToken
       ).ConfigureAwait(false);
@@ -386,7 +355,7 @@ public class LocalNode : IDisposable {
     else {
       return SendResponseAsync(
         client,
-        encoding,
+        Encoding,
         "# Unknown command. Try cap, list, nodes, config, fetch, version or quit"
       );
     }
@@ -440,7 +409,7 @@ public class LocalNode : IDisposable {
     else {
       return SendResponseAsync(
         client: client,
-        encoding: encoding,
+        encoding: Encoding,
         responseLine: "# Unknown command. Try cap, list, nodes, config, fetch, version or quit",
         cancellationToken: cancellationToken
       );
@@ -501,7 +470,7 @@ public class LocalNode : IDisposable {
   {
     return SendResponseAsync(
       client: client,
-      encoding: encoding,
+      encoding: Encoding,
       responseLines: new[] {
         HostName,
         ".",
@@ -517,8 +486,8 @@ public class LocalNode : IDisposable {
   {
     return SendResponseAsync(
       client: client,
-      encoding: encoding,
-      responseLine: $"munins node on {HostName} version: {nodeVersion}",
+      encoding: Encoding,
+      responseLine: $"munins node on {HostName} version: {NodeVersion}",
       cancellationToken: cancellationToken
     );
   }
@@ -536,7 +505,7 @@ public class LocalNode : IDisposable {
     // XXX: ignores capability arguments
     return SendResponseAsync(
       client: client,
-      encoding: encoding,
+      encoding: Encoding,
       responseLine: "cap",
       cancellationToken: cancellationToken
     );
@@ -553,7 +522,7 @@ public class LocalNode : IDisposable {
     // XXX: ignore [node] arguments
     return SendResponseAsync(
       client: client,
-      encoding: encoding,
+      encoding: Encoding,
       responseLine: string.Join(" ", Plugins.Select(static plugin => plugin.Name)),
       cancellationToken: cancellationToken
     );
@@ -565,12 +534,14 @@ public class LocalNode : IDisposable {
     CancellationToken cancellationToken
   )
   {
-    var plugin = Plugins.FirstOrDefault(plugin => string.Equals(encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal));
+    var plugin = Plugins.FirstOrDefault(
+      plugin => string.Equals(Encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal)
+    );
 
     if (plugin == null) {
       return SendResponseAsync(
         client,
-        encoding,
+        Encoding,
         new[] {
           "# Unknown service",
           ".",
@@ -581,7 +552,7 @@ public class LocalNode : IDisposable {
 
     return SendResponseAsync(
       client: client,
-      encoding: encoding,
+      encoding: Encoding,
       responseLines: plugin
         .FieldConfiguration
         .FetchFields()
@@ -597,12 +568,14 @@ public class LocalNode : IDisposable {
     CancellationToken cancellationToken
   )
   {
-    var plugin = Plugins.FirstOrDefault(plugin => string.Equals(encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal));
+    var plugin = Plugins.FirstOrDefault(
+      plugin => string.Equals(Encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal)
+    );
 
     if (plugin == null) {
       return SendResponseAsync(
         client,
-        encoding,
+        Encoding,
         new[] {
           "# Unknown service",
           ".",
@@ -655,7 +628,7 @@ public class LocalNode : IDisposable {
 
     return SendResponseAsync(
       client: client,
-      encoding: encoding,
+      encoding: Encoding,
       responseLines: responseLines,
       cancellationToken: cancellationToken
     );
