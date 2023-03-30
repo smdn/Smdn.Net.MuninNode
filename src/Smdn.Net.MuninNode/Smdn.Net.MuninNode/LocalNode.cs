@@ -182,11 +182,11 @@ public class LocalNode : IDisposable {
             SocketError.OperationAborted or // ECANCELED (125)
             SocketError.ConnectionReset // ECONNRESET (104)
         ) {
-          logger?.LogWarning($"socket exception ({(int)ex.SocketErrorCode} {ex.SocketErrorCode})");
+          logger?.LogInformation($"expected socket exception ({(int)ex.SocketErrorCode} {ex.SocketErrorCode})");
           break; // expected exception
         }
         catch (ObjectDisposedException) {
-          logger?.LogWarning("socket has been disposed");
+          logger?.LogInformation("socket has been disposed");
           break; // expected exception
         }
         catch (Exception ex) {
