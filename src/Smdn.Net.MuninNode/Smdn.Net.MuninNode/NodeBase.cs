@@ -207,6 +207,13 @@ public abstract class NodeBase : IDisposable {
           );
           break; // expected exception
         }
+        catch (OperationCanceledException) {
+          logger?.LogInformation(
+            "[{RemoteEndPoint}] operation canceled",
+            remoteEndPoint
+          );
+          throw;
+        }
         catch (Exception ex) {
           logger?.LogCritical(
             ex,
@@ -250,6 +257,13 @@ public abstract class NodeBase : IDisposable {
               cancellationToken: cancellationToken
             ).ConfigureAwait(false);
           }
+        }
+        catch (OperationCanceledException) {
+          logger?.LogInformation(
+            "[{RemoteEndPoint}] operation canceled",
+            remoteEndPoint
+          );
+          throw;
         }
         catch (Exception ex) {
           logger?.LogCritical(
