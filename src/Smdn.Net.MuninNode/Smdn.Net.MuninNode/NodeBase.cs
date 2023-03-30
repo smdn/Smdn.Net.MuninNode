@@ -112,22 +112,30 @@ public abstract class NodeBase : IDisposable {
 #endif
       .ConfigureAwait(false);
 
+    IPEndPoint? remoteEndPoint = null;
+
     try {
       cancellationToken.ThrowIfCancellationRequested();
 
-      if (client.RemoteEndPoint is not IPEndPoint remoteEndPoint) {
-        logger?.LogWarning($"cannot accept: {client.RemoteEndPoint?.AddressFamily}");
+      remoteEndPoint = client.RemoteEndPoint as IPEndPoint;
+
+      if (remoteEndPoint is null) {
+        logger?.LogWarning(
+          "cannot accept {RemoteEndPoint} ({RemoteEndPointAddressFamily})",
+          client.RemoteEndPoint?.ToString() ?? "(null)",
+          client.RemoteEndPoint?.AddressFamily
+        );
         return;
       }
 
       if (!IsClientAcceptable(remoteEndPoint)) {
-        logger?.LogWarning($"access refused: {client.RemoteEndPoint}");
+        logger?.LogWarning("access refused: {RemoteEndPoint}", remoteEndPoint);
         return;
       }
 
       cancellationToken.ThrowIfCancellationRequested();
 
-      logger?.LogInformation($"session started (master: {client.RemoteEndPoint})");
+      logger?.LogInformation("[{RemoteEndPoint}] session started", remoteEndPoint);
 
       await SendResponseAsync(
         client,
@@ -142,20 +150,21 @@ public abstract class NodeBase : IDisposable {
       var pipe = new Pipe();
 
       await Task.WhenAll(
-        FillAsync(client, pipe.Writer, cancellationToken),
-        ReadAsync(client, pipe.Reader, cancellationToken)
+        FillAsync(client, remoteEndPoint, pipe.Writer, cancellationToken),
+        ReadAsync(client, remoteEndPoint, pipe.Reader, cancellationToken)
       ).ConfigureAwait(false);
 
-      logger?.LogInformation("session ending");
+      logger?.LogInformation("[{RemoteEndPoint}] session ending", remoteEndPoint);
     }
     finally {
       client.Close();
 
-      logger?.LogInformation("connection closed");
+      logger?.LogInformation("[{RemoteEndPoint}] connection closed", remoteEndPoint);
     }
 
     async Task FillAsync(
       Socket socket,
+      IPEndPoint remoteEndPoint,
       PipeWriter writer,
       CancellationToken cancellationToken
     )
@@ -187,15 +196,27 @@ public abstract class NodeBase : IDisposable {
             SocketError.OperationAborted or // ECANCELED (125)
             SocketError.ConnectionReset // ECONNRESET (104)
         ) {
-          logger?.LogInformation($"expected socket exception ({(int)ex.SocketErrorCode} {ex.SocketErrorCode})");
+          logger?.LogInformation(
+            "[{RemoteEndPoint}] expected socket exception ({NumericSocketErrorCode} {SocketErrorCode})",
+            remoteEndPoint,
+            (int)ex.SocketErrorCode,
+            ex.SocketErrorCode
+          );
           break; // expected exception
         }
         catch (ObjectDisposedException) {
-          logger?.LogInformation("socket has been disposed");
+          logger?.LogInformation(
+            "[{RemoteEndPoint}] socket has been disposed",
+            remoteEndPoint
+          );
           break; // expected exception
         }
         catch (Exception ex) {
-          logger?.LogCritical(ex, "unexpected exception while receiving");
+          logger?.LogCritical(
+            ex,
+            "[{RemoteEndPoint}] unexpected exception while receiving",
+            remoteEndPoint
+          );
           break;
         }
 
@@ -212,6 +233,7 @@ public abstract class NodeBase : IDisposable {
 
     async Task ReadAsync(
       Socket socket,
+      IPEndPoint remoteEndPoint,
       PipeReader reader,
       CancellationToken cancellationToken
     )
@@ -234,9 +256,14 @@ public abstract class NodeBase : IDisposable {
           }
         }
         catch (Exception ex) {
+          logger?.LogCritical(
+            ex,
+            "[{RemoteEndPoint}] unexpected exception while processing command",
+            remoteEndPoint
+          );
+
           if (socket.Connected)
             socket.Close();
-          logger?.LogCritical(ex, "unexpected exception while processing command");
           break;
         }
 
