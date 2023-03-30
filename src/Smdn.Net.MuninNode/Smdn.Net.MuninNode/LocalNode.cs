@@ -44,7 +44,7 @@ public class LocalNode : IDisposable {
 
   private readonly Version nodeVersion;
   private readonly ILogger? logger;
-  private Socket server;
+  private Socket? server;
   private readonly Encoding encoding = Encoding.Default;
 
   public LocalNode(
@@ -79,18 +79,6 @@ public class LocalNode : IDisposable {
 
     this.nodeVersion = nodeVersion ?? defaultNodeVersion;
 
-    server = new Socket(
-#pragma warning disable SA1114
-#if ENABLE_IPv6
-      AddressFamily.InterNetworkV6,
-#else
-      AddressFamily.InterNetwork,
-#endif
-#pragma warning restore SA1114
-      SocketType.Stream,
-      ProtocolType.Tcp
-    );
-
     logger = serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<LocalNode>();
   }
 
@@ -114,7 +102,22 @@ public class LocalNode : IDisposable {
 
   public void Start()
   {
+    if (server is not null)
+      throw new InvalidOperationException("already started");
+
     logger?.LogInformation($"starting (end point: {LocalEndPoint})");
+
+    server = new Socket(
+#pragma warning disable SA1114
+#if ENABLE_IPv6
+      AddressFamily.InterNetworkV6,
+#else
+      AddressFamily.InterNetwork,
+#endif
+#pragma warning restore SA1114
+      SocketType.Stream,
+      ProtocolType.Tcp
+    );
 
     server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
     server.Bind(LocalEndPoint);
@@ -127,6 +130,9 @@ public class LocalNode : IDisposable {
     CancellationToken cancellationToken = default
   )
   {
+    if (server is null)
+      throw new InvalidOperationException("not started or already closed");
+
     logger?.LogInformation("accepting...");
 
     var client = await server
