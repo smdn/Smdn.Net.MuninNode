@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Threading;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 
 using Smdn.Net.MuninNode;
 using Smdn.Net.MuninPlugin;
@@ -42,13 +42,24 @@ services.AddLogging(
 using var localNode = new LocalNode(
   plugins: plugins,
   hostName: localNodeHostName,
-  portNumber: localNodePort,
-  timeout: TimeSpan.FromSeconds(10),
+  port: localNodePort,
   serviceProvider: services.BuildServiceProvider()
 );
 
+var cts = new CancellationTokenSource();
+
+Console.CancelKeyPress += (_, args) => {
+  cts.Cancel();
+  args.Cancel = true;
+};
+
 localNode.Start();
 
-for (;;) {
-  await localNode.AcceptClientAsync();
+try {
+  for (;;) {
+    await localNode.AcceptClientAsync(cts.Token);
+  }
+}
+catch (OperationCanceledException) {
+  Console.WriteLine("stopped");
 }
