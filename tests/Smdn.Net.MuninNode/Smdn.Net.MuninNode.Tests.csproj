@@ -13,4 +13,8 @@ SPDX-License-Identifier: MIT
     <TargetFrameworks Condition=" '$(EnableTargetFrameworkNetCoreApp)' == 'true' ">netcoreapp3.1;$(TargetFrameworks)</TargetFrameworks>
     <TargetFrameworks Condition=" '$(EnableTargetFrameworkNetFx)' == 'true' ">$(TargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Smdn.Fundamental.PortNumber" Version="3.*" />
+  </ItemGroup>
 </Project>
