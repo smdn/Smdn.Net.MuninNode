@@ -7,6 +7,25 @@ using System.Collections.Generic;
 namespace Smdn.Net.MuninPlugin;
 
 public abstract class PluginFieldConfiguration {
+  private sealed class NullPluginFieldConfiguration : PluginFieldConfiguration {
+    private static readonly PluginField NullField = new(
+      label: "null",
+      value: 0.0
+    );
+
+    public NullPluginFieldConfiguration()
+      : base(defaultGraphStyle: "AREA")
+    {
+    }
+
+    public override IEnumerable<PluginField> FetchFields()
+    {
+      yield return NullField;
+    }
+  }
+
+  public static PluginFieldConfiguration Null { get; } = new NullPluginFieldConfiguration();
+
   public string DefaultGraphStyle { get; }
   public Range? WarningValueRange { get; }
   public Range? CriticalValueRange { get; }
