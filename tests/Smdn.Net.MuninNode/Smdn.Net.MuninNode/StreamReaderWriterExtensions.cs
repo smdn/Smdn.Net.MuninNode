@@ -1,5 +1,12 @@
 // SPDX-FileCopyrightText: 2023 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
+#if NET6_0_OR_GREATER
+#define SYSTEM_THREADING_TASKS_TASK_WAITASYNC
+#endif
+
+#if !SYSTEM_THREADING_TASKS_TASK_WAITASYNC
+#error "System.Threading.Tasks.WaitAsync is unavailable."
+#endif
 
 using System;
 using System.IO;
