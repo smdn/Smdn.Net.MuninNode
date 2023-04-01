@@ -131,12 +131,37 @@ public abstract class NodeBase : IDisposable {
 
       logger?.LogInformation("[{RemoteEndPoint}] session started", remoteEndPoint);
 
-      await SendResponseAsync(
-        client,
-        Encoding,
-        $"# munin node at {HostName}",
-        cancellationToken
-      ).ConfigureAwait(false);
+      try {
+        await SendResponseAsync(
+          client,
+          Encoding,
+          $"# munin node at {HostName}",
+          cancellationToken
+        ).ConfigureAwait(false);
+      }
+      catch (SocketException ex) when (
+        ex.SocketErrorCode is
+          SocketError.Shutdown or // EPIPE (32)
+          SocketError.ConnectionAborted or // WSAECONNABORTED (10053)
+          SocketError.OperationAborted or // ECANCELED (125)
+          SocketError.ConnectionReset // ECONNRESET (104)
+      ) {
+        logger?.LogWarning(
+          "[{RemoteEndPoint}] client closed session while sending banner",
+          remoteEndPoint
+        );
+
+        return;
+      }
+      catch (Exception ex) {
+        logger?.LogCritical(
+          ex,
+          "[{RemoteEndPoint}] unexpected exception occured while sending banner",
+          remoteEndPoint
+        );
+
+        return;
+      }
 
       cancellationToken.ThrowIfCancellationRequested();
 
