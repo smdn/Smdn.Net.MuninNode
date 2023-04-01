@@ -73,8 +73,6 @@ public abstract class NodeBase : IDisposable {
     server = null!;
   }
 
-  public void Close() => (this as IDisposable).Dispose();
-
   protected abstract Socket CreateServerSocket();
 
   public void Start()
