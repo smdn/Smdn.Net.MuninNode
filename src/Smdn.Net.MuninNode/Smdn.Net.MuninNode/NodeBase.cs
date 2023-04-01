@@ -68,7 +68,6 @@ public abstract class NodeBase : IDisposable {
     if (!disposing)
       return;
 
-    server?.Disconnect(true);
     server?.Dispose();
     server = null!;
   }
