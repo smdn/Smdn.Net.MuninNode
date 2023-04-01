@@ -66,14 +66,22 @@ public class LocalNode : NodeBase {
     Socket? server = null;
 
     try {
+      var endPoint = new IPEndPoint(
+        address: Socket.OSSupportsIPv6 ? IPAddress.IPv6Any : IPAddress.Any,
+        port: LocalEndPoint.Port
+      );
+
       server = new Socket(
-        LocalEndPoint.AddressFamily,
+        endPoint.AddressFamily,
         SocketType.Stream,
         ProtocolType.Tcp
       );
 
+      if (endPoint.AddressFamily == AddressFamily.InterNetworkV6 && Socket.OSSupportsIPv4)
+        server.DualMode = true;
+
       server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-      server.Bind(LocalEndPoint);
+      server.Bind(endPoint);
       server.Listen(MaxClients);
 
       return server;
