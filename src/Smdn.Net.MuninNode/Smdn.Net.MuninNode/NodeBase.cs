@@ -6,6 +6,7 @@
 
 #if NET6_0_OR_GREATER
 #define SYSTEM_NET_SOCKETS_SOCKET_ACCEPTASYNC_CANCELLATIONTOKEN
+#define SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_BOOL_CANCELLATIONTOKEN
 #endif
 
 using System;
@@ -27,7 +28,7 @@ using Smdn.Text.Encodings;
 
 namespace Smdn.Net.MuninNode;
 
-public abstract class NodeBase : IDisposable {
+public abstract class NodeBase : IDisposable, IAsyncDisposable {
   private static readonly Version defaultNodeVersion = new(1, 0, 0, 0);
 
   public IReadOnlyList<Plugin> Plugins { get; }
@@ -63,11 +64,43 @@ public abstract class NodeBase : IDisposable {
     GC.SuppressFinalize(this);
   }
 
+  public async ValueTask DisposeAsync()
+  {
+    await DisposeAsyncCore().ConfigureAwait(false);
+
+    Dispose(disposing: false);
+    GC.SuppressFinalize(this);
+  }
+
+  protected virtual
+#if SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_BOOL_CANCELLATIONTOKEN
+  async
+#endif
+  ValueTask DisposeAsyncCore()
+  {
+#if SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_BOOL_CANCELLATIONTOKEN
+    if (server is not null)
+      await server.DisconnectAsync(reuseSocket: false);
+#else
+    server?.Disconnect(reuseSocket: false);
+#endif
+
+    server?.Close();
+    server?.Dispose();
+    server = null;
+
+#if !SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_BOOL_CANCELLATIONTOKEN
+    return default;
+#endif
+  }
+
   protected virtual void Dispose(bool disposing)
   {
     if (!disposing)
       return;
 
+    server?.Disconnect(reuseSocket: false);
+    server?.Close();
     server?.Dispose();
     server = null!;
   }

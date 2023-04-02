@@ -59,7 +59,7 @@ public class NodeBaseTests {
     Func<NodeBase, TcpClient, StreamWriter, StreamReader, CancellationToken, Task> action
   )
   {
-    using var node = CreateNode(plugins, out var endPoint);
+    await using var node = CreateNode(plugins, out var endPoint);
 
     node.Start();
 
@@ -90,18 +90,18 @@ public class NodeBaseTests {
   }
 
   [Test]
-  public void Start()
+  public async Task Start()
   {
-    using var node = CreateNode(out _);
+    await using var node = CreateNode(out _);
 
     Assert.DoesNotThrow(() => node.Start());
     Assert.Throws<InvalidOperationException>(() => node.Start(), "already started");
   }
 
   [Test]
-  public void AcceptClientAsync()
+  public async Task AcceptClientAsync()
   {
-    using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode(out var endPoint);
 
     node.Start();
 
@@ -120,9 +120,9 @@ public class NodeBaseTests {
   }
 
   [Test]
-  public void AcceptClientAsync_NodeNotStarted()
+  public async Task AcceptClientAsync_NodeNotStarted()
   {
-    using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode(out var endPoint);
 
     Assert.ThrowsAsync<InvalidOperationException>(async () => await node.AcceptClientAsync());
   }
@@ -130,9 +130,9 @@ public class NodeBaseTests {
   [TestCase(0)]
   [TestCase(1)]
   [TestCase(1000)]
-  public void AcceptClientAsync_CancellationRequested(int delayMilliseconds)
+  public async Task AcceptClientAsync_CancellationRequested(int delayMilliseconds)
   {
-    using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode(out var endPoint);
 
     node.Start();
 
@@ -144,9 +144,9 @@ public class NodeBaseTests {
   }
 
   [Test]
-  public void AcceptClientAsync_ClientDisconnected_BeforeSendingBanner()
+  public async Task AcceptClientAsync_ClientDisconnected_BeforeSendingBanner()
   {
-    using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode(out var endPoint);
 
     node.Start();
 
@@ -160,9 +160,9 @@ public class NodeBaseTests {
   }
 
   [Test]
-  public void AcceptClientAsync_ClientDisconnected_WhileAwaitingCommand()
+  public async Task AcceptClientAsync_ClientDisconnected_WhileAwaitingCommand()
   {
-    using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode(out var endPoint);
 
     node.Start();
 
@@ -179,9 +179,9 @@ public class NodeBaseTests {
 
   [TestCase("\r\n")]
   [TestCase("\n")]
-  public void ProcessCommandAsync_EndOfLine(string eol)
+  public async Task ProcessCommandAsync_EndOfLine(string eol)
   {
-    using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode(out var endPoint);
 
     node.Start();
 
