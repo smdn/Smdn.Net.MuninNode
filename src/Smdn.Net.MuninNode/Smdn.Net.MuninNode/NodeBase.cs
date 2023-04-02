@@ -78,12 +78,18 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 #endif
   ValueTask DisposeAsyncCore()
   {
+    try {
+      if (server is not null && server.Connected) {
 #if SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_BOOL_CANCELLATIONTOKEN
-    if (server is not null)
-      await server.DisconnectAsync(reuseSocket: false);
+        await server.DisconnectAsync(reuseSocket: false);
 #else
-    server?.Disconnect(reuseSocket: false);
+        server.Disconnect(reuseSocket: false);
 #endif
+      }
+    }
+    catch (SocketException) {
+      // swallow
+    }
 
     server?.Close();
     server?.Dispose();
@@ -99,7 +105,14 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     if (!disposing)
       return;
 
-    server?.Disconnect(reuseSocket: false);
+    try {
+      if (server is not null && server.Connected)
+        server.Disconnect(reuseSocket: false);
+    }
+    catch (SocketException) {
+      // swallow
+    }
+
     server?.Close();
     server?.Dispose();
     server = null!;
