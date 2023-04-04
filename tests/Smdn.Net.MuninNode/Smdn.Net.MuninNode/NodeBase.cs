@@ -68,7 +68,7 @@ public class NodeBaseTests {
     );
 
     var taskAccept = Task.Run(
-      async () => await node.AcceptClientAsync(),
+      async () => await node.AcceptSingleSessionAsync(),
       cts.Token
     );
 
@@ -99,13 +99,13 @@ public class NodeBaseTests {
   }
 
   [Test]
-  public async Task AcceptClientAsync()
+  public async Task AcceptSingleSessionAsync()
   {
     await using var node = CreateNode(out var endPoint);
 
     node.Start();
 
-    var taskAccept = Task.Run(async () => await node.AcceptClientAsync());
+    var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
     using var client = CreateClient(endPoint, out var writer, out var reader);
 
@@ -120,17 +120,17 @@ public class NodeBaseTests {
   }
 
   [Test]
-  public async Task AcceptClientAsync_NodeNotStarted()
+  public async Task AcceptSingleSessionAsync_NodeNotStarted()
   {
     await using var node = CreateNode(out var endPoint);
 
-    Assert.ThrowsAsync<InvalidOperationException>(async () => await node.AcceptClientAsync());
+    Assert.ThrowsAsync<InvalidOperationException>(async () => await node.AcceptSingleSessionAsync());
   }
 
   [TestCase(0)]
   [TestCase(1)]
   [TestCase(1000)]
-  public async Task AcceptClientAsync_CancellationRequested(int delayMilliseconds)
+  public async Task AcceptSingleSessionAsync_CancellationRequested(int delayMilliseconds)
   {
     await using var node = CreateNode(out var endPoint);
 
@@ -138,19 +138,19 @@ public class NodeBaseTests {
 
     using var cts = new CancellationTokenSource(millisecondsDelay: delayMilliseconds);
 
-    var ex = Assert.CatchAsync(async () => await node.AcceptClientAsync(cts.Token));
+    var ex = Assert.CatchAsync(async () => await node.AcceptSingleSessionAsync(cts.Token));
 
     Assert.That(ex, Is.InstanceOf<OperationCanceledException>().Or.InstanceOf<TaskCanceledException>());
   }
 
   [Test]
-  public async Task AcceptClientAsync_ClientDisconnected_BeforeSendingBanner()
+  public async Task AcceptSingleSessionAsync_ClientDisconnected_BeforeSendingBanner()
   {
     await using var node = CreateNode(out var endPoint);
 
     node.Start();
 
-    var taskAccept = Task.Run(async () => await node.AcceptClientAsync());
+    var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
     using var client = CreateClient(endPoint, out _, out _);
 
@@ -160,13 +160,13 @@ public class NodeBaseTests {
   }
 
   [Test]
-  public async Task AcceptClientAsync_ClientDisconnected_WhileAwaitingCommand()
+  public async Task AcceptSingleSessionAsync_ClientDisconnected_WhileAwaitingCommand()
   {
     await using var node = CreateNode(out var endPoint);
 
     node.Start();
 
-    var taskAccept = Task.Run(async () => await node.AcceptClientAsync());
+    var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
     using var client = CreateClient(endPoint, out _, out var reader);
 
@@ -209,7 +209,7 @@ public class NodeBaseTests {
 
   [TestCase(true)]
   [TestCase(false)]
-  public async Task AcceptClientAsync_INodeSessionCallback(bool setSessionCallbackNull)
+  public async Task AcceptSingleSessionAsync_INodeSessionCallback(bool setSessionCallbackNull)
   {
     var plugin = new PseudoPluginWithSessionCallback(setSessionCallbackNull);
     var isSessionCallbackNull = plugin.SessionCallback is null;
@@ -223,7 +223,7 @@ public class NodeBaseTests {
 
     node.Start();
 
-    var taskAccept = Task.Run(async () => await node.AcceptClientAsync());
+    var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
     Assert.AreEqual(0, plugin.StartedSessionIds.Count, nameof(plugin.StartedSessionIds));
     Assert.AreEqual(0, plugin.ClosedSessionIds.Count, nameof(plugin.ClosedSessionIds));
@@ -264,6 +264,42 @@ public class NodeBaseTests {
     }
   }
 
+  [TestCase(true)]
+  [TestCase(false)]
+  public async Task AcceptAsync(bool throwIfCancellationRequested)
+  {
+    await using var node = CreateNode(out var endPoint);
+
+    node.Start();
+
+    using var cts = new CancellationTokenSource();
+
+    var taskAccept = Task.Run(async () => await node.AcceptAsync(throwIfCancellationRequested, cts.Token));
+
+    using var client0 = CreateClient(endPoint, out var writer0, out var reader0);
+
+    reader0.ReadLine();
+    writer0.WriteLine(".");
+    writer0.Close();
+
+    Assert.IsFalse(taskAccept.Wait(TimeSpan.FromSeconds(1.0)), "task must not be completed");
+
+    using var client1 = CreateClient(endPoint, out var writer1, out var reader1);
+
+    reader1.ReadLine();
+    writer1.WriteLine(".");
+    writer1.Close();
+
+    Assert.IsFalse(taskAccept.Wait(TimeSpan.FromSeconds(1.0)), "task must not be completed");
+
+    cts.Cancel();
+
+    if (throwIfCancellationRequested)
+      Assert.ThrowsAsync<OperationCanceledException>(async () => await taskAccept);
+    else
+      Assert.DoesNotThrowAsync(async () => await taskAccept);
+  }
+
   [TestCase("\r\n")]
   [TestCase("\n")]
   public async Task ProcessCommandAsync_EndOfLine(string eol)
@@ -272,7 +308,7 @@ public class NodeBaseTests {
 
     node.Start();
 
-    var taskAccept = Task.Run(async () => await node.AcceptClientAsync());
+    var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
     using var client = CreateClient(endPoint, out var writer, out _);
 

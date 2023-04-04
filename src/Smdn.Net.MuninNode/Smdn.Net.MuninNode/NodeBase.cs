@@ -135,7 +135,50 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
   protected abstract bool IsClientAcceptable(IPEndPoint remoteEndPoint);
 
-  public async ValueTask AcceptClientAsync(
+  /// <summary>
+  /// Starts accepting multiple sessions.
+  /// The <see cref="ValueTask" /> this method returns will never complete unless the cancellation requested by the <paramref name="cancellationToken" />.
+  /// </summary>
+  /// <param name="throwIfCancellationRequested">
+  /// If <see langworkd="true" />, throws an <see cref="OperationCanceledException" /> on cancellation requested.
+  /// If <see langworkd="false" />, completes the task without throwing an <see cref="OperationCanceledException" />.
+  /// </param>
+  /// <param name="cancellationToken">
+  /// The <see cref="CancellationToken" /> to stop accepting sessions.
+  /// </param>
+  public async ValueTask AcceptAsync(
+    bool throwIfCancellationRequested,
+    CancellationToken cancellationToken
+  )
+  {
+    try {
+      for (; ;) {
+        if (cancellationToken.IsCancellationRequested) {
+          if (throwIfCancellationRequested)
+            cancellationToken.ThrowIfCancellationRequested();
+          else
+            return;
+        }
+
+        await AcceptSingleSessionAsync(cancellationToken);
+      }
+    }
+    catch (OperationCanceledException ex) {
+      if (throwIfCancellationRequested || ex.CancellationToken != cancellationToken)
+        throw;
+
+      return;
+    }
+  }
+
+  /// <summary>
+  /// Starts accepting single session.
+  /// The <see cref="ValueTask" /> this method returns will complete when the accepted session is closed or the cancellation requested by the <paramref name="cancellationToken" />.
+  /// </summary>
+  /// <param name="cancellationToken">
+  /// The <see cref="CancellationToken" /> to stop accepting sessions.
+  /// </param>
+  public async ValueTask AcceptSingleSessionAsync(
     CancellationToken cancellationToken = default
   )
   {
