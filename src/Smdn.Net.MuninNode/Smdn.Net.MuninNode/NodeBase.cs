@@ -16,6 +16,7 @@ using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,7 +32,7 @@ namespace Smdn.Net.MuninNode;
 public abstract class NodeBase : IDisposable, IAsyncDisposable {
   private static readonly Version defaultNodeVersion = new(1, 0, 0, 0);
 
-  public IReadOnlyList<Plugin> Plugins { get; }
+  public IReadOnlyCollection<IPlugin> Plugins { get; }
   public string HostName { get; }
 
   public virtual Version NodeVersion => defaultNodeVersion;
@@ -41,7 +42,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
   private Socket? server;
 
   public NodeBase(
-    IReadOnlyList<Plugin> plugins,
+    IReadOnlyCollection<IPlugin> plugins,
     string hostName,
     ILogger? logger
   )
@@ -172,9 +173,11 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
         return;
       }
 
+      var sessionId = GenerateSessionId(server.LocalEndPoint, remoteEndPoint);
+
       cancellationToken.ThrowIfCancellationRequested();
 
-      logger?.LogInformation("[{RemoteEndPoint}] session started", remoteEndPoint);
+      logger?.LogDebug("[{RemoteEndPoint}] sending banner", remoteEndPoint);
 
       try {
         await SendResponseAsync(
@@ -210,20 +213,60 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
       cancellationToken.ThrowIfCancellationRequested();
 
-      // https://docs.microsoft.com/ja-jp/dotnet/standard/io/pipelines
-      var pipe = new Pipe();
+      logger?.LogInformation("[{RemoteEndPoint}] session started; ID={SessionId}", remoteEndPoint, sessionId);
 
-      await Task.WhenAll(
-        FillAsync(client, remoteEndPoint, pipe.Writer, cancellationToken),
-        ReadAsync(client, remoteEndPoint, pipe.Reader, cancellationToken)
-      ).ConfigureAwait(false);
+      try {
+        foreach (var plugin in Plugins) {
+          if (plugin.SessionCallback is not null)
+            await plugin.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        }
 
-      logger?.LogInformation("[{RemoteEndPoint}] session ending", remoteEndPoint);
+        // https://docs.microsoft.com/ja-jp/dotnet/standard/io/pipelines
+        var pipe = new Pipe();
+
+        await Task.WhenAll(
+          FillAsync(client, remoteEndPoint, pipe.Writer, cancellationToken),
+          ReadAsync(client, remoteEndPoint, pipe.Reader, cancellationToken)
+        ).ConfigureAwait(false);
+
+        logger?.LogInformation("[{RemoteEndPoint}] session closed; ID={SessionId}", remoteEndPoint, sessionId);
+      }
+      finally {
+        foreach (var plugin in Plugins) {
+          if (plugin.SessionCallback is not null)
+            await plugin.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        }
+      }
     }
     finally {
       client.Close();
 
       logger?.LogInformation("[{RemoteEndPoint}] connection closed", remoteEndPoint);
+    }
+
+    static string GenerateSessionId(EndPoint? localEndPoint, IPEndPoint remoteEndPoint)
+    {
+#if SYSTEM_SECURITY_CRYPTOGRAPHY_SHA1_HASHSIZEINBYTES
+      const int SHA1HashSizeInBytes = SHA1.HashSizeInBytes;
+#else
+      const int SHA1HashSizeInBytes = 160/*bits*/ / 8;
+#endif
+
+      var sessionIdentity = Encoding.ASCII.GetBytes($"{localEndPoint}\n{remoteEndPoint}\n{DateTimeOffset.Now:o}");
+
+      Span<byte> sha1hash = stackalloc byte[SHA1HashSizeInBytes];
+
+#pragma warning disable CA5350
+#if SYSTEM_SECURITY_CRYPTOGRAPHY_SHA1_TRYHASHDATA
+      SHA1.TryHashData(sessionIdentity, sha1hash, out var bytesWrittenSHA1);
+#else
+      using var sha1 = SHA1.Create();
+
+      sha1.TryComputeHash(sessionIdentity, sha1hash, out var bytesWrittenSHA1);
+#endif
+#pragma warning restore CA5350
+
+      return Convert.ToBase64String(sha1hash);
     }
 
     async Task FillAsync(
@@ -634,7 +677,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     );
   }
 
-  private ValueTask ProcessCommandFetchAsync(
+  private async ValueTask ProcessCommandFetchAsync(
     Socket client,
     ReadOnlySequence<byte> arguments,
     CancellationToken cancellationToken
@@ -645,7 +688,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     );
 
     if (plugin == null) {
-      return SendResponseAsync(
+      await SendResponseAsync(
         client,
         Encoding,
         new[] {
@@ -653,20 +696,47 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
           ".",
         },
         cancellationToken
-      );
+      ).ConfigureAwait(false);
+
+      return;
     }
 
-    return SendResponseAsync(
+    var responseLines = new List<string>(capacity: plugin.DataSource.Fields.Count + 1);
+
+    foreach (var field in plugin.DataSource.Fields) {
+      var valueString = await field.GetFormattedValueStringAsync(
+        cancellationToken: cancellationToken
+      ).ConfigureAwait(false);
+
+      responseLines.Add($"{field.Name}.value {valueString}");
+    }
+
+    responseLines.Add(".");
+
+    await SendResponseAsync(
       client: client,
       encoding: Encoding,
-      responseLines: plugin
-        .FieldConfiguration
-        .FetchFields()
-        .Select(static f => $"{f.Name}.value {f.FormattedValueString}")
-        .Append("."),
+      responseLines: responseLines,
       cancellationToken: cancellationToken
-    );
+    ).ConfigureAwait(false);
   }
+
+  private static string? TranslateFieldDrawAttribute(PluginFieldGraphStyle style)
+    => style switch {
+      PluginFieldGraphStyle.Default => null,
+      PluginFieldGraphStyle.Area => "AREA",
+      PluginFieldGraphStyle.Stack => "STACK",
+      PluginFieldGraphStyle.AreaStack => "AREASTACK",
+      PluginFieldGraphStyle.Line => "LINE",
+      PluginFieldGraphStyle.LineWidth1 => "LINE1",
+      PluginFieldGraphStyle.LineWidth2 => "LINE2",
+      PluginFieldGraphStyle.LineWidth3 => "LINE3",
+      PluginFieldGraphStyle.LineStack => "LINESTACK",
+      PluginFieldGraphStyle.LineStackWidth1 => "LINE1STACK",
+      PluginFieldGraphStyle.LineStackWidth2 => "LINE2STACK",
+      PluginFieldGraphStyle.LineStackWidth3 => "LINE3STACK",
+      _ => throw new InvalidOperationException($"undefined draw attribute value: ({(int)style} {style})"),
+    };
 
   private ValueTask ProcessCommandConfigAsync(
     Socket client,
@@ -690,42 +760,44 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       );
     }
 
+    var graphAttrs = plugin.GraphAttributes;
+
     var responseLines = new List<string>() {
-      $"graph_title {plugin.GraphConfiguration.Title}",
-      $"graph_category {plugin.GraphConfiguration.Category}",
-      $"graph_args {plugin.GraphConfiguration.Arguments}",
-      $"graph_scale {(plugin.GraphConfiguration.Scale ? "yes" : "no")}",
-      $"graph_vlabel {plugin.GraphConfiguration.VerticalLabel}",
-      $"update_rate {(int)plugin.GraphConfiguration.UpdateRate.TotalSeconds}",
+      $"graph_title {graphAttrs.Title}",
+      $"graph_category {graphAttrs.Category}",
+      $"graph_args {graphAttrs.Arguments}",
+      $"graph_scale {(graphAttrs.Scale ? "yes" : "no")}",
+      $"graph_vlabel {graphAttrs.VerticalLabel}",
+      $"update_rate {(int)graphAttrs.UpdateRate.TotalSeconds}",
     };
 
-    if (plugin.GraphConfiguration.Width.HasValue)
-      responseLines.Add($"graph_width {plugin.GraphConfiguration.Width.Value}");
-    if (plugin.GraphConfiguration.Height.HasValue)
-      responseLines.Add($"graph_height {plugin.GraphConfiguration.Height.Value}");
+    if (graphAttrs.Width.HasValue)
+      responseLines.Add($"graph_width {graphAttrs.Width.Value}");
+    if (graphAttrs.Height.HasValue)
+      responseLines.Add($"graph_height {graphAttrs.Height.Value}");
 
-    foreach (var field in plugin.FieldConfiguration.FetchFields()) {
-      responseLines.Add($"{field.Name}.label {field.Label}");
+    foreach (var field in plugin.DataSource.Fields) {
+      var fieldAttrs = field.Attributes;
 
-      var draw = field.GraphStyle;
+      responseLines.Add($"{field.Name}.label {fieldAttrs.Label}");
 
-      if (string.IsNullOrEmpty(draw))
-        draw = plugin.FieldConfiguration.DefaultGraphStyle;
+      var draw = TranslateFieldDrawAttribute(fieldAttrs.GraphStyle);
 
-      if (!string.IsNullOrEmpty(draw))
+      if (draw is not null)
         responseLines.Add($"{field.Name}.draw {draw}");
 
-      // TODO: add support for "field.warning integer" and "field.warning integer:integer"
 #if false
-      if (plugin.FieldConfiguration.WarningValue.HasValue) {
-        var warningRange = plugin.FieldConfiguration.WarningValue.Value;
+      // TODO: add support for "field.warning integer" and "field.warning integer:integer"
+      if (fieldAttrs.WarningValueRange.HasValue) {
+        var warningRange = fieldAttrs.WarningValueRange.Value;
 
         responseLines.Add($"{field.Name}.warning {warningRange.Start}:{warningRange.End}");
       }
-      if (plugin.FieldConfiguration.CriticalValue.HasValue) {
-        var criticalRange = plugin.FieldConfiguration.CriticalValue.Value;
 
-        responseLines.Add($"{field.ID}.critical {criticalRange.Start}:{criticalRange.End}");
+      if (fieldAttrs.CriticalValueRange.HasValue) {
+        var criticalRange = fieldAttrs.CriticalValueRange.Value;
+
+        responseLines.Add($"{field.Name}.critical {criticalRange.Start}:{criticalRange.End}");
       }
 #endif
     }

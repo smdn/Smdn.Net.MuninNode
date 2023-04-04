@@ -2,18 +2,27 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Smdn.Net.MuninPlugin;
 
-public class Plugin {
+public class Plugin : IPlugin, IPluginDataSource, INodeSessionCallback {
   public string Name { get; }
-  public PluginGraphConfiguration GraphConfiguration { get; }
-  public PluginFieldConfiguration FieldConfiguration { get; }
+
+  public PluginGraphAttributes GraphAttributes { get; }
+  public IReadOnlyCollection<IPluginField> Fields { get; }
+
+  IPluginDataSource IPlugin.DataSource => this;
+  IReadOnlyCollection<IPluginField> IPluginDataSource.Fields => Fields;
+
+  INodeSessionCallback? IPlugin.SessionCallback => this;
 
   public Plugin(
     string name,
-    PluginGraphConfiguration graphConfiguration,
-    PluginFieldConfiguration fieldConfiguration
+    PluginGraphAttributes graphAttributes,
+    IReadOnlyCollection<IPluginField> fields
   )
   {
     if (name == null)
@@ -22,7 +31,19 @@ public class Plugin {
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(name));
 
     Name = name;
-    GraphConfiguration = graphConfiguration ?? throw new ArgumentNullException(nameof(graphConfiguration));
-    FieldConfiguration = fieldConfiguration ?? throw new ArgumentNullException(nameof(fieldConfiguration));
+    GraphAttributes = graphAttributes ?? throw new ArgumentNullException(nameof(graphAttributes));
+    Fields = fields ?? throw new ArgumentNullException(nameof(fields));
   }
+
+  ValueTask INodeSessionCallback.ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken)
+    => ReportSessionStartedAsync(sessionId, cancellationToken);
+
+  protected virtual ValueTask ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken)
+    => default; // do nothing in this class
+
+  ValueTask INodeSessionCallback.ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken)
+    => ReportSessionClosedAsync(sessionId, cancellationToken);
+
+  protected virtual ValueTask ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken)
+    => default; // do nothing in this class
 }

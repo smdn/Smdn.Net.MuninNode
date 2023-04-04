@@ -17,7 +17,7 @@ public class LocalNode : NodeBase {
   public IPEndPoint LocalEndPoint { get; }
 
   public LocalNode(
-    IReadOnlyList<Plugin> plugins,
+    IReadOnlyCollection<IPlugin> plugins,
     int port,
     IServiceProvider? serviceProvider = null
   )
@@ -31,7 +31,7 @@ public class LocalNode : NodeBase {
   }
 
   public LocalNode(
-    IReadOnlyList<Plugin> plugins,
+    IReadOnlyCollection<IPlugin> plugins,
     string hostName,
     int port,
     IServiceProvider? serviceProvider = null
