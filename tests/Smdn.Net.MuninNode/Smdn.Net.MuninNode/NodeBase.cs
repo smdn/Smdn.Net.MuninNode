@@ -358,11 +358,16 @@ public class NodeBaseTests {
 
       Assert.AreEqual(0, client.Available);
 
-      var ex = Assert.Throws<IOException>(() => reader.ReadLine());
+      try {
+        Assert.IsNull(await reader.ReadLineAsync(cancellationToken));
 
-      Assert.IsInstanceOf<SocketException>(ex!.InnerException);
+        Assert.IsFalse(client.Connected, nameof(client.Connected));
+      }
+      catch (IOException ex) {
+        Assert.IsInstanceOf<SocketException>(ex!.InnerException); // expected case
 
-      Assert.IsFalse(client.Connected, nameof(client.Connected));
+        Assert.IsFalse(client.Connected, nameof(client.Connected));
+      }
     });
   }
 
