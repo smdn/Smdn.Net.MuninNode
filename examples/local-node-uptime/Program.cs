@@ -10,23 +10,24 @@ using Microsoft.Extensions.Logging;
 using Smdn.Net.MuninNode;
 using Smdn.Net.MuninPlugin;
 
-const string localNodeHostName = "test.munin-node.localhost";
-const int localNodePort = 14949;
+const string nodeHostName = "test.munin-node.localhost";
+const int nodePort = 14949;
+
+var startAt = DateTime.Now;
 
 var plugins = new[] {
-  new Plugin(
+  PluginFactory.CreatePlugin(
     name: "uptime",
-    graphConfiguration: new PluginGraphConfiguration(
+    fieldLabel: nodeHostName,
+    fieldGraphStyle: PluginFieldGraphStyle.Area,
+    fetchFieldValue: () => (DateTime.Now - startAt).TotalMinutes,
+    graphAttributes: new PluginGraphAttributes(
       category: "system",
       title: "Uptime of local-node",
       verticalLabel: "Uptime [minutes]",
       scale: false,
       updateRate: TimeSpan.FromMinutes(1.0),
       arguments: "--base 1000 --lower-limit 0"
-    ),
-    fieldConfiguration: new UptimeFieldConfiguration(
-      label: localNodeHostName,
-      startAt: DateTime.Now
     )
   ),
 };
@@ -39,10 +40,10 @@ services.AddLogging(
     .AddFilter(static level => LogLevel.Trace <= level)
 );
 
-using var localNode = new LocalNode(
+await using var node = new LocalNode(
   plugins: plugins,
-  hostName: localNodeHostName,
-  port: localNodePort,
+  hostName: nodeHostName,
+  port: nodePort,
   serviceProvider: services.BuildServiceProvider()
 );
 
@@ -53,13 +54,8 @@ Console.CancelKeyPress += (_, args) => {
   args.Cancel = true;
 };
 
-localNode.Start();
+node.Start();
 
-try {
-  for (;;) {
-    await localNode.AcceptClientAsync(cts.Token);
-  }
-}
-catch (OperationCanceledException) {
-  Console.WriteLine("stopped");
-}
+await node.AcceptAsync(throwIfCancellationRequested: false, cts.Token);
+
+Console.WriteLine("stopped");
