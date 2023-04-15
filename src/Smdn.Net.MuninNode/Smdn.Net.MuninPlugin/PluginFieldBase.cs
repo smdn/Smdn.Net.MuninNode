@@ -12,16 +12,22 @@ public abstract class PluginFieldBase : IPluginField {
   public string Name { get; }
   public string Label { get; }
   public PluginFieldGraphStyle GraphStyle { get; }
+  public PluginFieldNormalValueRange NormalRangeForWarning { get; }
+  public PluginFieldNormalValueRange NormalRangeForCritical { get; }
 
   PluginFieldAttributes IPluginField.Attributes => new(
     label: Label,
-    graphStyle: GraphStyle
+    graphStyle: GraphStyle,
+    normalRangeForWarning: NormalRangeForWarning,
+    normalRangeForCritical: NormalRangeForCritical
   );
 
   protected PluginFieldBase(
     string label,
     string? name,
-    PluginFieldGraphStyle graphStyle = default
+    PluginFieldGraphStyle graphStyle = default,
+    PluginFieldNormalValueRange normalRangeForWarning = default,
+    PluginFieldNormalValueRange normalRangeForCritical = default
   )
   {
     if (label is null)
@@ -41,6 +47,8 @@ public abstract class PluginFieldBase : IPluginField {
     Label = label;
     Name = name;
     GraphStyle = graphStyle;
+    NormalRangeForWarning = normalRangeForWarning;
+    NormalRangeForCritical = normalRangeForCritical;
   }
 
   /// <summary>Gets a value for plugin field.</summary>

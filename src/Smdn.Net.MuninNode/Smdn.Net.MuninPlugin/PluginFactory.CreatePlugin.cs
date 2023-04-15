@@ -39,6 +39,8 @@ partial class PluginFactory {
         label: fieldLabel,
         name: null,
         graphStyle: fieldGraphStyle,
+        normalRangeForWarning: PluginFieldNormalValueRange.None,
+        normalRangeForCritical: PluginFieldNormalValueRange.None,
         fetchValue: fetchFieldValue
       )
     );

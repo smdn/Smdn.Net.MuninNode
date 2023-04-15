@@ -824,20 +824,21 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       if (draw is not null)
         responseLines.Add($"{field.Name}.draw {draw}");
 
-#if false
-      // TODO: add support for "field.warning integer" and "field.warning integer:integer"
-      if (fieldAttrs.WarningValueRange.HasValue) {
-        var warningRange = fieldAttrs.WarningValueRange.Value;
+      if (fieldAttrs.NormalRangeForWarning.HasValue)
+        AddFieldValueRange("warning", fieldAttrs.NormalRangeForWarning);
 
-        responseLines.Add($"{field.Name}.warning {warningRange.Start}:{warningRange.End}");
+      if (fieldAttrs.NormalRangeForCritical.HasValue)
+        AddFieldValueRange("critical", fieldAttrs.NormalRangeForCritical);
+
+      void AddFieldValueRange(string attr, PluginFieldNormalValueRange range)
+      {
+        if (range.Min.HasValue && range.Max.HasValue)
+          responseLines.Add($"{field.Name}.{attr} {range.Min.Value}:{range.Max.Value}");
+        else if (range.Min.HasValue)
+          responseLines.Add($"{field.Name}.{attr} {range.Min.Value}:");
+        else if (range.Max.HasValue)
+          responseLines.Add($"{field.Name}.{attr} :{range.Max.Value}");
       }
-
-      if (fieldAttrs.CriticalValueRange.HasValue) {
-        var criticalRange = fieldAttrs.CriticalValueRange.Value;
-
-        responseLines.Add($"{field.Name}.critical {criticalRange.Start}:{criticalRange.End}");
-      }
-#endif
     }
 
     responseLines.Add(".");

@@ -9,14 +9,27 @@ public readonly struct PluginFieldAttributes {
   public string Label { get; }
   public PluginFieldGraphStyle GraphStyle { get; }
 
-#if false
-  Range? WarningValueRange { get; }
-  Range? CriticalValueRange { get; }
-#endif
+  public PluginFieldNormalValueRange NormalRangeForWarning { get; }
+  public PluginFieldNormalValueRange NormalRangeForCritical { get; }
 
   public PluginFieldAttributes(
     string label,
     PluginFieldGraphStyle graphStyle = PluginFieldGraphStyle.Default
+  )
+    : this(
+      label: label,
+      graphStyle: graphStyle,
+      normalRangeForWarning: default,
+      normalRangeForCritical: default
+    )
+  {
+  }
+
+  public PluginFieldAttributes(
+    string label,
+    PluginFieldGraphStyle graphStyle = PluginFieldGraphStyle.Default,
+    PluginFieldNormalValueRange normalRangeForWarning = default,
+    PluginFieldNormalValueRange normalRangeForCritical = default
   )
   {
     if (label is null)
@@ -26,5 +39,7 @@ public readonly struct PluginFieldAttributes {
 
     Label = label;
     GraphStyle = graphStyle;
+    NormalRangeForWarning = normalRangeForWarning;
+    NormalRangeForCritical = normalRangeForCritical;
   }
 }

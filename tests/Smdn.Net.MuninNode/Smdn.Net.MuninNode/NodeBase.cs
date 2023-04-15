@@ -735,4 +735,102 @@ public class NodeBaseTests {
       Assert.IsInstanceOf(expectedExceptionType, ex);
     }
   }
+
+  private static System.Collections.IEnumerable YieldTestCases_ProcessCommandAsync_ConfigCommand_WarningAndCriticalField()
+  {
+    foreach (var (range, expectedAttributeValue) in new[] {
+      (PluginFieldNormalValueRange.CreateMin(0.0), "0:"),
+      (PluginFieldNormalValueRange.CreateMin(1.0), "1:"),
+      (PluginFieldNormalValueRange.CreateMax(0.0), ":0"),
+      (PluginFieldNormalValueRange.CreateMax(-1.0), ":-1"),
+      (PluginFieldNormalValueRange.CreateRange(-1.0, 1.0), "-1:1"),
+      (PluginFieldNormalValueRange.None, null),
+    }) {
+      yield return new object?[] {
+        PluginFactory.CreateField(
+          label: "field",
+          graphStyle: default,
+          normalRangeForWarning: range,
+          normalRangeForCritical: default,
+          fetchValue: static () => 0.0
+        ),
+        expectedAttributeValue is null ? null : "field.warning " + expectedAttributeValue,
+        null
+      };
+
+      yield return new object?[] {
+        PluginFactory.CreateField(
+          label: "field",
+          graphStyle: default,
+          normalRangeForWarning: default,
+          normalRangeForCritical: range,
+          fetchValue: static () => 0.0
+        ),
+        null,
+        expectedAttributeValue is null ? null : "field.critical " + expectedAttributeValue,
+      };
+    }
+  }
+
+  [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand_WarningAndCriticalField))]
+  public async Task ProcessCommandAsync_ConfigCommand_WarningAndCriticalField(
+    IPluginField field,
+    string? expectedFieldWarningAttributeLine,
+    string? expectedFieldCriticalAttributeLine
+  )
+  {
+    var graphAttrs = new PluginGraphAttributes(
+      title: "title",
+      category: "test",
+      verticalLabel: "test",
+      scale: false,
+      arguments: "--args",
+      updateRate: TimeSpan.FromMinutes(1)
+    );
+
+    var plugins = new[] {
+      PluginFactory.CreatePlugin(
+        "plugin",
+        graphAttrs,
+        new[] { field }
+      ),
+    };
+
+    await StartSession(
+      plugins: plugins,
+      action: async (node, client, writer, reader, cancellationToken) => {
+        await writer.WriteLineAsync("config plugin", cancellationToken);
+        await writer.FlushAsync(cancellationToken);
+
+        var lines = new List<string>();
+
+        try {
+          for (; ;) {
+            var line = await reader.ReadLineAsync(cancellationToken);
+
+            if (line is null)
+              break;
+
+            lines.Add(line);
+
+            if (line == ".")
+              break;
+          }
+        }
+        catch (IOException ex) when (ex.InnerException is SocketException) {
+          // ignore
+        }
+
+        if (expectedFieldWarningAttributeLine is null)
+          CollectionAssert.DoesNotContain(lines, expectedFieldWarningAttributeLine);
+        else
+          CollectionAssert.Contains(lines, expectedFieldWarningAttributeLine);
+
+        if (expectedFieldCriticalAttributeLine is null)
+          CollectionAssert.DoesNotContain(lines, expectedFieldCriticalAttributeLine);
+        else
+          CollectionAssert.Contains(lines, expectedFieldCriticalAttributeLine);
+      }
+    );
+  }
 }
