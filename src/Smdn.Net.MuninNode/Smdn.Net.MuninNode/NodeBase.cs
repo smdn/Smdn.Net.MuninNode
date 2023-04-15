@@ -4,11 +4,6 @@
 // TODO: use LoggerMessage.Define
 #pragma warning disable CA1848 // For improved performance, use the LoggerMessage delegates instead of calling 'LoggerExtensions.LogInformation(ILogger, string?, params object?[])'
 
-#if NET6_0_OR_GREATER
-#define SYSTEM_NET_SOCKETS_SOCKET_ACCEPTASYNC_CANCELLATIONTOKEN
-#define SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_BOOL_CANCELLATIONTOKEN
-#endif
-
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -74,14 +69,14 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
   }
 
   protected virtual
-#if SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_BOOL_CANCELLATIONTOKEN
+#if SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_REUSESOCKET_CANCELLATIONTOKEN
   async
 #endif
   ValueTask DisposeAsyncCore()
   {
     try {
       if (server is not null && server.Connected) {
-#if SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_BOOL_CANCELLATIONTOKEN
+#if SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_REUSESOCKET_CANCELLATIONTOKEN
         await server.DisconnectAsync(reuseSocket: false);
 #else
         server.Disconnect(reuseSocket: false);
@@ -96,7 +91,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     server?.Dispose();
     server = null;
 
-#if !SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_BOOL_CANCELLATIONTOKEN
+#if !SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_REUSESOCKET_CANCELLATIONTOKEN
     return default;
 #endif
   }
