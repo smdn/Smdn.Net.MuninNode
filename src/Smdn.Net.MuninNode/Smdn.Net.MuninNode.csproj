@@ -20,7 +20,11 @@ SPDX-License-Identifier: MIT
 
   <PropertyGroup Label="assembly attributes">
     <Description>
-<![CDATA[Smdn.Net.MuninNode is a .NET implementation of Munin-Node and Munin-Plugin.
+<![CDATA[A .NET implementation of [Munin-Node](http://guide.munin-monitoring.org/en/latest/node/index.html) and [Munin-Plugin](http://guide.munin-monitoring.org/en/latest/plugin/index.html).
+
+This library provides Munin-Node implementation for .NET, which enables to you to create custom Munin-Node using the .NET languages and libraries.
+
+This library also provides abstraction APIs for implementing Munin-Plugin. By using Munin-Plugin APIs in combination with the Munin-Node implementation, you can implement the function of collecting various kind of telemetry data using Munin, with .NET.
 ]]>
     </Description>
     <CopyrightYear>2021</CopyrightYear>
