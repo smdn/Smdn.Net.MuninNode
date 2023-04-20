@@ -3,6 +3,10 @@
 
 namespace Smdn.Net.MuninPlugin;
 
+/// <summary>
+/// Represents the style of how the field should be drawn on the graph.
+/// </summary>
+/// <seealso href="http://guide.munin-monitoring.org/en/latest/reference/plugin.html#fieldname-draw">Plugin reference - Field name attributes - {fieldname}.draw</seealso>
 public enum PluginFieldGraphStyle {
   Default = default,
 

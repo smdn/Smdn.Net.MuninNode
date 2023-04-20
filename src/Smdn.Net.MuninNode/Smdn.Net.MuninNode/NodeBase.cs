@@ -24,6 +24,10 @@ using Smdn.Text.Encodings;
 
 namespace Smdn.Net.MuninNode;
 
+/// <summary>
+/// Provides an extensible base class with basic Munin-Node functionality.
+/// </summary>
+/// <seealso href="http://guide.munin-monitoring.org/en/latest/node/index.html">The Munin node</seealso>
 public abstract class NodeBase : IDisposable, IAsyncDisposable {
   private static readonly Version defaultNodeVersion = new(1, 0, 0, 0);
 
