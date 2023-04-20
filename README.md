@@ -62,5 +62,12 @@ quit                                  <-- type 'quit' to close connection
 Connection closed by foreign host.
 ```
 
+# For contributers
+Contributions are appreciated!
+
+If there's a feature you would like to add or a bug you would like to fix, please read [Contribution guidelines](./CONTRIBUTING.md) and create an Issue or Pull Request.
+
+IssueやPull Requestを送る際は、[Contribution guidelines](./CONTRIBUTING.md)をご覧頂ください。　可能なら英語が望ましいですが、日本語で構いません。　
+
 # PseudoMuninNode
 [PseudoMuninNode](https://github.com/smdn/PseudoMuninNode), the C++ implementation for ESP32 (Arduino IDE) is also available.
