@@ -14,10 +14,13 @@ public class Plugin : IPlugin, IPluginDataSource, INodeSessionCallback {
   public PluginGraphAttributes GraphAttributes { get; }
   public IReadOnlyCollection<IPluginField> Fields { get; }
 
+#pragma warning disable CA1033
   IPluginDataSource IPlugin.DataSource => this;
+
   IReadOnlyCollection<IPluginField> IPluginDataSource.Fields => Fields;
 
   INodeSessionCallback? IPlugin.SessionCallback => this;
+#pragma warning restore CA1033
 
   public Plugin(
     string name,

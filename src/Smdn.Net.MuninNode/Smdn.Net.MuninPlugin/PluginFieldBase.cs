@@ -15,12 +15,14 @@ public abstract class PluginFieldBase : IPluginField {
   public PluginFieldNormalValueRange NormalRangeForWarning { get; }
   public PluginFieldNormalValueRange NormalRangeForCritical { get; }
 
+#pragma warning disable CA1033
   PluginFieldAttributes IPluginField.Attributes => new(
     label: Label,
     graphStyle: GraphStyle,
     normalRangeForWarning: NormalRangeForWarning,
     normalRangeForCritical: NormalRangeForCritical
   );
+#pragma warning restore CA1033
 
   protected PluginFieldBase(
     string label,
@@ -55,6 +57,7 @@ public abstract class PluginFieldBase : IPluginField {
   /// <remarks>Reports 'UNKNOWN' as a plugin field value if the return value is <see langword="null"/>.</remarks>
   protected abstract ValueTask<double?> FetchValueAsync(CancellationToken cancellationToken);
 
+#pragma warning disable CA1033
   async ValueTask<string> IPluginField.GetFormattedValueStringAsync(CancellationToken cancellationToken)
   {
     const string unknownValueString = "U";
@@ -63,6 +66,7 @@ public abstract class PluginFieldBase : IPluginField {
 
     return value?.ToString(provider: null) ?? unknownValueString; // TODO: format specifier
   }
+#pragma warning restore CA1033
 
   // http://guide.munin-monitoring.org/en/latest/reference/plugin.html#field-name-attributes
   // Field name attributes
