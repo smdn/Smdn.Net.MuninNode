@@ -243,6 +243,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
         return;
       }
+#pragma warning disable CA1031
       catch (Exception ex) {
         logger?.LogCritical(
           ex,
@@ -252,6 +253,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
         return;
       }
+#pragma warning restore CA1031
 
       cancellationToken.ThrowIfCancellationRequested();
 
@@ -367,6 +369,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
           );
           throw;
         }
+#pragma warning disable CA1031
         catch (Exception ex) {
           logger?.LogCritical(
             ex,
@@ -375,6 +378,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
           );
           break;
         }
+#pragma warning restore CA1031
 
         var result = await writer.FlushAsync(
           cancellationToken: cancellationToken
@@ -418,6 +422,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
           );
           throw;
         }
+#pragma warning disable CA1031
         catch (Exception ex) {
           logger?.LogCritical(
             ex,
@@ -429,6 +434,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
             socket.Close();
           break;
         }
+#pragma warning restore CA1031
 
         reader.AdvanceTo(buffer.Start, buffer.End);
 
