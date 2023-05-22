@@ -40,7 +40,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
   private readonly ILogger? logger;
   private Socket? server;
 
-  public NodeBase(
+  protected NodeBase(
     IReadOnlyCollection<IPlugin> plugins,
     string hostName,
     ILogger? logger
