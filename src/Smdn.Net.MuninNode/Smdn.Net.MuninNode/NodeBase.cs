@@ -81,7 +81,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     try {
       if (server is not null && server.Connected) {
 #if SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_REUSESOCKET_CANCELLATIONTOKEN
-        await server.DisconnectAsync(reuseSocket: false);
+        await server.DisconnectAsync(reuseSocket: false).ConfigureAwait(false);
 #else
         server.Disconnect(reuseSocket: false);
 #endif
@@ -159,7 +159,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
             return;
         }
 
-        await AcceptSingleSessionAsync(cancellationToken);
+        await AcceptSingleSessionAsync(cancellationToken).ConfigureAwait(false);
       }
     }
     catch (OperationCanceledException ex) {
