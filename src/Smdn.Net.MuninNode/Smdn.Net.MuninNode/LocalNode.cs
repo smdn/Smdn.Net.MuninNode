@@ -116,5 +116,7 @@ public class LocalNode : NodeBase {
   }
 
   protected override bool IsClientAcceptable(IPEndPoint remoteEndPoint)
-    => IPAddress.IsLoopback(remoteEndPoint.Address);
+    => IPAddress.IsLoopback(
+      (remoteEndPoint ?? throw new ArgumentNullException(nameof(remoteEndPoint))).Address
+    );
 }
