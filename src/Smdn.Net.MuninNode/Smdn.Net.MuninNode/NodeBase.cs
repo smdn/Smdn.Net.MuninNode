@@ -269,8 +269,8 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
         var pipe = new Pipe();
 
         await Task.WhenAll(
-          FillAsync(client, remoteEndPoint, pipe.Writer, cancellationToken),
-          ReadAsync(client, remoteEndPoint, pipe.Reader, cancellationToken)
+          ReceiveCommandAsync(client, remoteEndPoint, pipe.Writer, cancellationToken),
+          ProcessCommandAsync(client, remoteEndPoint, pipe.Reader, cancellationToken)
         ).ConfigureAwait(false);
 
         logger?.LogInformation("[{RemoteEndPoint}] session closed; ID={SessionId}", remoteEndPoint, sessionId);
@@ -287,160 +287,160 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
       logger?.LogInformation("[{RemoteEndPoint}] connection closed", remoteEndPoint);
     }
+  }
 
-    static string GenerateSessionId(EndPoint? localEndPoint, IPEndPoint remoteEndPoint)
-    {
+  private static string GenerateSessionId(EndPoint? localEndPoint, IPEndPoint remoteEndPoint)
+  {
 #if SYSTEM_SECURITY_CRYPTOGRAPHY_SHA1_HASHSIZEINBYTES
-      const int SHA1HashSizeInBytes = SHA1.HashSizeInBytes;
+    const int SHA1HashSizeInBytes = SHA1.HashSizeInBytes;
 #else
-      const int SHA1HashSizeInBytes = 160/*bits*/ / 8;
+    const int SHA1HashSizeInBytes = 160/*bits*/ / 8;
 #endif
 
-      var sessionIdentity = Encoding.ASCII.GetBytes($"{localEndPoint}\n{remoteEndPoint}\n{DateTimeOffset.Now:o}");
+    var sessionIdentity = Encoding.ASCII.GetBytes($"{localEndPoint}\n{remoteEndPoint}\n{DateTimeOffset.Now:o}");
 
-      Span<byte> sha1hash = stackalloc byte[SHA1HashSizeInBytes];
+    Span<byte> sha1hash = stackalloc byte[SHA1HashSizeInBytes];
 
 #pragma warning disable CA5350
 #if SYSTEM_SECURITY_CRYPTOGRAPHY_SHA1_TRYHASHDATA
-      SHA1.TryHashData(sessionIdentity, sha1hash, out var bytesWrittenSHA1);
+    SHA1.TryHashData(sessionIdentity, sha1hash, out var bytesWrittenSHA1);
 #else
-      using var sha1 = SHA1.Create();
+    using var sha1 = SHA1.Create();
 
-      sha1.TryComputeHash(sessionIdentity, sha1hash, out var bytesWrittenSHA1);
+    sha1.TryComputeHash(sessionIdentity, sha1hash, out var bytesWrittenSHA1);
 #endif
 #pragma warning restore CA5350
 
-      return Convert.ToBase64String(sha1hash);
+    return Convert.ToBase64String(sha1hash);
+  }
+
+  private async Task ReceiveCommandAsync(
+    Socket socket,
+    IPEndPoint remoteEndPoint,
+    PipeWriter writer,
+    CancellationToken cancellationToken
+  )
+  {
+    const int minimumBufferSize = 256;
+
+    for (; ; ) {
+      cancellationToken.ThrowIfCancellationRequested();
+
+      var memory = writer.GetMemory(minimumBufferSize);
+
+      try {
+        if (!socket.Connected)
+          break;
+
+        var bytesRead = await socket.ReceiveAsync(
+          buffer: memory,
+          socketFlags: SocketFlags.None,
+          cancellationToken: cancellationToken
+        ).ConfigureAwait(false);
+
+        if (bytesRead == 0)
+          break;
+
+        writer.Advance(bytesRead);
+      }
+      catch (SocketException ex) when (
+        ex.SocketErrorCode is
+          SocketError.OperationAborted or // ECANCELED (125)
+          SocketError.ConnectionReset // ECONNRESET (104)
+      ) {
+        logger?.LogInformation(
+          "[{RemoteEndPoint}] expected socket exception ({NumericSocketErrorCode} {SocketErrorCode})",
+          remoteEndPoint,
+          (int)ex.SocketErrorCode,
+          ex.SocketErrorCode
+        );
+        break; // expected exception
+      }
+      catch (ObjectDisposedException) {
+        logger?.LogInformation(
+          "[{RemoteEndPoint}] socket has been disposed",
+          remoteEndPoint
+        );
+        break; // expected exception
+      }
+      catch (OperationCanceledException) {
+        logger?.LogInformation(
+          "[{RemoteEndPoint}] operation canceled",
+          remoteEndPoint
+        );
+        throw;
+      }
+#pragma warning disable CA1031
+      catch (Exception ex) {
+        logger?.LogCritical(
+          ex,
+          "[{RemoteEndPoint}] unexpected exception while receiving",
+          remoteEndPoint
+        );
+        break;
+      }
+#pragma warning restore CA1031
+
+      var result = await writer.FlushAsync(
+        cancellationToken: cancellationToken
+      ).ConfigureAwait(false);
+
+      if (result.IsCompleted)
+        break;
     }
 
-    async Task FillAsync(
-      Socket socket,
-      IPEndPoint remoteEndPoint,
-      PipeWriter writer,
-      CancellationToken cancellationToken
-    )
-    {
-      const int minimumBufferSize = 256;
+    await writer.CompleteAsync().ConfigureAwait(false);
+  }
 
-      for (; ; ) {
-        cancellationToken.ThrowIfCancellationRequested();
+  private async Task ProcessCommandAsync(
+    Socket socket,
+    IPEndPoint remoteEndPoint,
+    PipeReader reader,
+    CancellationToken cancellationToken
+  )
+  {
+    for (; ; ) {
+      cancellationToken.ThrowIfCancellationRequested();
 
-        var memory = writer.GetMemory(minimumBufferSize);
+      var result = await reader.ReadAsync(
+        cancellationToken: cancellationToken
+      ).ConfigureAwait(false);
+      var buffer = result.Buffer;
 
-        try {
-          if (!socket.Connected)
-            break;
-
-          var bytesRead = await socket.ReceiveAsync(
-            buffer: memory,
-            socketFlags: SocketFlags.None,
+      try {
+        while (TryReadLine(ref buffer, out var line)) {
+          await RespondToCommandAsync(
+            client: socket,
+            commandLine: line,
             cancellationToken: cancellationToken
           ).ConfigureAwait(false);
-
-          if (bytesRead == 0)
-            break;
-
-          writer.Advance(bytesRead);
         }
-        catch (SocketException ex) when (
-          ex.SocketErrorCode is
-            SocketError.OperationAborted or // ECANCELED (125)
-            SocketError.ConnectionReset // ECONNRESET (104)
-        ) {
-          logger?.LogInformation(
-            "[{RemoteEndPoint}] expected socket exception ({NumericSocketErrorCode} {SocketErrorCode})",
-            remoteEndPoint,
-            (int)ex.SocketErrorCode,
-            ex.SocketErrorCode
-          );
-          break; // expected exception
-        }
-        catch (ObjectDisposedException) {
-          logger?.LogInformation(
-            "[{RemoteEndPoint}] socket has been disposed",
-            remoteEndPoint
-          );
-          break; // expected exception
-        }
-        catch (OperationCanceledException) {
-          logger?.LogInformation(
-            "[{RemoteEndPoint}] operation canceled",
-            remoteEndPoint
-          );
-          throw;
-        }
+      }
+      catch (OperationCanceledException) {
+        logger?.LogInformation(
+          "[{RemoteEndPoint}] operation canceled",
+          remoteEndPoint
+        );
+        throw;
+      }
 #pragma warning disable CA1031
-        catch (Exception ex) {
-          logger?.LogCritical(
-            ex,
-            "[{RemoteEndPoint}] unexpected exception while receiving",
-            remoteEndPoint
-          );
-          break;
-        }
+      catch (Exception ex) {
+        logger?.LogCritical(
+          ex,
+          "[{RemoteEndPoint}] unexpected exception while processing command",
+          remoteEndPoint
+        );
+
+        if (socket.Connected)
+          socket.Close();
+        break;
+      }
 #pragma warning restore CA1031
 
-        var result = await writer.FlushAsync(
-          cancellationToken: cancellationToken
-        ).ConfigureAwait(false);
+      reader.AdvanceTo(buffer.Start, buffer.End);
 
-        if (result.IsCompleted)
-          break;
-      }
-
-      await writer.CompleteAsync().ConfigureAwait(false);
-    }
-
-    async Task ReadAsync(
-      Socket socket,
-      IPEndPoint remoteEndPoint,
-      PipeReader reader,
-      CancellationToken cancellationToken
-    )
-    {
-      for (; ; ) {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var result = await reader.ReadAsync(
-          cancellationToken: cancellationToken
-        ).ConfigureAwait(false);
-        var buffer = result.Buffer;
-
-        try {
-          while (TryReadLine(ref buffer, out var line)) {
-            await ProcessCommandAsync(
-              client: socket,
-              commandLine: line,
-              cancellationToken: cancellationToken
-            ).ConfigureAwait(false);
-          }
-        }
-        catch (OperationCanceledException) {
-          logger?.LogInformation(
-            "[{RemoteEndPoint}] operation canceled",
-            remoteEndPoint
-          );
-          throw;
-        }
-#pragma warning disable CA1031
-        catch (Exception ex) {
-          logger?.LogCritical(
-            ex,
-            "[{RemoteEndPoint}] unexpected exception while processing command",
-            remoteEndPoint
-          );
-
-          if (socket.Connected)
-            socket.Close();
-          break;
-        }
-#pragma warning restore CA1031
-
-        reader.AdvanceTo(buffer.Start, buffer.End);
-
-        if (result.IsCompleted)
-          break;
-      }
+      if (result.IsCompleted)
+        break;
     }
 
     static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
@@ -566,7 +566,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
   private static readonly ReadOnlyMemory<byte> commandCap         = Encoding.ASCII.GetBytes("cap");
   private static readonly ReadOnlyMemory<byte> commandVersion     = Encoding.ASCII.GetBytes("version");
 
-  private ValueTask ProcessCommandAsync(
+  private ValueTask RespondToCommandAsync(
     Socket client,
     ReadOnlySequence<byte> commandLine,
     CancellationToken cancellationToken
