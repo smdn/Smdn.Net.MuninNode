@@ -513,7 +513,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
   private static readonly byte commandQuitShort = (byte)'.';
 
 #if LANG_VERSION_11_OR_GREATER
-  private ValueTask ProcessCommandAsync(
+  private ValueTask RespondToCommandAsync(
     Socket client,
     ReadOnlySequence<byte> commandLine,
     CancellationToken cancellationToken
