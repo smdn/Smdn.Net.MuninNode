@@ -31,11 +31,15 @@ namespace Smdn.Net.MuninNode;
 public abstract class NodeBase : IDisposable, IAsyncDisposable {
   private static readonly Version defaultNodeVersion = new(1, 0, 0, 0);
 
-  public IReadOnlyCollection<IPlugin> Plugins { get; }
+  [Obsolete("This member will be deprecated in future version.")]
+  public IReadOnlyCollection<IPlugin> Plugins => pluginProvider.Plugins;
+
   public string HostName { get; }
 
   public virtual Version NodeVersion => defaultNodeVersion;
   public virtual Encoding Encoding => Encoding.Default;
+
+  private readonly IPluginProvider pluginProvider;
 
   protected ILogger? Logger { get; }
 
@@ -46,8 +50,31 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     string hostName,
     ILogger? logger
   )
+    : this(
+      pluginProvider: new PluginProvider(plugins ?? throw new ArgumentNullException(nameof(plugins))),
+      hostName: hostName,
+      logger: logger
+    )
   {
-    Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
+  }
+
+  private protected class PluginProvider : IPluginProvider {
+    public IReadOnlyCollection<IPlugin> Plugins { get; }
+    public INodeSessionCallback? SessionCallback => null;
+
+    public PluginProvider(IReadOnlyCollection<IPlugin> plugins)
+    {
+      Plugins = plugins;
+    }
+  }
+
+  protected NodeBase(
+    IPluginProvider pluginProvider,
+    string hostName,
+    ILogger? logger
+  )
+  {
+    this.pluginProvider = pluginProvider ?? throw new ArgumentNullException(nameof(pluginProvider));
 
     if (hostName == null)
       throw new ArgumentNullException(nameof(hostName));
@@ -261,7 +288,10 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       Logger?.LogInformation("[{RemoteEndPoint}] session started; ID={SessionId}", remoteEndPoint, sessionId);
 
       try {
-        foreach (var plugin in Plugins) {
+        if (pluginProvider.SessionCallback is not null)
+          await pluginProvider.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+
+        foreach (var plugin in pluginProvider.Plugins) {
           if (plugin.SessionCallback is not null)
             await plugin.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
         }
@@ -277,10 +307,13 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
         Logger?.LogInformation("[{RemoteEndPoint}] session closed; ID={SessionId}", remoteEndPoint, sessionId);
       }
       finally {
-        foreach (var plugin in Plugins) {
+        foreach (var plugin in pluginProvider.Plugins) {
           if (plugin.SessionCallback is not null)
             await plugin.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
         }
+
+        if (pluginProvider.SessionCallback is not null)
+          await pluginProvider.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
       }
     }
     finally {
@@ -721,7 +754,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     return SendResponseAsync(
       client: client,
       encoding: Encoding,
-      responseLine: string.Join(" ", Plugins.Select(static plugin => plugin.Name)),
+      responseLine: string.Join(" ", pluginProvider.Plugins.Select(static plugin => plugin.Name)),
       cancellationToken: cancellationToken
     );
   }
@@ -732,7 +765,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     CancellationToken cancellationToken
   )
   {
-    var plugin = Plugins.FirstOrDefault(
+    var plugin = pluginProvider.Plugins.FirstOrDefault(
       plugin => string.Equals(Encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal)
     );
 
@@ -793,7 +826,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     CancellationToken cancellationToken
   )
   {
-    var plugin = Plugins.FirstOrDefault(
+    var plugin = pluginProvider.Plugins.FirstOrDefault(
       plugin => string.Equals(Encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal)
     );
 
