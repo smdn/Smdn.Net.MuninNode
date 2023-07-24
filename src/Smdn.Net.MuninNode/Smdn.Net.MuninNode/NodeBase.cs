@@ -857,6 +857,8 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       responseLines.Add($"graph_width {graphAttrs.Width.Value}");
     if (graphAttrs.Height.HasValue)
       responseLines.Add($"graph_height {graphAttrs.Height.Value}");
+    if (!string.IsNullOrEmpty(graphAttrs.Order))
+      responseLines.Add($"graph_order {graphAttrs.Order}");
 
     foreach (var field in plugin.DataSource.Fields) {
       var fieldAttrs = field.Attributes;

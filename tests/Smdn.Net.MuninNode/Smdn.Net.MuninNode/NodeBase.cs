@@ -656,6 +656,80 @@ public class NodeBaseTests {
     );
   }
 
+  private static System.Collections.IEnumerable YieldTestCases_ProcessCommandAsync_ConfigCommand_GraphOrder()
+  {
+    foreach (var (order, expectedGraphOrder) in new[] {
+      (null, null),
+      (Array.Empty<string>(), null),
+      (new[] { "field1" }, "field1"),
+      (new[] { "field2", "field1" }, "field2 field1"),
+    }) {
+      var graphAttrs = new PluginGraphAttributes(
+        title: "title",
+        category: "test",
+        verticalLabel: "test",
+        scale: false,
+        arguments: "--args",
+        updateRate: TimeSpan.FromMinutes(1),
+        width: null,
+        height: null,
+        order: order
+      );
+
+      var plugin = PluginFactory.CreatePlugin(
+        "plugin1",
+        graphAttrs,
+        new[] {
+          PluginFactory.CreateField("plugin1field1", static () => 1.1),
+          PluginFactory.CreateField("plugin1field2", PluginFieldGraphStyle.LineWidth3, static () => 1.2)
+        }
+      );
+
+      yield return new object[] {
+        plugin,
+        new Action<IReadOnlyList<string>>(
+          responseLines => {
+            if (expectedGraphOrder is null)
+              CollectionAssert.DoesNotContain(responseLines, "graph_order", "graph_order");
+            else
+              CollectionAssert.Contains(responseLines, $"graph_order {expectedGraphOrder}", "graph_order");
+          }
+        )
+      };
+    }
+  }
+
+  [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand_GraphOrder))]
+  public async Task ProcessCommandAsync_ConfigCommand_GraphOrder(
+    IPlugin plugin,
+    Action<IReadOnlyList<string>> assertResponseLines
+  )
+  {
+    await StartSession(
+      plugins: new[] { plugin },
+      action: async (node, client, writer, reader, cancellationToken) => {
+        await writer.WriteLineAsync($"config {plugin.Name}", cancellationToken);
+        await writer.FlushAsync(cancellationToken);
+
+        var lines = new List<string>();
+
+        for (; ;) {
+          var line = await reader.ReadLineAsync(cancellationToken);
+
+          if (line is null)
+            break;
+
+          lines.Add(line);
+
+          if (line == ".")
+            break;
+        }
+
+        assertResponseLines(lines);
+      }
+    );
+  }
+
   [TestCase(PluginFieldGraphStyle.Default, null, null)]
   [TestCase(PluginFieldGraphStyle.Area, "AREA", null)]
   [TestCase(PluginFieldGraphStyle.Stack, "STACK", null)]

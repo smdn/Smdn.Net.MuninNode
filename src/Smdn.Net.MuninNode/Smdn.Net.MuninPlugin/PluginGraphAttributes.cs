@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Collections.Generic;
 
 namespace Smdn.Net.MuninPlugin;
 
@@ -46,6 +47,10 @@ public sealed class PluginGraphAttributes {
   /// <seealso href="http://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-height">Plugin reference - Global attributes - graph_height</seealso>
   public int? Height { get; }
 
+  /// <summary>Gets a value for the <c>graph_order</c>.</summary>
+  /// <seealso href="http://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-order">Plugin reference - Global attributes - graph_order</seealso>
+  public string? Order { get; }
+
   public PluginGraphAttributes(
     string title,
     string category,
@@ -55,6 +60,31 @@ public sealed class PluginGraphAttributes {
     TimeSpan updateRate,
     int? width = null,
     int? height = null
+  )
+    : this(
+      title: title,
+      category: category,
+      verticalLabel: verticalLabel,
+      scale: scale,
+      arguments: arguments,
+      updateRate: updateRate,
+      width: width,
+      height: height,
+      order: null
+    )
+  {
+  }
+
+  public PluginGraphAttributes(
+    string title,
+    string category,
+    string verticalLabel,
+    bool scale,
+    string arguments,
+    TimeSpan updateRate,
+    int? width,
+    int? height,
+    IEnumerable<string>? order
   )
   {
     if (title == null)
@@ -85,6 +115,7 @@ public sealed class PluginGraphAttributes {
     VerticalLabel = verticalLabel;
     Width = width;
     Height = height;
+    Order = order is null ? null : string.Join(" ", order);
 
     if (updateRate < TimeSpan.FromSeconds(1.0))
       throw new ArgumentOutOfRangeException(nameof(updateRate), updateRate, "must be at least 1 seconds");
