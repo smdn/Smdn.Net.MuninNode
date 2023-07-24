@@ -37,7 +37,8 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
   public virtual Version NodeVersion => defaultNodeVersion;
   public virtual Encoding Encoding => Encoding.Default;
 
-  private readonly ILogger? logger;
+  protected ILogger? Logger { get; }
+
   private Socket? server;
 
   protected NodeBase(
@@ -55,7 +56,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
     HostName = hostName;
 
-    this.logger = logger;
+    Logger = logger;
   }
 
   public void Dispose()
@@ -125,11 +126,11 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     if (server is not null)
       throw new InvalidOperationException("already started");
 
-    logger?.LogInformation($"starting");
+    Logger?.LogInformation($"starting");
 
     server = CreateServerSocket() ?? throw new InvalidOperationException("cannot start server");
 
-    logger?.LogInformation("started (end point: {LocalEndPoint})", server.LocalEndPoint);
+    Logger?.LogInformation("started (end point: {LocalEndPoint})", server.LocalEndPoint);
   }
 
   protected abstract bool IsClientAcceptable(IPEndPoint remoteEndPoint);
@@ -184,7 +185,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     if (server is null)
       throw new InvalidOperationException("not started or already closed");
 
-    logger?.LogInformation("accepting...");
+    Logger?.LogInformation("accepting...");
 
     var client = await server
 #if SYSTEM_NET_SOCKETS_SOCKET_ACCEPTASYNC_CANCELLATIONTOKEN
@@ -202,7 +203,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       remoteEndPoint = client.RemoteEndPoint as IPEndPoint;
 
       if (remoteEndPoint is null) {
-        logger?.LogWarning(
+        Logger?.LogWarning(
           "cannot accept {RemoteEndPoint} ({RemoteEndPointAddressFamily})",
           client.RemoteEndPoint?.ToString() ?? "(null)",
           client.RemoteEndPoint?.AddressFamily
@@ -211,7 +212,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       }
 
       if (!IsClientAcceptable(remoteEndPoint)) {
-        logger?.LogWarning("access refused: {RemoteEndPoint}", remoteEndPoint);
+        Logger?.LogWarning("access refused: {RemoteEndPoint}", remoteEndPoint);
         return;
       }
 
@@ -219,7 +220,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
       cancellationToken.ThrowIfCancellationRequested();
 
-      logger?.LogDebug("[{RemoteEndPoint}] sending banner", remoteEndPoint);
+      Logger?.LogDebug("[{RemoteEndPoint}] sending banner", remoteEndPoint);
 
       try {
         await SendResponseAsync(
@@ -236,7 +237,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
           SocketError.OperationAborted or // ECANCELED (125)
           SocketError.ConnectionReset // ECONNRESET (104)
       ) {
-        logger?.LogWarning(
+        Logger?.LogWarning(
           "[{RemoteEndPoint}] client closed session while sending banner",
           remoteEndPoint
         );
@@ -245,7 +246,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       }
 #pragma warning disable CA1031
       catch (Exception ex) {
-        logger?.LogCritical(
+        Logger?.LogCritical(
           ex,
           "[{RemoteEndPoint}] unexpected exception occured while sending banner",
           remoteEndPoint
@@ -257,7 +258,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
       cancellationToken.ThrowIfCancellationRequested();
 
-      logger?.LogInformation("[{RemoteEndPoint}] session started; ID={SessionId}", remoteEndPoint, sessionId);
+      Logger?.LogInformation("[{RemoteEndPoint}] session started; ID={SessionId}", remoteEndPoint, sessionId);
 
       try {
         foreach (var plugin in Plugins) {
@@ -273,7 +274,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
           ProcessCommandAsync(client, remoteEndPoint, pipe.Reader, cancellationToken)
         ).ConfigureAwait(false);
 
-        logger?.LogInformation("[{RemoteEndPoint}] session closed; ID={SessionId}", remoteEndPoint, sessionId);
+        Logger?.LogInformation("[{RemoteEndPoint}] session closed; ID={SessionId}", remoteEndPoint, sessionId);
       }
       finally {
         foreach (var plugin in Plugins) {
@@ -285,7 +286,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     finally {
       client.Close();
 
-      logger?.LogInformation("[{RemoteEndPoint}] connection closed", remoteEndPoint);
+      Logger?.LogInformation("[{RemoteEndPoint}] connection closed", remoteEndPoint);
     }
   }
 
@@ -348,7 +349,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
           SocketError.OperationAborted or // ECANCELED (125)
           SocketError.ConnectionReset // ECONNRESET (104)
       ) {
-        logger?.LogInformation(
+        Logger?.LogInformation(
           "[{RemoteEndPoint}] expected socket exception ({NumericSocketErrorCode} {SocketErrorCode})",
           remoteEndPoint,
           (int)ex.SocketErrorCode,
@@ -357,14 +358,14 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
         break; // expected exception
       }
       catch (ObjectDisposedException) {
-        logger?.LogInformation(
+        Logger?.LogInformation(
           "[{RemoteEndPoint}] socket has been disposed",
           remoteEndPoint
         );
         break; // expected exception
       }
       catch (OperationCanceledException) {
-        logger?.LogInformation(
+        Logger?.LogInformation(
           "[{RemoteEndPoint}] operation canceled",
           remoteEndPoint
         );
@@ -372,7 +373,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       }
 #pragma warning disable CA1031
       catch (Exception ex) {
-        logger?.LogCritical(
+        Logger?.LogCritical(
           ex,
           "[{RemoteEndPoint}] unexpected exception while receiving",
           remoteEndPoint
@@ -417,7 +418,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
         }
       }
       catch (OperationCanceledException) {
-        logger?.LogInformation(
+        Logger?.LogInformation(
           "[{RemoteEndPoint}] operation canceled",
           remoteEndPoint
         );
@@ -425,7 +426,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       }
 #pragma warning disable CA1031
       catch (Exception ex) {
-        logger?.LogCritical(
+        Logger?.LogCritical(
           ex,
           "[{RemoteEndPoint}] unexpected exception while processing command",
           remoteEndPoint
