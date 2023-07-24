@@ -52,6 +52,23 @@ partial class PluginFactory {
       fetchValue: fetchValue
     );
 
+  public static IPluginField CreateField(
+    string name,
+    string label,
+    PluginFieldGraphStyle graphStyle,
+    PluginFieldNormalValueRange normalRangeForWarning,
+    PluginFieldNormalValueRange normalRangeForCritical,
+    Func<double?> fetchValue
+  )
+    => new ValueFromFuncPluginField(
+      label: label,
+      name: name,
+      graphStyle: graphStyle,
+      normalRangeForWarning: normalRangeForWarning,
+      normalRangeForCritical: normalRangeForCritical,
+      fetchValue: fetchValue
+    );
+
   private sealed class ValueFromFuncPluginField : PluginFieldBase {
     private readonly Func<double?> fetchValue;
 
