@@ -30,7 +30,6 @@ var plugins = new[] {
       title: "random numbers",
       verticalLabel: "number",
       scale: false,
-      updateRate: TimeSpan.FromMinutes(1.0),
       arguments: "--base 1000 --lower-limit 0 --upper-limit 10"
     )
   ),

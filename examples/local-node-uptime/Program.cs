@@ -32,7 +32,6 @@ var plugins = new[] {
       title: $"Uptime of {nodeHostName}",
       verticalLabel: "Uptime [minutes]",
       scale: false,
-      updateRate: TimeSpan.FromMinutes(1.0),
       // Specify arguments for graph drawing. See below for more information about graph arguments:
       //   http://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-args
       //   http://guide.munin-monitoring.org/en/latest/example/graph/graph_args.html
