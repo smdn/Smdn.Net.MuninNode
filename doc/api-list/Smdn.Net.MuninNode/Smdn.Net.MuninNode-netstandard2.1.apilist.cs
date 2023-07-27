@@ -1,7 +1,7 @@
-// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-1.1.0)
+// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-1.2.0)
 //   Name: Smdn.Net.MuninNode
-//   AssemblyVersion: 1.1.0.0
-//   InformationalVersion: 1.1.0+8c512e91195981258988a30fdf9c0ff4c53a6acc
+//   AssemblyVersion: 1.2.0.0
+//   InformationalVersion: 1.2.0+b0e11cd6b408018ad93f29b49e58cab7e9ef6b1b
 //   TargetFramework: .NETStandard,Version=v2.1
 //   Configuration: Release
 //   Referenced assemblies:
@@ -26,6 +26,8 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode {
   public class LocalNode : NodeBase {
+    public LocalNode(IPluginProvider pluginProvider, string hostName, int port, ILogger? logger = null) {}
+    public LocalNode(IPluginProvider pluginProvider, string hostName, int port, IServiceProvider? serviceProvider = null) {}
     public LocalNode(IReadOnlyCollection<IPlugin> plugins, int port, IServiceProvider? serviceProvider = null) {}
     public LocalNode(IReadOnlyCollection<IPlugin> plugins, string hostName, int port, IServiceProvider? serviceProvider = null) {}
 
@@ -39,11 +41,21 @@ namespace Smdn.Net.MuninNode {
     IAsyncDisposable,
     IDisposable
   {
+    private protected class PluginProvider : IPluginProvider {
+      public PluginProvider(IReadOnlyCollection<IPlugin> plugins) {}
+
+      public IReadOnlyCollection<IPlugin> Plugins { get; }
+      public INodeSessionCallback? SessionCallback { get; }
+    }
+
+    protected NodeBase(IPluginProvider pluginProvider, string hostName, ILogger? logger) {}
     protected NodeBase(IReadOnlyCollection<IPlugin> plugins, string hostName, ILogger? logger) {}
 
     public virtual Encoding Encoding { get; }
     public string HostName { get; }
+    protected ILogger? Logger { get; }
     public virtual Version NodeVersion { get; }
+    [Obsolete("This member will be deprecated in future version.")]
     public IReadOnlyCollection<IPlugin> Plugins { get; }
 
     public async ValueTask AcceptAsync(bool throwIfCancellationRequested, CancellationToken cancellationToken) {}
@@ -80,6 +92,11 @@ namespace Smdn.Net.MuninPlugin {
     string Name { get; }
 
     ValueTask<string> GetFormattedValueStringAsync(CancellationToken cancellationToken);
+  }
+
+  public interface IPluginProvider {
+    IReadOnlyCollection<IPlugin> Plugins { get; }
+    INodeSessionCallback? SessionCallback { get; }
   }
 
   public enum PluginFieldGraphStyle : int {
@@ -121,6 +138,7 @@ namespace Smdn.Net.MuninPlugin {
     public static IPluginField CreateField(string label, Func<double?> fetchValue) {}
     public static IPluginField CreateField(string label, PluginFieldGraphStyle graphStyle, Func<double?> fetchValue) {}
     public static IPluginField CreateField(string label, PluginFieldGraphStyle graphStyle, PluginFieldNormalValueRange normalRangeForWarning, PluginFieldNormalValueRange normalRangeForCritical, Func<double?> fetchValue) {}
+    public static IPluginField CreateField(string name, string label, PluginFieldGraphStyle graphStyle, PluginFieldNormalValueRange normalRangeForWarning, PluginFieldNormalValueRange normalRangeForCritical, Func<double?> fetchValue) {}
     public static IPlugin CreatePlugin(string name, PluginGraphAttributes graphAttributes, IReadOnlyCollection<IPluginField> fields) {}
     public static IPlugin CreatePlugin(string name, PluginGraphAttributes graphAttributes, IReadOnlyCollection<PluginFieldBase> fields) {}
     public static IPlugin CreatePlugin(string name, PluginGraphAttributes graphAttributes, PluginFieldBase field) {}
@@ -143,14 +161,18 @@ namespace Smdn.Net.MuninPlugin {
   }
 
   public sealed class PluginGraphAttributes {
+    [Obsolete("This member will be deprecated in future version.")]
     public PluginGraphAttributes(string title, string category, string verticalLabel, bool scale, string arguments, TimeSpan updateRate, int? width = null, int? height = null) {}
+    public PluginGraphAttributes(string title, string category, string verticalLabel, bool scale, string arguments, TimeSpan? updateRate = null, int? width = null, int? height = null) {}
+    public PluginGraphAttributes(string title, string category, string verticalLabel, bool scale, string arguments, TimeSpan? updateRate, int? width, int? height, IEnumerable<string>? order) {}
 
     public string Arguments { get; }
     public string Category { get; }
     public int? Height { get; }
+    public string? Order { get; }
     public bool Scale { get; }
     public string Title { get; }
-    public TimeSpan UpdateRate { get; }
+    public TimeSpan? UpdateRate { get; }
     public string VerticalLabel { get; }
     public int? Width { get; }
   }
