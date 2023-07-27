@@ -404,8 +404,7 @@ public class NodeBaseTests {
       category: "test",
       verticalLabel: "test",
       scale: false,
-      arguments: "--args",
-      updateRate: TimeSpan.FromMinutes(1)
+      arguments: "--args"
     );
 
     var plugins = new[] {
@@ -439,8 +438,7 @@ public class NodeBaseTests {
       category: "test",
       verticalLabel: "test",
       scale: false,
-      arguments: "--args",
-      updateRate: TimeSpan.FromMinutes(1)
+      arguments: "--args"
     );
 
     var plugins = new[] {
@@ -522,8 +520,7 @@ public class NodeBaseTests {
       category: "test",
       verticalLabel: "test",
       scale: false,
-      arguments: "--args",
-      updateRate: TimeSpan.FromMinutes(1)
+      arguments: "--args"
     );
 
     var plugins = new[] {
@@ -553,8 +550,7 @@ public class NodeBaseTests {
       category: "test",
       verticalLabel: "test",
       scale: false,
-      arguments: "--args",
-      updateRate: TimeSpan.FromMinutes(1)
+      arguments: "--args"
     );
 
     var plugins = new[] {
@@ -620,11 +616,6 @@ public class NodeBaseTests {
       CollectionAssert.Contains(responseLines, $"graph_args {graph.Arguments}", "graph_args");
       CollectionAssert.Contains(responseLines, $"graph_scale {scaleString}", "graph_scale");
       CollectionAssert.Contains(responseLines, $"graph_vlabel {graph.VerticalLabel}", "graph_vlabel");
-
-      if (graph.UpdateRate.HasValue)
-        CollectionAssert.Contains(responseLines, $"update_rate {(int)graph.UpdateRate.Value.TotalSeconds}", "update_rate");
-      else
-        CollectionAssert.DoesNotContain(responseLines, "update_rate ", "update_rate");
     }
   }
 
@@ -875,8 +866,7 @@ public class NodeBaseTests {
       category: "test",
       verticalLabel: "test",
       scale: false,
-      arguments: "--args",
-      updateRate: TimeSpan.FromMinutes(1)
+      arguments: "--args"
     );
 
     var plugins = new[] {
@@ -978,8 +968,7 @@ public class NodeBaseTests {
       category: "test",
       verticalLabel: "test",
       scale: false,
-      arguments: "--args",
-      updateRate: TimeSpan.FromMinutes(1)
+      arguments: "--args"
     );
 
     var plugins = new[] {
