@@ -75,6 +75,31 @@ public sealed class PluginGraphAttributes {
   {
   }
 
+  [Obsolete("This member will be deprecated in future version.")]
+  public PluginGraphAttributes(
+    string title,
+    string category,
+    string verticalLabel,
+    bool scale,
+    string arguments,
+    TimeSpan updateRate,
+    int? width = null,
+    int? height = null
+  )
+    : this(
+      title: title,
+      category: category,
+      verticalLabel: verticalLabel,
+      scale: scale,
+      arguments: arguments,
+      updateRate: updateRate,
+      width: width,
+      height: height,
+      order: null
+    )
+  {
+  }
+
   public PluginGraphAttributes(
     string title,
     string category,
