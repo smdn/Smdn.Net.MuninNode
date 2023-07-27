@@ -850,9 +850,10 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       $"graph_args {graphAttrs.Arguments}",
       $"graph_scale {(graphAttrs.Scale ? "yes" : "no")}",
       $"graph_vlabel {graphAttrs.VerticalLabel}",
-      $"update_rate {(int)graphAttrs.UpdateRate.TotalSeconds}",
     };
 
+    if (graphAttrs.UpdateRate.HasValue)
+      responseLines.Add($"update_rate {(int)graphAttrs.UpdateRate.Value.TotalSeconds}");
     if (graphAttrs.Width.HasValue)
       responseLines.Add($"graph_width {graphAttrs.Width.Value}");
     if (graphAttrs.Height.HasValue)

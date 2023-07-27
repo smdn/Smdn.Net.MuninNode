@@ -37,7 +37,7 @@ public sealed class PluginGraphAttributes {
 
   /// <summary>Gets a value for the <c>update_rate</c>.</summary>
   /// <seealso href="http://guide.munin-monitoring.org/en/latest/reference/plugin.html#update-rate">Plugin reference - Global attributes - update_rate</seealso>
-  public TimeSpan UpdateRate { get; }
+  public TimeSpan? UpdateRate { get; }
 
   /// <summary>Gets a value for the <c>graph_width</c>.</summary>
   /// <seealso href="http://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-width">Plugin reference - Global attributes - graph_width</seealso>
@@ -57,7 +57,7 @@ public sealed class PluginGraphAttributes {
     string verticalLabel,
     bool scale,
     string arguments,
-    TimeSpan updateRate,
+    TimeSpan? updateRate = null,
     int? width = null,
     int? height = null
   )
@@ -81,7 +81,7 @@ public sealed class PluginGraphAttributes {
     string verticalLabel,
     bool scale,
     string arguments,
-    TimeSpan updateRate,
+    TimeSpan? updateRate,
     int? width,
     int? height,
     IEnumerable<string>? order
@@ -117,7 +117,7 @@ public sealed class PluginGraphAttributes {
     Height = height;
     Order = order is null ? null : string.Join(" ", order);
 
-    if (updateRate < TimeSpan.FromSeconds(1.0))
+    if (updateRate.HasValue && updateRate.Value < TimeSpan.FromSeconds(1.0))
       throw new ArgumentOutOfRangeException(nameof(updateRate), updateRate, "must be at least 1 seconds");
 
     UpdateRate = updateRate;

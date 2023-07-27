@@ -620,7 +620,11 @@ public class NodeBaseTests {
       CollectionAssert.Contains(responseLines, $"graph_args {graph.Arguments}", "graph_args");
       CollectionAssert.Contains(responseLines, $"graph_scale {scaleString}", "graph_scale");
       CollectionAssert.Contains(responseLines, $"graph_vlabel {graph.VerticalLabel}", "graph_vlabel");
-      CollectionAssert.Contains(responseLines, $"update_rate {(int)graph.UpdateRate.TotalSeconds}", "update_rate");
+
+      if (graph.UpdateRate.HasValue)
+        CollectionAssert.Contains(responseLines, $"update_rate {(int)graph.UpdateRate.Value.TotalSeconds}", "update_rate");
+      else
+        CollectionAssert.DoesNotContain(responseLines, "update_rate ", "update_rate");
     }
   }
 
@@ -635,6 +639,122 @@ public class NodeBaseTests {
       plugins: plugins,
       action: async (node, client, writer, reader, cancellationToken) => {
         await writer.WriteLineAsync(command, cancellationToken);
+        await writer.FlushAsync(cancellationToken);
+
+        var lines = new List<string>();
+
+        for (; ;) {
+          var line = await reader.ReadLineAsync(cancellationToken);
+
+          if (line is null)
+            break;
+
+          lines.Add(line);
+
+          if (line == ".")
+            break;
+        }
+
+        assertResponseLines(lines);
+      }
+    );
+  }
+
+  private static System.Collections.IEnumerable YieldTestCases_ProcessCommandAsync_ConfigCommand_OptionalAttributes()
+  {
+    foreach (var (width, height) in new (int?, int?)[] {
+      (null, null),
+      (100, null),
+      (null, 100),
+      (100, 100),
+    }) {
+      var graphAttrs = new PluginGraphAttributes(
+        title: "title",
+        category: "test",
+        verticalLabel: "test",
+        scale: false,
+        arguments: "--args",
+        updateRate: null,
+        width: width,
+        height: height,
+        order: null
+      );
+
+      var plugin = PluginFactory.CreatePlugin(
+        "plugin1",
+        graphAttrs,
+        new[] {
+          PluginFactory.CreateField("plugin1field1", static () => 1.1),
+        }
+      );
+
+      yield return new object[] {
+        plugin,
+        new Action<IReadOnlyList<string>>(
+          responseLines => {
+            if (width.HasValue)
+              CollectionAssert.Contains(responseLines, $"graph_width {width}", "graph_width");
+            else
+              CollectionAssert.DoesNotContain(responseLines, "graph_width ", "graph_width");
+
+            if (height.HasValue)
+              CollectionAssert.Contains(responseLines, $"graph_height {height}", "graph_height");
+            else
+              CollectionAssert.DoesNotContain(responseLines, "graph_height ", "graph_height");
+          }
+        )
+      };
+    }
+
+    foreach (var updateRate in new TimeSpan?[] {
+      null,
+      TimeSpan.FromSeconds(1.0),
+      TimeSpan.FromSeconds(10.0)
+    }) {
+      var graphAttrs = new PluginGraphAttributes(
+        title: "title",
+        category: "test",
+        verticalLabel: "test",
+        scale: false,
+        arguments: "--args",
+        updateRate: updateRate,
+        width: null,
+        height: null,
+        order: null
+      );
+
+      var plugin = PluginFactory.CreatePlugin(
+        "plugin2",
+        graphAttrs,
+        new[] {
+          PluginFactory.CreateField("plugin1field1", static () => 2.1),
+        }
+      );
+
+      yield return new object[] {
+        plugin,
+        new Action<IReadOnlyList<string>>(
+          responseLines => {
+            if (updateRate.HasValue)
+              CollectionAssert.Contains(responseLines, $"update_rate {(int)updateRate.Value.TotalSeconds}", "update_rate");
+            else
+              CollectionAssert.DoesNotContain(responseLines, "update_rate ", "update_rate");
+          }
+        )
+      };
+    }
+  }
+
+  [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand_OptionalAttributes))]
+  public async Task ProcessCommandAsync_ConfigCommand_OptionalAttributes(
+    IPlugin plugin,
+    Action<IReadOnlyList<string>> assertResponseLines
+  )
+  {
+    await StartSession(
+      plugins: new[] { plugin },
+      action: async (node, client, writer, reader, cancellationToken) => {
+        await writer.WriteLineAsync($"config {plugin.Name}", cancellationToken);
         await writer.FlushAsync(cancellationToken);
 
         var lines = new List<string>();
@@ -690,7 +810,7 @@ public class NodeBaseTests {
         new Action<IReadOnlyList<string>>(
           responseLines => {
             if (expectedGraphOrder is null)
-              CollectionAssert.DoesNotContain(responseLines, "graph_order", "graph_order");
+              CollectionAssert.DoesNotContain(responseLines, "graph_order ", "graph_order");
             else
               CollectionAssert.Contains(responseLines, $"graph_order {expectedGraphOrder}", "graph_order");
           }
