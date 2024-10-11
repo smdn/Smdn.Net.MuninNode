@@ -94,8 +94,8 @@ public class NodeBaseTests {
   {
     await using var node = CreateNode(out _);
 
-    Assert.DoesNotThrow(() => node.Start());
-    Assert.Throws<InvalidOperationException>(() => node.Start(), "already started");
+    Assert.DoesNotThrow(node.Start);
+    Assert.Throws<InvalidOperationException>(node.Start, "already started");
   }
 
   [Test]
@@ -322,10 +322,10 @@ public class NodeBaseTests {
   [Test]
   public async Task ProcessCommandAsync_UnknownCommand()
   {
-    const string unknownCommand = "unknown";
+    const string UnknownCommand = "unknown";
 
     await StartSession(async static (node, client, writer, reader, cancellationToken) => {
-      await writer.WriteLineAsync(unknownCommand, cancellationToken);
+      await writer.WriteLineAsync(UnknownCommand, cancellationToken);
       await writer.FlushAsync(cancellationToken);
 
       Assert.That(
@@ -634,7 +634,7 @@ public class NodeBaseTests {
 
         var lines = new List<string>();
 
-        for (; ;) {
+        for (; ; ) {
           var line = await reader.ReadLineAsync(cancellationToken);
 
           if (line is null)
@@ -750,7 +750,7 @@ public class NodeBaseTests {
 
         var lines = new List<string>();
 
-        for (; ;) {
+        for (; ; ) {
           var line = await reader.ReadLineAsync(cancellationToken);
 
           if (line is null)
@@ -824,7 +824,7 @@ public class NodeBaseTests {
 
         var lines = new List<string>();
 
-        for (; ;) {
+        for (; ; ) {
           var line = await reader.ReadLineAsync(cancellationToken);
 
           if (line is null)
@@ -889,7 +889,7 @@ public class NodeBaseTests {
           var lines = new List<string>();
 
           try {
-            for (; ;) {
+            for (; ; ) {
               var line = await reader.ReadLineAsync(cancellationToken);
 
               if (line is null)
@@ -988,7 +988,7 @@ public class NodeBaseTests {
         var lines = new List<string>();
 
         try {
-          for (; ;) {
+          for (; ; ) {
             var line = await reader.ReadLineAsync(cancellationToken);
 
             if (line is null)
