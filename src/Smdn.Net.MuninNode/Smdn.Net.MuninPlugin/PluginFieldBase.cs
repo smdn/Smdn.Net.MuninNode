@@ -80,6 +80,7 @@ public abstract class PluginFieldBase : IPluginField {
   // http://guide.munin-monitoring.org/en/latest/reference/plugin.html#notes-on-field-names
   // Notes on field names
   //   The characters must be [a-zA-Z0-9_], while the first character must be [a-zA-Z_].
+#pragma warning disable SYSLIB1045
   private static readonly Regex RegexValidFieldName = new(
     pattern: $@"^[a-zA-Z_][a-zA-Z0-9_]*$",
     options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
@@ -93,6 +94,7 @@ public abstract class PluginFieldBase : IPluginField {
     pattern: $@"[^a-zA-Z0-9_]",
     options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
   );
+#pragma warning restore SYSLIB1045
 
   private static string GetDefaultNameFromLabel(string label)
   {
