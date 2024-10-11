@@ -18,7 +18,7 @@ public interface IPluginProvider {
   /// <seealso cref="MuninNode.NodeBase"/>
   IReadOnlyCollection<IPlugin> Plugins { get; }
 
-  /// <summary>Gets a <see cref="INodeSessionCallback"/>, which defines the callbacks when a request session from the <c>munin-update</c> starts or ends, such as fetching data or getting configurations.
+  /// <summary>Gets a <see cref="INodeSessionCallback"/>, which defines the callbacks when a request session from the <c>munin-update</c> starts or ends, such as fetching data or getting configurations.</summary>
   /// <seealso cref="INodeSessionCallback"/>
   /// <seealso cref="MuninNode.NodeBase"/>
   INodeSessionCallback? SessionCallback { get; }

@@ -36,15 +36,15 @@ public abstract class PluginFieldBase : IPluginField {
       throw new ArgumentNullException(nameof(label));
     if (label.Length == 0)
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(label));
-    if (!regexValidFieldLabel.IsMatch(label))
-      throw new ArgumentException($"'{label}' is invalid for field name. The value of {nameof(label)} must match the following regular expression: '{regexValidFieldLabel}'", nameof(label));
+    if (!RegexValidFieldLabel.IsMatch(label))
+      throw new ArgumentException($"'{label}' is invalid for field name. The value of {nameof(label)} must match the following regular expression: '{RegexValidFieldLabel}'", nameof(label));
 
     name ??= GetDefaultNameFromLabel(label);
 
     if (name.Length == 0)
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(name));
-    if (!regexValidFieldName.IsMatch(name))
-      throw new ArgumentException($"'{name}' is invalid for field name. The value of {nameof(name)} must match the following regular expression: '{regexValidFieldName}'", nameof(name));
+    if (!RegexValidFieldName.IsMatch(name))
+      throw new ArgumentException($"'{name}' is invalid for field name. The value of {nameof(name)} must match the following regular expression: '{RegexValidFieldName}'", nameof(name));
 
     Label = label;
     Name = name;
@@ -60,11 +60,11 @@ public abstract class PluginFieldBase : IPluginField {
 #pragma warning disable CA1033
   async ValueTask<string> IPluginField.GetFormattedValueStringAsync(CancellationToken cancellationToken)
   {
-    const string unknownValueString = "U";
+    const string UnknownValueString = "U";
 
     var value = await FetchValueAsync(cancellationToken).ConfigureAwait(false);
 
-    return value?.ToString(provider: null) ?? unknownValueString; // TODO: format specifier
+    return value?.ToString(provider: null) ?? UnknownValueString; // TODO: format specifier
   }
 #pragma warning restore CA1033
 
@@ -72,7 +72,7 @@ public abstract class PluginFieldBase : IPluginField {
   // Field name attributes
   //   Attribute: {fieldname}.label
   //   Value: anything except # and \
-  private static readonly Regex regexValidFieldLabel = new(
+  private static readonly Regex RegexValidFieldLabel = new(
     pattern: $@"^[^{Regex.Escape("#\\")}]+$",
     options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
   );
@@ -80,16 +80,16 @@ public abstract class PluginFieldBase : IPluginField {
   // http://guide.munin-monitoring.org/en/latest/reference/plugin.html#notes-on-field-names
   // Notes on field names
   //   The characters must be [a-zA-Z0-9_], while the first character must be [a-zA-Z_].
-  private static readonly Regex regexValidFieldName = new(
+  private static readonly Regex RegexValidFieldName = new(
     pattern: $@"^[a-zA-Z_][a-zA-Z0-9_]*$",
     options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
   );
 
-  private static readonly Regex regexInvalidFieldNamePrefix = new(
+  private static readonly Regex RegexInvalidFieldNamePrefix = new(
     pattern: $@"^[0-9_]+",
     options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
   );
-  private static readonly Regex regexInvalidFieldNameChars = new(
+  private static readonly Regex RegexInvalidFieldNameChars = new(
     pattern: $@"[^a-zA-Z0-9_]",
     options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
   );
@@ -101,8 +101,8 @@ public abstract class PluginFieldBase : IPluginField {
     if (label.Length == 0)
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(label));
 
-    return regexInvalidFieldNameChars.Replace(
-      regexInvalidFieldNamePrefix.Replace(label, string.Empty),
+    return RegexInvalidFieldNameChars.Replace(
+      RegexInvalidFieldNamePrefix.Replace(label, string.Empty),
       string.Empty
     );
   }

@@ -24,7 +24,7 @@ public interface IPluginField {
   /// </summary>
   /// <param name="cancellationToken">The <see cref="CancellationToken" /> to monitor for cancellation requests.</param>
   /// <returns>
-  /// A <see cref="ValueTask{string?}"/> representing the current value of the field.
+  /// A <see cref="ValueTask{String}"/> representing the current value of the field.
   /// Returns a field's numeric value in its string representation.
   /// By returning <c>"U"</c> instead of numeric value, the field can also be reported as having a value of 'UNKNOWN'.
   /// </returns>

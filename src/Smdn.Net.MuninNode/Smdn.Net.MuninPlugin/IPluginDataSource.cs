@@ -9,7 +9,7 @@ namespace Smdn.Net.MuninPlugin;
 /// Provides an interface that abstracts the data source for the plugin.
 /// </summary>
 public interface IPluginDataSource {
-  /// <summary>Gets a collection of plugin fields (<see cref="IPluginField"/>) provided by this data source.
+  /// <summary>Gets a collection of plugin fields (<see cref="IPluginField"/>) provided by this data source.</summary>
   /// <seealso cref="IPluginField"/>
   IReadOnlyCollection<IPluginField> Fields { get; }
 }

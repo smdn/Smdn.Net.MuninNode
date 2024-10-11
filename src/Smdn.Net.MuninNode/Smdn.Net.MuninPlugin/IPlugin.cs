@@ -20,7 +20,7 @@ public interface IPlugin {
   /// <seealso cref="IPluginDataSource"/>
   IPluginDataSource DataSource { get; }
 
-  /// <summary>Gets a <see cref="INodeSessionCallback"/>, which defines the callbacks when a request session from the <c>munin-update</c> starts or ends, such as fetching data or getting configurations.
+  /// <summary>Gets a <see cref="INodeSessionCallback"/>, which defines the callbacks when a request session from the <c>munin-update</c> starts or ends, such as fetching data or getting configurations.</summary>
   /// <remarks>Callbacks of this interface can be used to initiate bulk collection of field values.</remarks>
   /// <seealso cref="INodeSessionCallback"/>
   /// <seealso cref="MuninNode.NodeBase"/>

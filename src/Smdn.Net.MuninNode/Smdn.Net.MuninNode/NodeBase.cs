@@ -15,6 +15,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Microsoft.Extensions.Logging;
 
 using Smdn.Net.MuninPlugin;
@@ -29,14 +30,14 @@ namespace Smdn.Net.MuninNode;
 /// </summary>
 /// <seealso href="http://guide.munin-monitoring.org/en/latest/node/index.html">The Munin node</seealso>
 public abstract class NodeBase : IDisposable, IAsyncDisposable {
-  private static readonly Version defaultNodeVersion = new(1, 0, 0, 0);
+  private static readonly Version DefaultNodeVersion = new(1, 0, 0, 0);
 
   [Obsolete("This member will be deprecated in future version.")]
   public IReadOnlyCollection<IPlugin> Plugins => pluginProvider.Plugins;
 
   public string HostName { get; }
 
-  public virtual Version NodeVersion => defaultNodeVersion;
+  public virtual Version NodeVersion => DefaultNodeVersion;
   public virtual Encoding Encoding => Encoding.Default;
 
   private readonly IPluginProvider pluginProvider;
@@ -179,7 +180,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
   )
   {
     try {
-      for (; ;) {
+      for (; ; ) {
         if (cancellationToken.IsCancellationRequested) {
           if (throwIfCancellationRequested)
             cancellationToken.ThrowIfCancellationRequested();
@@ -355,12 +356,12 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     CancellationToken cancellationToken
   )
   {
-    const int minimumBufferSize = 256;
+    const int MinimumBufferSize = 256;
 
     for (; ; ) {
       cancellationToken.ThrowIfCancellationRequested();
 
-      var memory = writer.GetMemory(minimumBufferSize);
+      var memory = writer.GetMemory(MinimumBufferSize);
 
       try {
         if (!socket.Connected)
@@ -544,7 +545,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     return false;
   }
 
-  private static readonly byte commandQuitShort = (byte)'.';
+  private static readonly byte CommandQuitShort = (byte)'.';
 
 #if LANG_VERSION_11_OR_GREATER
   private ValueTask RespondToCommandAsync(
@@ -567,7 +568,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     }
     else if (
       ExpectCommand(commandLine, "quit"u8, out _) ||
-      (commandLine.Length == 1 && commandLine.FirstSpan[0] == commandQuitShort)
+      (commandLine.Length == 1 && commandLine.FirstSpan[0] == CommandQuitShort)
     ) {
       client.Close();
 #if SYSTEM_THREADING_TASKS_VALUETASK_COMPLETEDTASK
@@ -649,8 +650,13 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 #endif
 
 #pragma warning disable IDE0230
-  private static readonly ReadOnlyMemory<byte> endOfLine = new[] { (byte)'\n' };
+  private static readonly ReadOnlyMemory<byte> EndOfLine = new[] { (byte)'\n' };
 #pragma warning restore IDE0230
+
+  private static readonly string[] ResponseLinesUnknownService = [
+    "# Unknown service",
+    ".",
+  ];
 
   private static ValueTask SendResponseAsync(
     Socket client,
@@ -687,7 +693,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       ).ConfigureAwait(false);
 
       await client.SendAsync(
-        buffer: endOfLine,
+        buffer: EndOfLine,
         socketFlags: SocketFlags.None,
         cancellationToken: cancellationToken
       ).ConfigureAwait(false);
@@ -773,10 +779,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       await SendResponseAsync(
         client,
         Encoding,
-        new[] {
-          "# Unknown service",
-          ".",
-        },
+        ResponseLinesUnknownService,
         cancellationToken
       ).ConfigureAwait(false);
 
@@ -834,10 +837,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       return SendResponseAsync(
         client,
         Encoding,
-        new[] {
-          "# Unknown service",
-          ".",
-        },
+        ResponseLinesUnknownService,
         cancellationToken
       );
     }

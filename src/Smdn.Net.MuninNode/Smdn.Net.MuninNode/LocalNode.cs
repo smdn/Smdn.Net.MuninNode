@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode;
@@ -19,7 +21,7 @@ public class LocalNode : NodeBase {
 
   public IPEndPoint LocalEndPoint { get; }
 
-  /// <inheritdoc cref="LocalNode(IReadOnlyCollection{IPlugin}, int, string, IServiceProvider)"/>
+  /// <inheritdoc cref="LocalNode(IReadOnlyCollection{IPlugin}, string, int, IServiceProvider)"/>
   public LocalNode(
     IReadOnlyCollection<IPlugin> plugins,
     int port,
@@ -177,7 +179,9 @@ public class LocalNode : NodeBase {
       return server;
     }
     catch {
+#pragma warning disable CA1508
       server?.Dispose();
+#pragma warning restore CA1508
       throw;
     }
   }
