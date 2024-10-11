@@ -6,7 +6,7 @@ namespace Smdn.Net.MuninPlugin;
 /// <summary>
 /// Provides an interface that abstracts the plugin.
 /// </summary>
-/// <seealso href="http://guide.munin-monitoring.org/en/latest/reference/plugin.html">Plugin reference</seealso>
+/// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html">Plugin reference</seealso>
 public interface IPlugin {
   /// <summary>Gets a plugin name.</summary>
   /// <remarks>This value is used as the plugin name returned by the 'list' argument, or the plugin name specified by the 'fetch' argument.</remarks>

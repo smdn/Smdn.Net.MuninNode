@@ -12,8 +12,8 @@ namespace Smdn.Net.MuninPlugin;
 /// With <c>{fieldname}.warning</c> or <c>{fieldname}.ciritical</c>, you can define the upper and lower limits of values that are considered to be warning or critical.
 /// This type defines the upper limit, lower limit, or range that is considered to be normal value.
 /// </remarks>
-/// <seealso href="http://guide.munin-monitoring.org/en/latest/reference/plugin.html#fieldname-critical">Plugin reference - Field name attributes - {fieldname}.critical</seealso>
-/// <seealso href="http://guide.munin-monitoring.org/en/latest/reference/plugin.html#fieldname-warning">Plugin reference - Field name attributes - {fieldname}.warning</seealso>
+/// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#fieldname-critical">Plugin reference - Field name attributes - {fieldname}.critical</seealso>
+/// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#fieldname-warning">Plugin reference - Field name attributes - {fieldname}.warning</seealso>
 public readonly struct PluginFieldNormalValueRange {
   private static double ValidateValue(double val, string paramName)
   {

@@ -10,10 +10,10 @@ namespace Smdn.Net.MuninPlugin;
 /// Provides an interface that abstracts the fields of the plugin.
 /// This interface represents the 'field name attributes'.
 /// </summary>
-/// <seealso href="http://guide.munin-monitoring.org/en/latest/reference/plugin.html#field-name-attributes">Plugin reference - Field name attributes</seealso>
+/// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#field-name-attributes">Plugin reference - Field name attributes</seealso>
 public interface IPluginField {
   /// <summary>Gets a value for the <c>fieldname</c>. This value represents the <c>fieldname</c> itself for the attribute <c>{fieldname}.xxx</c>.</summary>
-  /// <seealso href="http://guide.munin-monitoring.org/en/latest/reference/plugin.html#field-name-attributes">Plugin reference - Field name attributes</seealso>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#field-name-attributes">Plugin reference - Field name attributes</seealso>
   string Name { get; }
 
   /// <summary>Gets a collection of attributes that describes the <c>fieldname</c>.</summary>

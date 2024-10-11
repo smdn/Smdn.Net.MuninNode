@@ -28,7 +28,7 @@ namespace Smdn.Net.MuninNode;
 /// <summary>
 /// Provides an extensible base class with basic Munin-Node functionality.
 /// </summary>
-/// <seealso href="http://guide.munin-monitoring.org/en/latest/node/index.html">The Munin node</seealso>
+/// <seealso href="https://guide.munin-monitoring.org/en/latest/node/index.html">The Munin node</seealso>
 public abstract class NodeBase : IDisposable, IAsyncDisposable {
   private static readonly Version DefaultNodeVersion = new(1, 0, 0, 0);
 
@@ -737,8 +737,8 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     CancellationToken cancellationToken
   )
   {
-    // TODO: multigraph (http://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
-    // TODO: dirtyconfig (http://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html)
+    // TODO: multigraph (https://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
+    // TODO: dirtyconfig (https://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html)
     // XXX: ignores capability arguments
     return SendResponseAsync(
       client: client,

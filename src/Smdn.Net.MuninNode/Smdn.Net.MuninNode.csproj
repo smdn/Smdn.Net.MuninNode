@@ -18,7 +18,7 @@ SPDX-License-Identifier: MIT
 
   <PropertyGroup Label="assembly attributes">
     <Description>
-<![CDATA[A .NET implementation of [Munin-Node](http://guide.munin-monitoring.org/en/latest/node/index.html) and [Munin-Plugin](http://guide.munin-monitoring.org/en/latest/plugin/index.html).
+<![CDATA[A .NET implementation of [Munin-Node](https://guide.munin-monitoring.org/en/latest/node/index.html) and [Munin-Plugin](https://guide.munin-monitoring.org/en/latest/plugin/index.html).
 
 This library provides Munin-Node implementation for .NET, which enables to you to create custom Munin-Node using the .NET languages and libraries.
 

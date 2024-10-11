@@ -68,7 +68,7 @@ public abstract class PluginFieldBase : IPluginField {
   }
 #pragma warning restore CA1033
 
-  // http://guide.munin-monitoring.org/en/latest/reference/plugin.html#field-name-attributes
+  // https://guide.munin-monitoring.org/en/latest/reference/plugin.html#field-name-attributes
   // Field name attributes
   //   Attribute: {fieldname}.label
   //   Value: anything except # and \
@@ -77,7 +77,7 @@ public abstract class PluginFieldBase : IPluginField {
     options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
   );
 
-  // http://guide.munin-monitoring.org/en/latest/reference/plugin.html#notes-on-field-names
+  // https://guide.munin-monitoring.org/en/latest/reference/plugin.html#notes-on-field-names
   // Notes on field names
   //   The characters must be [a-zA-Z0-9_], while the first character must be [a-zA-Z_].
 #pragma warning disable SYSLIB1045

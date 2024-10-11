@@ -5,7 +5,7 @@
 [![NuGet Smdn.Net.MuninNode](https://img.shields.io/nuget/v/Smdn.Net.MuninNode.svg)](https://www.nuget.org/packages/Smdn.Net.MuninNode/)
 
 # Smdn.Net.MuninNode
-Smdn.Net.MuninNode is a .NET implementation of [Munin-Node](http://guide.munin-monitoring.org/en/latest/node/index.html) and [Munin-Plugin](http://guide.munin-monitoring.org/en/latest/plugin/index.html).
+Smdn.Net.MuninNode is a .NET implementation of [Munin-Node](https://guide.munin-monitoring.org/en/latest/node/index.html) and [Munin-Plugin](https://guide.munin-monitoring.org/en/latest/plugin/index.html).
 
 This library provides Munin-Node implementation for .NET, which enables to you to create custom Munin-Node using the .NET languages and libraries.
 
@@ -39,7 +39,7 @@ If you want `munin-update` to gather the telemetry data from the Munin-Node you 
 
 Multiple instances can also be started by defining multiple nodes with different port numbers if you want.
 
-For more information about node definitions, please refer to the [Munin documentation for munin.conf](http://guide.munin-monitoring.org/en/latest/reference/munin.conf.html).
+For more information about node definitions, please refer to the [Munin documentation for munin.conf](https://guide.munin-monitoring.org/en/latest/reference/munin.conf.html).
 
 
 ### Testing node
