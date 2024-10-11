@@ -25,5 +25,5 @@ internal static class StreamReaderWriterExtensions {
 #endif
 
   public static async Task FlushAsync(this StreamWriter writer, CancellationToken cancellationToken)
-    => await writer.FlushAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
+    => await writer.FlushAsync(cancellationToken).WaitAsync(cancellationToken).ConfigureAwait(false);
 }
