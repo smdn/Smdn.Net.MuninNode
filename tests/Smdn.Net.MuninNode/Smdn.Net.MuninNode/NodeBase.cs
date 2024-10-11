@@ -1016,4 +1016,84 @@ public class NodeBaseTests {
       }
     );
   }
+
+  [TestCase]
+  public async Task ProcessCommandAsync_ConfigCommand_NegativeField()
+  {
+    var graphAttrs = new PluginGraphAttributes(
+      title: "title",
+      category: "test",
+      verticalLabel: "test",
+      scale: false,
+      arguments: "--args"
+    );
+
+    const string PositiveFieldName = "field_plus";
+    const string NegativeFieldName = "field_minus";
+
+    var plugins = new[] {
+      PluginFactory.CreatePlugin(
+        "plugin",
+        graphAttrs,
+        new[] {
+          PluginFactory.CreateField(
+            name: PositiveFieldName,
+            label: "Field(+)",
+            graphStyle: default,
+            normalRangeForWarning: default,
+            normalRangeForCritical: default,
+            negativeFieldName: NegativeFieldName,
+            fetchValue: static () => +1.0
+          ),
+          PluginFactory.CreateField(
+            name: NegativeFieldName,
+            label: "Field(-)",
+            normalRangeForWarning: default,
+            normalRangeForCritical: default,
+            graphStyle: default,
+            fetchValue: static () => -1.0
+          ),
+        }
+      ),
+    };
+
+    await StartSession(
+      plugins: plugins,
+      action: async (node, client, writer, reader, cancellationToken) => {
+        await writer.WriteLineAsync("config plugin", cancellationToken);
+        await writer.FlushAsync(cancellationToken);
+
+        var lines = new List<string>();
+
+        try {
+          for (; ;) {
+            var line = await reader.ReadLineAsync(cancellationToken);
+
+            if (line is null)
+              break;
+
+            lines.Add(line);
+
+            if (line == ".")
+              break;
+          }
+        }
+        catch (IOException ex) when (ex.InnerException is SocketException) {
+          // ignore
+        }
+
+        var expectedAttrNegativeLine = $"{PositiveFieldName}.negative {NegativeFieldName}";
+        var expectedAttrGraphLine = $"{NegativeFieldName}.graph no";
+
+        Assert.That(lines, Has.Member(expectedAttrNegativeLine));
+        Assert.That(lines, Has.Member(expectedAttrGraphLine));
+
+        Assert.That(
+          lines.IndexOf(expectedAttrGraphLine),
+          Is.LessThan(lines.IndexOf(expectedAttrNegativeLine)),
+          "negative field's attributes must be listed first"
+        );
+      }
+    );
+  }
 }

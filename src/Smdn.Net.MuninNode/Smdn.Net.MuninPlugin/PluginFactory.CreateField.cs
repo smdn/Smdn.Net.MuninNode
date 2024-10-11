@@ -19,6 +19,7 @@ partial class PluginFactory {
       graphStyle: PluginFieldGraphStyle.Default,
       normalRangeForWarning: PluginFieldNormalValueRange.None,
       normalRangeForCritical: PluginFieldNormalValueRange.None,
+      negativeFieldName: null,
       fetchValue: fetchValue
     );
 
@@ -33,6 +34,7 @@ partial class PluginFactory {
       graphStyle: graphStyle,
       normalRangeForWarning: PluginFieldNormalValueRange.None,
       normalRangeForCritical: PluginFieldNormalValueRange.None,
+      negativeFieldName: null,
       fetchValue: fetchValue
     );
 
@@ -49,6 +51,7 @@ partial class PluginFactory {
       graphStyle: graphStyle,
       normalRangeForWarning: normalRangeForWarning,
       normalRangeForCritical: normalRangeForCritical,
+      negativeFieldName: null,
       fetchValue: fetchValue
     );
 
@@ -66,6 +69,26 @@ partial class PluginFactory {
       graphStyle: graphStyle,
       normalRangeForWarning: normalRangeForWarning,
       normalRangeForCritical: normalRangeForCritical,
+      negativeFieldName: null,
+      fetchValue: fetchValue
+    );
+
+  public static IPluginField CreateField(
+    string name,
+    string label,
+    PluginFieldGraphStyle graphStyle,
+    PluginFieldNormalValueRange normalRangeForWarning,
+    PluginFieldNormalValueRange normalRangeForCritical,
+    string? negativeFieldName,
+    Func<double?> fetchValue
+  )
+    => new ValueFromFuncPluginField(
+      label: label,
+      name: name,
+      graphStyle: graphStyle,
+      normalRangeForWarning: normalRangeForWarning,
+      normalRangeForCritical: normalRangeForCritical,
+      negativeFieldName: negativeFieldName,
       fetchValue: fetchValue
     );
 
@@ -78,6 +101,7 @@ partial class PluginFactory {
       PluginFieldGraphStyle graphStyle,
       PluginFieldNormalValueRange normalRangeForWarning,
       PluginFieldNormalValueRange normalRangeForCritical,
+      string? negativeFieldName,
       Func<double?> fetchValue
     )
       : base(
@@ -85,7 +109,8 @@ partial class PluginFactory {
         name: name,
         graphStyle: graphStyle,
         normalRangeForWarning: normalRangeForWarning,
-        normalRangeForCritical: normalRangeForCritical
+        normalRangeForCritical: normalRangeForCritical,
+        negativeFieldName: negativeFieldName
       )
     {
       this.fetchValue = fetchValue ?? throw new ArgumentNullException(nameof(fetchValue));

@@ -861,8 +861,15 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     if (!string.IsNullOrEmpty(graphAttrs.Order))
       responseLines.Add($"graph_order {graphAttrs.Order}");
 
-    foreach (var field in plugin.DataSource.Fields) {
+    // The fields referenced by {fieldname}.negative must be defined ahread of others,
+    // and thus lists the negative field settings first.
+    // Otherwise, the following error occurs when generating the graph.
+    // "[RRD ERROR] Unable to graph /var/cache/munin/www/XXX.png : undefined v name XXXXXXXXXXXXXX"
+    var orderedFields = plugin.DataSource.Fields.OrderBy(f => IsNegativeField(f, plugin.DataSource.Fields) ? 0 : 1);
+
+    foreach (var field in orderedFields) {
       var fieldAttrs = field.Attributes;
+      bool? graph = null;
 
       responseLines.Add($"{field.Name}.label {fieldAttrs.Label}");
 
@@ -876,6 +883,22 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
       if (fieldAttrs.NormalRangeForCritical.HasValue)
         AddFieldValueRange("critical", fieldAttrs.NormalRangeForCritical);
+
+      if (!string.IsNullOrEmpty(fieldAttrs.NegativeFieldName)) {
+        var negativeField = plugin.DataSource.Fields.FirstOrDefault(
+          f => string.Equals(fieldAttrs.NegativeFieldName, f.Name, StringComparison.Ordinal)
+        );
+
+        if (negativeField is not null)
+          responseLines.Add($"{field.Name}.negative {negativeField.Name}");
+      }
+
+      // this field is defined as the negative field of other field, so should not be graphed
+      if (IsNegativeField(field, plugin.DataSource.Fields))
+        graph = false;
+
+      if (graph is bool drawGraph)
+        responseLines.Add($"{field.Name}.graph {(drawGraph ? "yes" : "no")}");
 
       void AddFieldValueRange(string attr, PluginFieldNormalValueRange range)
       {
@@ -896,5 +919,10 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       responseLines: responseLines,
       cancellationToken: cancellationToken
     );
+
+    static bool IsNegativeField(IPluginField field, IReadOnlyCollection<IPluginField> fields)
+      => fields.Any(
+        f => string.Equals(field.Name, f.Attributes.NegativeFieldName, StringComparison.Ordinal)
+      );
   }
 }

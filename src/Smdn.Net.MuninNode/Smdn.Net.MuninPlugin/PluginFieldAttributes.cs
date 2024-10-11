@@ -32,6 +32,15 @@ public readonly struct PluginFieldAttributes {
   /// <seealso cref="PluginFieldNormalValueRange"/>
   public PluginFieldNormalValueRange NormalRangeForCritical { get; }
 
+  /// <summary>Gets a value for the <c>{fieldname}.negative</c>.</summary>
+  /// <remarks>
+  /// This property specifies that the specified field is drawn as the negative side of this field.
+  /// If a valid field name is specified for this property, it also implicitly sets the attribute <c>{fieldname}.graph no</c>.
+  /// </remarks>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#fieldname-negative">Plugin reference - Field name attributes - {fieldname}.critical</seealso>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/develop/plugins/plugin-bcp.html#plugin-bcp-direction">Best Current Practices for good plugin graphs - Direction</seealso>
+  public string? NegativeFieldName { get; }
+
   public PluginFieldAttributes(
     string label,
     PluginFieldGraphStyle graphStyle = PluginFieldGraphStyle.Default
@@ -40,7 +49,8 @@ public readonly struct PluginFieldAttributes {
       label: label,
       graphStyle: graphStyle,
       normalRangeForWarning: default,
-      normalRangeForCritical: default
+      normalRangeForCritical: default,
+      negativeFieldName: null
     )
   {
   }
@@ -50,6 +60,23 @@ public readonly struct PluginFieldAttributes {
     PluginFieldGraphStyle graphStyle = PluginFieldGraphStyle.Default,
     PluginFieldNormalValueRange normalRangeForWarning = default,
     PluginFieldNormalValueRange normalRangeForCritical = default
+  )
+    : this(
+      label: label,
+      graphStyle: graphStyle,
+      normalRangeForWarning: normalRangeForWarning,
+      normalRangeForCritical: normalRangeForCritical,
+      negativeFieldName: null
+    )
+  {
+  }
+
+  public PluginFieldAttributes(
+    string label,
+    PluginFieldGraphStyle graphStyle,
+    PluginFieldNormalValueRange normalRangeForWarning,
+    PluginFieldNormalValueRange normalRangeForCritical,
+    string? negativeFieldName
   )
   {
     if (label is null)
@@ -61,5 +88,6 @@ public readonly struct PluginFieldAttributes {
     GraphStyle = graphStyle;
     NormalRangeForWarning = normalRangeForWarning;
     NormalRangeForCritical = normalRangeForCritical;
+    NegativeFieldName = negativeFieldName;
   }
 }

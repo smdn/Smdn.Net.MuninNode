@@ -14,13 +14,15 @@ public abstract class PluginFieldBase : IPluginField {
   public PluginFieldGraphStyle GraphStyle { get; }
   public PluginFieldNormalValueRange NormalRangeForWarning { get; }
   public PluginFieldNormalValueRange NormalRangeForCritical { get; }
+  public string? NegativeFieldName { get; }
 
 #pragma warning disable CA1033
   PluginFieldAttributes IPluginField.Attributes => new(
     label: Label,
     graphStyle: GraphStyle,
     normalRangeForWarning: NormalRangeForWarning,
-    normalRangeForCritical: NormalRangeForCritical
+    normalRangeForCritical: NormalRangeForCritical,
+    negativeFieldName: NegativeFieldName
   );
 #pragma warning restore CA1033
 
@@ -30,6 +32,25 @@ public abstract class PluginFieldBase : IPluginField {
     PluginFieldGraphStyle graphStyle = default,
     PluginFieldNormalValueRange normalRangeForWarning = default,
     PluginFieldNormalValueRange normalRangeForCritical = default
+  )
+    : this(
+      label: label,
+      name: name,
+      graphStyle: graphStyle,
+      normalRangeForWarning: normalRangeForWarning,
+      normalRangeForCritical: normalRangeForCritical,
+      negativeFieldName: null
+    )
+  {
+  }
+
+  protected PluginFieldBase(
+    string label,
+    string? name,
+    PluginFieldGraphStyle graphStyle,
+    PluginFieldNormalValueRange normalRangeForWarning,
+    PluginFieldNormalValueRange normalRangeForCritical,
+    string? negativeFieldName
   )
   {
     if (label is null)
@@ -51,6 +72,7 @@ public abstract class PluginFieldBase : IPluginField {
     GraphStyle = graphStyle;
     NormalRangeForWarning = normalRangeForWarning;
     NormalRangeForCritical = normalRangeForCritical;
+    NegativeFieldName = negativeFieldName;
   }
 
   /// <summary>Gets a value for plugin field.</summary>

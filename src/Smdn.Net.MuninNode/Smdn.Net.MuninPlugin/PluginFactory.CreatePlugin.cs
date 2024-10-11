@@ -41,6 +41,7 @@ partial class PluginFactory {
         graphStyle: fieldGraphStyle,
         normalRangeForWarning: PluginFieldNormalValueRange.None,
         normalRangeForCritical: PluginFieldNormalValueRange.None,
+        negativeFieldName: null,
         fetchValue: fetchFieldValue
       )
     );
