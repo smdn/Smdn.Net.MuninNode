@@ -111,7 +111,7 @@ public class NodeBaseTests {
 
     var banner = reader.ReadLine();
 
-    Assert.AreEqual($"# munin node at {node.HostName}", banner, nameof(banner));
+    Assert.That(banner, Is.EqualTo($"# munin node at {node.HostName}"), nameof(banner));
 
     writer.WriteLine(".");
     writer.Close();
@@ -214,7 +214,7 @@ public class NodeBaseTests {
     var plugin = new PseudoPluginWithSessionCallback(setSessionCallbackNull);
     var isSessionCallbackNull = plugin.SessionCallback is null;
 
-    Assert.AreEqual(setSessionCallbackNull, isSessionCallbackNull);
+    Assert.That(isSessionCallbackNull, Is.EqualTo(setSessionCallbackNull));
 
     await using var node = CreateNode(
       plugins: new IPlugin[] { plugin },
@@ -225,26 +225,26 @@ public class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    Assert.AreEqual(0, plugin.StartedSessionIds.Count, nameof(plugin.StartedSessionIds));
-    Assert.AreEqual(0, plugin.ClosedSessionIds.Count, nameof(plugin.ClosedSessionIds));
+    Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(0), nameof(plugin.StartedSessionIds));
+    Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
 
     using var client = CreateClient(endPoint, out var writer, out var reader);
 
     var banner = reader.ReadLine();
 
-    Assert.AreEqual($"# munin node at {node.HostName}", banner, nameof(banner));
+    Assert.That(banner, Is.EqualTo($"# munin node at {node.HostName}"), nameof(banner));
 
     await Task.Delay(500); // wait for node process completed
 
     if (isSessionCallbackNull) {
-      Assert.AreEqual(0, plugin.StartedSessionIds.Count, nameof(plugin.StartedSessionIds));
-      Assert.AreEqual(0, plugin.ClosedSessionIds.Count, nameof(plugin.ClosedSessionIds));
+      Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(0), nameof(plugin.StartedSessionIds));
+      Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
     }
     else {
-      Assert.AreEqual(1, plugin.StartedSessionIds.Count, nameof(plugin.StartedSessionIds));
-      Assert.IsNotEmpty(plugin.StartedSessionIds[0], nameof(plugin.StartedSessionIds));
+      Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(1), nameof(plugin.StartedSessionIds));
+      Assert.That(plugin.StartedSessionIds[0], Is.Not.Empty, nameof(plugin.StartedSessionIds));
 
-      Assert.AreEqual(0, plugin.ClosedSessionIds.Count, nameof(plugin.ClosedSessionIds));
+      Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
     }
 
     writer.WriteLine(".");
@@ -253,14 +253,14 @@ public class NodeBaseTests {
     Assert.DoesNotThrowAsync(async () => await taskAccept);
 
     if (isSessionCallbackNull) {
-      Assert.AreEqual(0, plugin.StartedSessionIds.Count, nameof(plugin.StartedSessionIds));
-      Assert.AreEqual(0, plugin.ClosedSessionIds.Count, nameof(plugin.ClosedSessionIds));
+      Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(0), nameof(plugin.StartedSessionIds));
+      Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
     }
     else {
-      Assert.AreEqual(1, plugin.StartedSessionIds.Count, nameof(plugin.StartedSessionIds));
+      Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(1), nameof(plugin.StartedSessionIds));
 
-      Assert.AreEqual(1, plugin.ClosedSessionIds.Count, nameof(plugin.ClosedSessionIds));
-      Assert.IsNotEmpty(plugin.ClosedSessionIds[0], nameof(plugin.ClosedSessionIds));
+      Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(1), nameof(plugin.ClosedSessionIds));
+      Assert.That(plugin.ClosedSessionIds[0], Is.Not.Empty, nameof(plugin.ClosedSessionIds));
     }
   }
 
@@ -282,7 +282,7 @@ public class NodeBaseTests {
     writer0.WriteLine(".");
     writer0.Close();
 
-    Assert.IsFalse(taskAccept.Wait(TimeSpan.FromSeconds(1.0)), "task must not be completed");
+    Assert.That(taskAccept.Wait(TimeSpan.FromSeconds(1.0)), Is.False, "task must not be completed");
 
     using var client1 = CreateClient(endPoint, out var writer1, out var reader1);
 
@@ -290,7 +290,7 @@ public class NodeBaseTests {
     writer1.WriteLine(".");
     writer1.Close();
 
-    Assert.IsFalse(taskAccept.Wait(TimeSpan.FromSeconds(1.0)), "task must not be completed");
+    Assert.That(taskAccept.Wait(TimeSpan.FromSeconds(1.0)), Is.False, "task must not be completed");
 
     cts.Cancel();
 
@@ -328,9 +328,9 @@ public class NodeBaseTests {
       await writer.WriteLineAsync(unknownCommand, cancellationToken);
       await writer.FlushAsync(cancellationToken);
 
-      Assert.AreEqual(
-        "# Unknown command. Try cap, list, nodes, config, fetch, version or quit",
+      Assert.That(
         await reader.ReadLineAsync(cancellationToken),
+        Is.EqualTo("# Unknown command. Try cap, list, nodes, config, fetch, version or quit"),
         "line #1"
       );
     });
@@ -343,8 +343,8 @@ public class NodeBaseTests {
       await writer.WriteLineAsync("nodes", cancellationToken);
       await writer.FlushAsync(cancellationToken);
 
-      Assert.AreEqual(node.HostName, await reader.ReadLineAsync(cancellationToken), "line #1");
-      Assert.AreEqual(".", await reader.ReadLineAsync(cancellationToken), "line #2");
+      Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo(node.HostName), "line #1");
+      Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo("."), "line #2");
     });
   }
 
@@ -356,15 +356,15 @@ public class NodeBaseTests {
       await writer.WriteLineAsync(command, cancellationToken);
       await writer.FlushAsync(cancellationToken);
 
-      Assert.AreEqual(0, client.Available);
+      Assert.That(client.Available, Is.EqualTo(0));
 
       try {
-        Assert.IsNull(await reader.ReadLineAsync(cancellationToken));
+        Assert.That(await reader.ReadLineAsync(cancellationToken), Is.Null);
 
         // Assert.IsFalse(client.Connected, nameof(client.Connected));
       }
       catch (IOException ex) {
-        Assert.IsInstanceOf<SocketException>(ex!.InnerException); // expected case
+        Assert.That(ex!.InnerException, Is.InstanceOf<SocketException>()); // expected case
 
         // Assert.IsFalse(client.Connected, nameof(client.Connected));
       }
@@ -378,7 +378,7 @@ public class NodeBaseTests {
       await writer.WriteLineAsync("cap", cancellationToken);
       await writer.FlushAsync(cancellationToken);
 
-      Assert.AreEqual("cap", await reader.ReadLineAsync(cancellationToken), "line #1");
+      Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo("cap"), "line #1");
     });
   }
 
@@ -391,8 +391,8 @@ public class NodeBaseTests {
 
       var line = await reader.ReadLineAsync(cancellationToken);
 
-      StringAssert.Contains(node.HostName, line, "line #1 must contain hostname");
-      StringAssert.Contains(node.NodeVersion.ToString(), line, "line #1 must contain node version");
+      Assert.That(line, Does.Contain(node.HostName), "line #1 must contain hostname");
+      Assert.That(line, Does.Contain(node.NodeVersion.ToString()), "line #1 must contain node version");
     });
   }
 
@@ -426,7 +426,7 @@ public class NodeBaseTests {
         await writer.WriteLineAsync("list", cancellationToken);
         await writer.FlushAsync(cancellationToken);
 
-        Assert.AreEqual("plugin1 plugin2", await reader.ReadLineAsync(cancellationToken), "line #1");
+        Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo("plugin1 plugin2"), "line #1");
       }
     );
   }
@@ -503,11 +503,11 @@ public class NodeBaseTests {
         var totalLineCount = 0;
 
         foreach (var (expectedResponseLine, lineNumber) in expectedResponseLines.Select(static (line, index) => (line, index))) {
-          Assert.AreEqual(expectedResponseLine, await reader.ReadLineAsync(cancellationToken), $"line #{lineNumber}");
+          Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo(expectedResponseLine), $"line #{lineNumber}");
           totalLineCount++;
         }
 
-        Assert.AreEqual(expectedResponseLines.Length, totalLineCount, nameof(totalLineCount));
+        Assert.That(totalLineCount, Is.EqualTo(expectedResponseLines.Length), nameof(totalLineCount));
       }
     );
   }
@@ -537,8 +537,8 @@ public class NodeBaseTests {
         await writer.WriteLineAsync("config nonexistentplugin", cancellationToken);
         await writer.FlushAsync(cancellationToken);
 
-        Assert.AreEqual("# Unknown service", await reader.ReadLineAsync(cancellationToken), "line #1");
-        Assert.AreEqual(".", await reader.ReadLineAsync(cancellationToken), "line #2");
+        Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo("# Unknown service"), "line #1");
+        Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo("."), "line #2");
       }
     );
   }
@@ -579,12 +579,12 @@ public class NodeBaseTests {
           AssertGraphConfigurations(responseLines, plugins[0]);
 
           // plugin1field1
-          CollectionAssert.Contains(responseLines, "plugin1field1.label plugin1field1", "plugin1field1.label");
-          CollectionAssert.DoesNotContain(responseLines, "plugin1field1.draw ", "plugin1field1.draw");
+          Assert.That(responseLines, Has.Member("plugin1field1.label plugin1field1"), "plugin1field1.label");
+          Assert.That(responseLines, Has.No.Member("plugin1field1.draw "), "plugin1field1.draw");
 
           // plugin1field2
-          CollectionAssert.Contains(responseLines, "plugin1field2.label plugin1field2", "plugin1field2.label");
-          CollectionAssert.Contains(responseLines, "plugin1field2.draw LINE3", "plugin1field2.draw");
+          Assert.That(responseLines, Has.Member("plugin1field2.label plugin1field2"), "plugin1field2.label");
+          Assert.That(responseLines, Has.Member("plugin1field2.draw LINE3"), "plugin1field2.draw");
         }
       )
     };
@@ -597,8 +597,8 @@ public class NodeBaseTests {
           AssertGraphConfigurations(responseLines, plugins[1]);
 
           // plugin2field1
-          CollectionAssert.Contains(responseLines, "plugin2field1.label plugin2field1", "plugin2field1.label");
-          CollectionAssert.Contains(responseLines, "plugin2field1.draw AREA", "plugin2field1.draw");
+          Assert.That(responseLines, Has.Member("plugin2field1.label plugin2field1"), "plugin2field1.label");
+          Assert.That(responseLines, Has.Member("plugin2field1.draw AREA"), "plugin2field1.draw");
         }
       )
     };
@@ -611,11 +611,11 @@ public class NodeBaseTests {
       var graph = expectedPlugin.GraphAttributes;
       var scaleString = graph.Scale ? "yes" : "no";
 
-      CollectionAssert.Contains(responseLines, $"graph_title {graph.Title}", "graph_title");
-      CollectionAssert.Contains(responseLines, $"graph_category {graph.Category}", "graph_category");
-      CollectionAssert.Contains(responseLines, $"graph_args {graph.Arguments}", "graph_args");
-      CollectionAssert.Contains(responseLines, $"graph_scale {scaleString}", "graph_scale");
-      CollectionAssert.Contains(responseLines, $"graph_vlabel {graph.VerticalLabel}", "graph_vlabel");
+      Assert.That(responseLines, Has.Member($"graph_title {graph.Title}"), "graph_title");
+      Assert.That(responseLines, Has.Member($"graph_category {graph.Category}"), "graph_category");
+      Assert.That(responseLines, Has.Member($"graph_args {graph.Arguments}"), "graph_args");
+      Assert.That(responseLines, Has.Member($"graph_scale {scaleString}"), "graph_scale");
+      Assert.That(responseLines, Has.Member($"graph_vlabel {graph.VerticalLabel}"), "graph_vlabel");
     }
   }
 
@@ -684,14 +684,14 @@ public class NodeBaseTests {
         new Action<IReadOnlyList<string>>(
           responseLines => {
             if (width.HasValue)
-              CollectionAssert.Contains(responseLines, $"graph_width {width}", "graph_width");
+              Assert.That(responseLines, Has.Member($"graph_width {width}"), "graph_width");
             else
-              CollectionAssert.DoesNotContain(responseLines, "graph_width ", "graph_width");
+              Assert.That(responseLines, Has.No.Member("graph_width "), "graph_width");
 
             if (height.HasValue)
-              CollectionAssert.Contains(responseLines, $"graph_height {height}", "graph_height");
+              Assert.That(responseLines, Has.Member($"graph_height {height}"), "graph_height");
             else
-              CollectionAssert.DoesNotContain(responseLines, "graph_height ", "graph_height");
+              Assert.That(responseLines, Has.No.Member("graph_height "), "graph_height");
           }
         )
       };
@@ -727,9 +727,9 @@ public class NodeBaseTests {
         new Action<IReadOnlyList<string>>(
           responseLines => {
             if (updateRate.HasValue)
-              CollectionAssert.Contains(responseLines, $"update_rate {(int)updateRate.Value.TotalSeconds}", "update_rate");
+              Assert.That(responseLines, Has.Member($"update_rate {(int)updateRate.Value.TotalSeconds}"), "update_rate");
             else
-              CollectionAssert.DoesNotContain(responseLines, "update_rate ", "update_rate");
+              Assert.That(responseLines, Has.No.Member("update_rate "), "update_rate");
           }
         )
       };
@@ -801,9 +801,9 @@ public class NodeBaseTests {
         new Action<IReadOnlyList<string>>(
           responseLines => {
             if (expectedGraphOrder is null)
-              CollectionAssert.DoesNotContain(responseLines, "graph_order ", "graph_order");
+              Assert.That(responseLines, Has.No.Member("graph_order "), "graph_order");
             else
-              CollectionAssert.Contains(responseLines, $"graph_order {expectedGraphOrder}", "graph_order");
+              Assert.That(responseLines, Has.Member($"graph_order {expectedGraphOrder}"), "graph_order");
           }
         )
       };
@@ -906,9 +906,9 @@ public class NodeBaseTests {
           }
 
           if (expectedFieldDrawAttribute is null)
-            CollectionAssert.DoesNotContain(lines, "field.draw");
+            Assert.That(lines, Has.No.Member("field.draw"));
           else
-            CollectionAssert.Contains(lines, $"field.draw {expectedFieldDrawAttribute}");
+            Assert.That(lines, Has.Member($"field.draw {expectedFieldDrawAttribute}"));
         }
       );
     }
@@ -916,7 +916,7 @@ public class NodeBaseTests {
       if (expectedExceptionType is null)
         throw;
 
-      Assert.IsInstanceOf(expectedExceptionType, ex);
+      Assert.That(ex, Is.InstanceOf(expectedExceptionType));
     }
   }
 
@@ -1005,14 +1005,14 @@ public class NodeBaseTests {
         }
 
         if (expectedFieldWarningAttributeLine is null)
-          CollectionAssert.DoesNotContain(lines, expectedFieldWarningAttributeLine);
+          Assert.That(lines, Has.No.Member(expectedFieldWarningAttributeLine));
         else
-          CollectionAssert.Contains(lines, expectedFieldWarningAttributeLine);
+          Assert.That(lines, Has.Member(expectedFieldWarningAttributeLine));
 
         if (expectedFieldCriticalAttributeLine is null)
-          CollectionAssert.DoesNotContain(lines, expectedFieldCriticalAttributeLine);
+          Assert.That(lines, Has.No.Member(expectedFieldCriticalAttributeLine));
         else
-          CollectionAssert.Contains(lines, expectedFieldCriticalAttributeLine);
+          Assert.That(lines, Has.Member(expectedFieldCriticalAttributeLine));
       }
     );
   }

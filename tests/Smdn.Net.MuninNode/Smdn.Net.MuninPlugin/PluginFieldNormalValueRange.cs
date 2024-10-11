@@ -34,12 +34,12 @@ public class PluginFieldNormalValueRangeTests {
     );
 
     if (typeOfExpectedException is null) {
-      Assert.IsNotNull(range.Min, nameof(range.Min));
-      Assert.AreEqual(value, range.Min!.Value, nameof(range.Min));
+      Assert.That(range.Min, Is.Not.Null, nameof(range.Min));
+      Assert.That(range.Min!.Value, Is.EqualTo(value), nameof(range.Min));
 
-      Assert.IsNull(range.Max, nameof(range.Max));
+      Assert.That(range.Max, Is.Null, nameof(range.Max));
 
-      Assert.IsTrue(range.HasValue, nameof(range.HasValue));
+      Assert.That(range.HasValue, Is.True, nameof(range.HasValue));
     }
   }
 
@@ -56,12 +56,12 @@ public class PluginFieldNormalValueRangeTests {
     );
 
     if (typeOfExpectedException is null) {
-      Assert.IsNotNull(range.Max, nameof(range.Max));
-      Assert.AreEqual(value, range.Max!.Value, nameof(range.Max));
+      Assert.That(range.Max, Is.Not.Null, nameof(range.Max));
+      Assert.That(range.Max!.Value, Is.EqualTo(value), nameof(range.Max));
 
-      Assert.IsNull(range.Min, nameof(range.Min));
+      Assert.That(range.Min, Is.Null, nameof(range.Min));
 
-      Assert.IsTrue(range.HasValue, nameof(range.HasValue));
+      Assert.That(range.HasValue, Is.True, nameof(range.HasValue));
     }
   }
 
@@ -99,13 +99,13 @@ public class PluginFieldNormalValueRangeTests {
     );
 
     if (typeOfExpectedException is null) {
-      Assert.IsNotNull(range.Min, nameof(range.Min));
-      Assert.AreEqual(min, range.Min!.Value, nameof(range.Min));
+      Assert.That(range.Min, Is.Not.Null, nameof(range.Min));
+      Assert.That(range.Min!.Value, Is.EqualTo(min), nameof(range.Min));
 
-      Assert.IsNotNull(range.Max, nameof(range.Max));
-      Assert.AreEqual(max, range.Max!.Value, nameof(range.Max));
+      Assert.That(range.Max, Is.Not.Null, nameof(range.Max));
+      Assert.That(range.Max!.Value, Is.EqualTo(max), nameof(range.Max));
 
-      Assert.IsTrue(range.HasValue, nameof(range.HasValue));
+      Assert.That(range.HasValue, Is.True, nameof(range.HasValue));
     }
   }
 }

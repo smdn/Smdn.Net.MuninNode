@@ -80,7 +80,7 @@ public class PluginFieldBaseTests {
 
     Assert.DoesNotThrow(() => f = new ConcretePluginField(label: label));
 
-    Assert.AreEqual(expectedDefaultName, f!.Name, nameof(f.Name));
+    Assert.That(f!.Name, Is.EqualTo(expectedDefaultName), nameof(f.Name));
   }
 
   [TestCase("")]
