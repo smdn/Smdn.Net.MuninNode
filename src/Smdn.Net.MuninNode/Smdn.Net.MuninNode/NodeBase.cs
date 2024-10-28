@@ -35,7 +35,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
   [Obsolete("This member will be deprecated in future version.")]
   public IReadOnlyCollection<IPlugin> Plugins => pluginProvider.Plugins;
 
-  public string HostName { get; }
+  public abstract string HostName { get; }
 
   public virtual Version NodeVersion => DefaultNodeVersion;
   public virtual Encoding Encoding => Encoding.Default;
@@ -48,12 +48,10 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
   protected NodeBase(
     IReadOnlyCollection<IPlugin> plugins,
-    string hostName,
     ILogger? logger
   )
     : this(
       pluginProvider: new PluginProvider(plugins ?? throw new ArgumentNullException(nameof(plugins))),
-      hostName: hostName,
       logger: logger
     )
   {
@@ -71,19 +69,10 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
   protected NodeBase(
     IPluginProvider pluginProvider,
-    string hostName,
     ILogger? logger
   )
   {
     this.pluginProvider = pluginProvider ?? throw new ArgumentNullException(nameof(pluginProvider));
-
-    if (hostName == null)
-      throw new ArgumentNullException(nameof(hostName));
-    if (hostName.Length == 0)
-      throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(hostName));
-
-    HostName = hostName;
-
     Logger = logger;
   }
 

@@ -19,6 +19,7 @@ public class LocalNode : NodeBase {
   private const string DefaultHostName = "munin-node.localhost";
   private static readonly int MaxClients = 1;
 
+  public override string HostName { get; }
   public IPEndPoint LocalEndPoint { get; }
 
   /// <inheritdoc cref="LocalNode(IReadOnlyCollection{IPlugin}, string, int, IServiceProvider)"/>
@@ -130,10 +131,16 @@ public class LocalNode : NodeBase {
   )
     : base(
       pluginProvider: pluginProvider,
-      hostName: hostName,
       logger: logger
     )
   {
+    if (hostName == null)
+      throw new ArgumentNullException(nameof(hostName));
+    if (hostName.Length == 0)
+      throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(hostName));
+
+    HostName = hostName;
+
     if (Socket.OSSupportsIPv6) {
       LocalEndPoint = new IPEndPoint(
         address: IPAddress.IPv6Loopback,
