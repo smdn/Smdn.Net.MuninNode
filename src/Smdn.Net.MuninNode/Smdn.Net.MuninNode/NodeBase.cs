@@ -32,47 +32,22 @@ namespace Smdn.Net.MuninNode;
 public abstract class NodeBase : IDisposable, IAsyncDisposable {
   private static readonly Version DefaultNodeVersion = new(1, 0, 0, 0);
 
-  [Obsolete("This member will be deprecated in future version.")]
-  public IReadOnlyCollection<IPlugin> Plugins => pluginProvider.Plugins;
-
+  public abstract IPluginProvider PluginProvider { get; }
   public abstract string HostName { get; }
 
   public virtual Version NodeVersion => DefaultNodeVersion;
   public virtual Encoding Encoding => Encoding.Default;
 
-  private readonly IPluginProvider pluginProvider;
-
   protected ILogger? Logger { get; }
 
   private Socket? server;
 
-  protected NodeBase(
-    IReadOnlyCollection<IPlugin> plugins,
-    ILogger? logger
-  )
-    : this(
-      pluginProvider: new PluginProvider(plugins ?? throw new ArgumentNullException(nameof(plugins))),
-      logger: logger
-    )
-  {
-  }
-
-  private protected class PluginProvider : IPluginProvider {
-    public IReadOnlyCollection<IPlugin> Plugins { get; }
-    public INodeSessionCallback? SessionCallback => null;
-
-    public PluginProvider(IReadOnlyCollection<IPlugin> plugins)
-    {
-      Plugins = plugins;
-    }
-  }
+  public EndPoint LocalEndPoint => server?.LocalEndPoint ?? throw new InvalidOperationException("not yet bound or already disposed");
 
   protected NodeBase(
-    IPluginProvider pluginProvider,
     ILogger? logger
   )
   {
-    this.pluginProvider = pluginProvider ?? throw new ArgumentNullException(nameof(pluginProvider));
     Logger = logger;
   }
 
@@ -134,6 +109,12 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     server?.Close();
     server?.Dispose();
     server = null!;
+  }
+
+  protected void ThrowIfPluginProviderIsNull()
+  {
+    if (PluginProvider is null)
+      throw new InvalidOperationException($"{nameof(PluginProvider)} cannot be null");
   }
 
   protected abstract Socket CreateServerSocket();
@@ -201,6 +182,8 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
   {
     if (server is null)
       throw new InvalidOperationException("not started or already closed");
+
+    ThrowIfPluginProviderIsNull();
 
     Logger?.LogInformation("accepting...");
 
@@ -278,10 +261,10 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       Logger?.LogInformation("[{RemoteEndPoint}] session started; ID={SessionId}", remoteEndPoint, sessionId);
 
       try {
-        if (pluginProvider.SessionCallback is not null)
-          await pluginProvider.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        if (PluginProvider.SessionCallback is not null)
+          await PluginProvider.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
 
-        foreach (var plugin in pluginProvider.Plugins) {
+        foreach (var plugin in PluginProvider.Plugins) {
           if (plugin.SessionCallback is not null)
             await plugin.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
         }
@@ -297,13 +280,13 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
         Logger?.LogInformation("[{RemoteEndPoint}] session closed; ID={SessionId}", remoteEndPoint, sessionId);
       }
       finally {
-        foreach (var plugin in pluginProvider.Plugins) {
+        foreach (var plugin in PluginProvider.Plugins) {
           if (plugin.SessionCallback is not null)
             await plugin.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
         }
 
-        if (pluginProvider.SessionCallback is not null)
-          await pluginProvider.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        if (PluginProvider.SessionCallback is not null)
+          await PluginProvider.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
       }
     }
     finally {
@@ -745,11 +728,13 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     CancellationToken cancellationToken
   )
   {
+    ThrowIfPluginProviderIsNull();
+
     // XXX: ignore [node] arguments
     return SendResponseAsync(
       client: client,
       encoding: Encoding,
-      responseLine: string.Join(" ", pluginProvider.Plugins.Select(static plugin => plugin.Name)),
+      responseLine: string.Join(" ", PluginProvider.Plugins.Select(static plugin => plugin.Name)),
       cancellationToken: cancellationToken
     );
   }
@@ -760,7 +745,9 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     CancellationToken cancellationToken
   )
   {
-    var plugin = pluginProvider.Plugins.FirstOrDefault(
+    ThrowIfPluginProviderIsNull();
+
+    var plugin = PluginProvider.Plugins.FirstOrDefault(
       plugin => string.Equals(Encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal)
     );
 
@@ -818,7 +805,9 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     CancellationToken cancellationToken
   )
   {
-    var plugin = pluginProvider.Plugins.FirstOrDefault(
+    ThrowIfPluginProviderIsNull();
+
+    var plugin = PluginProvider.Plugins.FirstOrDefault(
       plugin => string.Equals(Encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal)
     );
 

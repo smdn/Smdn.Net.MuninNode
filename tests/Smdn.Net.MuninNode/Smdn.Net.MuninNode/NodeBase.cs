@@ -16,20 +16,47 @@ namespace Smdn.Net.MuninNode;
 
 [TestFixture]
 public class NodeBaseTests {
-  private static NodeBase CreateNode(out IPEndPoint endPoint)
-    => CreateNode(plugins: Array.Empty<IPlugin>(), out endPoint);
+  private class TestLocalNode : LocalNode {
+    private class ReadOnlyCollectionPluginProvider : IPluginProvider {
+      public IReadOnlyCollection<IPlugin> Plugins { get; }
+      public INodeSessionCallback? SessionCallback => null;
 
-  private static NodeBase CreateNode(IReadOnlyList<IPlugin> plugins, out IPEndPoint endPoint)
-  {
-    var node = PortNumberUtils.CreateServiceWithAvailablePort(
-      createService: port => new LocalNode(plugins, port),
-      isPortInUseException: static ex => ex is SocketException
-    );
+      public ReadOnlyCollectionPluginProvider(IReadOnlyCollection<IPlugin> plugins)
+      {
+        Plugins = plugins;
+      }
+    }
 
-    endPoint = node.LocalEndPoint;
+    public override IPluginProvider PluginProvider { get; }
+    public override string HostName => "test.munin-node.localhost";
 
-    return node;
+    public TestLocalNode(
+      IReadOnlyList<IPlugin> plugins
+    )
+      : base(
+        logger: null
+      )
+    {
+      PluginProvider = new ReadOnlyCollectionPluginProvider(plugins);
+    }
+
+    protected override EndPoint GetLocalEndPointToBind()
+      => new IPEndPoint(
+        address:
+          Socket.OSSupportsIPv6
+            ? IPAddress.IPv6Any
+            : Socket.OSSupportsIPv4
+              ? IPAddress.Any
+              : throw new NotSupportedException(),
+        port: 0
+      );
   }
+
+  private static NodeBase CreateNode()
+    => CreateNode(plugins: Array.Empty<IPlugin>());
+
+  private static NodeBase CreateNode(IReadOnlyList<IPlugin> plugins)
+    => new TestLocalNode(plugins);
 
   private static TcpClient CreateClient(
     IPEndPoint endPoint,
@@ -59,7 +86,7 @@ public class NodeBaseTests {
     Func<NodeBase, TcpClient, StreamWriter, StreamReader, CancellationToken, Task> action
   )
   {
-    await using var node = CreateNode(plugins, out var endPoint);
+    await using var node = CreateNode(plugins);
 
     node.Start();
 
@@ -72,7 +99,7 @@ public class NodeBaseTests {
       cts.Token
     );
 
-    using var client = CreateClient(endPoint, out var writer, out var reader);
+    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out var reader);
 
     try {
       reader.ReadLine(); // banner
@@ -92,7 +119,7 @@ public class NodeBaseTests {
   [Test]
   public async Task Start()
   {
-    await using var node = CreateNode(out _);
+    await using var node = CreateNode();
 
     Assert.DoesNotThrow(node.Start);
     Assert.Throws<InvalidOperationException>(node.Start, "already started");
@@ -101,13 +128,13 @@ public class NodeBaseTests {
   [Test]
   public async Task AcceptSingleSessionAsync()
   {
-    await using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode();
 
     node.Start();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    using var client = CreateClient(endPoint, out var writer, out var reader);
+    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out var reader);
 
     var banner = reader.ReadLine();
 
@@ -122,7 +149,7 @@ public class NodeBaseTests {
   [Test]
   public async Task AcceptSingleSessionAsync_NodeNotStarted()
   {
-    await using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode();
 
     Assert.ThrowsAsync<InvalidOperationException>(async () => await node.AcceptSingleSessionAsync());
   }
@@ -132,7 +159,7 @@ public class NodeBaseTests {
   [TestCase(1000)]
   public async Task AcceptSingleSessionAsync_CancellationRequested(int delayMilliseconds)
   {
-    await using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode();
 
     node.Start();
 
@@ -146,13 +173,13 @@ public class NodeBaseTests {
   [Test]
   public async Task AcceptSingleSessionAsync_ClientDisconnected_BeforeSendingBanner()
   {
-    await using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode();
 
     node.Start();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    using var client = CreateClient(endPoint, out _, out _);
+    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out _, out _);
 
     client.Close();
 
@@ -162,13 +189,13 @@ public class NodeBaseTests {
   [Test]
   public async Task AcceptSingleSessionAsync_ClientDisconnected_WhileAwaitingCommand()
   {
-    await using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode();
 
     node.Start();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    using var client = CreateClient(endPoint, out _, out var reader);
+    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out _, out var reader);
 
     reader.ReadLine(); // read banner
 
@@ -216,10 +243,7 @@ public class NodeBaseTests {
 
     Assert.That(isSessionCallbackNull, Is.EqualTo(setSessionCallbackNull));
 
-    await using var node = CreateNode(
-      plugins: new IPlugin[] { plugin },
-      out var endPoint
-    );
+    await using var node = CreateNode(plugins: new IPlugin[] { plugin });
 
     node.Start();
 
@@ -228,7 +252,7 @@ public class NodeBaseTests {
     Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(0), nameof(plugin.StartedSessionIds));
     Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
 
-    using var client = CreateClient(endPoint, out var writer, out var reader);
+    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out var reader);
 
     var banner = reader.ReadLine();
 
@@ -268,7 +292,7 @@ public class NodeBaseTests {
   [TestCase(false)]
   public async Task AcceptAsync(bool throwIfCancellationRequested)
   {
-    await using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode();
 
     node.Start();
 
@@ -276,7 +300,7 @@ public class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptAsync(throwIfCancellationRequested, cts.Token));
 
-    using var client0 = CreateClient(endPoint, out var writer0, out var reader0);
+    using var client0 = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer0, out var reader0);
 
     reader0.ReadLine();
     writer0.WriteLine(".");
@@ -284,7 +308,7 @@ public class NodeBaseTests {
 
     Assert.That(taskAccept.Wait(TimeSpan.FromSeconds(1.0)), Is.False, "task must not be completed");
 
-    using var client1 = CreateClient(endPoint, out var writer1, out var reader1);
+    using var client1 = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer1, out var reader1);
 
     reader1.ReadLine();
     writer1.WriteLine(".");
@@ -304,13 +328,13 @@ public class NodeBaseTests {
   [TestCase("\n")]
   public async Task ProcessCommandAsync_EndOfLine(string eol)
   {
-    await using var node = CreateNode(out var endPoint);
+    await using var node = CreateNode();
 
     node.Start();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    using var client = CreateClient(endPoint, out var writer, out _);
+    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out _);
 
     writer.Write(".");
     writer.Write(eol);
