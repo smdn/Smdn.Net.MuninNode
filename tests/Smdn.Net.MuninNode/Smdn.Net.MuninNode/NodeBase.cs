@@ -31,9 +31,11 @@ public class NodeBaseTests {
     public override string HostName => "test.munin-node.localhost";
 
     public TestLocalNode(
+      IAccessRule? accessRule,
       IReadOnlyList<IPlugin> plugins
     )
       : base(
+        accessRule: accessRule,
         logger: null
       )
     {
@@ -53,10 +55,16 @@ public class NodeBaseTests {
   }
 
   private static NodeBase CreateNode()
-    => CreateNode(plugins: Array.Empty<IPlugin>());
+    => CreateNode(accessRule: null, plugins: Array.Empty<IPlugin>());
+
+  private static NodeBase CreateNode(IAccessRule? accessRule)
+    => CreateNode(accessRule: accessRule, plugins: Array.Empty<IPlugin>());
 
   private static NodeBase CreateNode(IReadOnlyList<IPlugin> plugins)
-    => new TestLocalNode(plugins);
+    => CreateNode(accessRule: null, plugins: plugins);
+
+  private static NodeBase CreateNode(IAccessRule? accessRule, IReadOnlyList<IPlugin> plugins)
+    => new TestLocalNode(accessRule, plugins);
 
   private static TcpClient CreateClient(
     IPEndPoint endPoint,
@@ -79,14 +87,29 @@ public class NodeBaseTests {
   private static Task StartSession(
     Func<NodeBase, TcpClient, StreamWriter, StreamReader, CancellationToken, Task> action
   )
-    => StartSession(plugins: Array.Empty<IPlugin>(), action: action);
+    => StartSession(
+      accessRule: null,
+      plugins: Array.Empty<IPlugin>(),
+      action: action
+    );
+
+  private static Task StartSession(
+    IReadOnlyList<IPlugin> plugins,
+    Func<NodeBase, TcpClient, StreamWriter, StreamReader, CancellationToken, Task> action
+  )
+    => StartSession(
+      accessRule: null,
+      plugins: plugins,
+      action: action
+    );
 
   private static async Task StartSession(
+    IAccessRule? accessRule,
     IReadOnlyList<IPlugin> plugins,
     Func<NodeBase, TcpClient, StreamWriter, StreamReader, CancellationToken, Task> action
   )
   {
-    await using var node = CreateNode(plugins);
+    await using var node = CreateNode(accessRule, plugins);
 
     node.Start();
 
@@ -202,6 +225,66 @@ public class NodeBaseTests {
     client.Close();
 
     Assert.DoesNotThrowAsync(async () => await taskAccept);
+  }
+
+  private sealed class AcceptAllAccessRule : IAccessRule {
+    public bool IsAcceptable(IPEndPoint remoteEndPoint) => true;
+  }
+
+  [Test]
+  public async Task AcceptSingleSessionAsync_IAccessRule_AccessGranted()
+  {
+    await StartSession(
+      accessRule: new AcceptAllAccessRule(),
+      plugins: Array.Empty<IPlugin>(),
+      async static (node, client, writer, reader, cancellationToken
+    ) => {
+      await writer.WriteLineAsync("command", cancellationToken);
+      await writer.FlushAsync(cancellationToken);
+
+      Assert.That(
+        await reader.ReadLineAsync(cancellationToken),
+        Is.Not.Null,
+        "line #1"
+      );
+
+      var connected = !(
+        client.Client.Poll(1 /*microsecs*/, SelectMode.SelectRead) &&
+        client.Client.Available == 0
+      );
+
+      Assert.That(connected, Is.True);
+    });
+  }
+
+  private sealed class RefuseAllAccessRule : IAccessRule {
+    public bool IsAcceptable(IPEndPoint remoteEndPoint) => false;
+  }
+
+  [Test]
+  public async Task AcceptSingleSessionAsync_IAccessRule_AccessRefused()
+  {
+    await StartSession(
+      accessRule: new RefuseAllAccessRule(),
+      plugins: Array.Empty<IPlugin>(),
+      async static (node, client, writer, reader, cancellationToken
+    ) => {
+      await writer.WriteLineAsync(".", cancellationToken);
+      await writer.FlushAsync(cancellationToken);
+
+      Assert.That(
+        await reader.ReadLineAsync(cancellationToken),
+        Is.Null,
+        "line #1"
+      );
+
+      var connected = !(
+        client.Client.Poll(1 /*microsecs*/, SelectMode.SelectRead) &&
+        client.Client.Available == 0
+      );
+
+      Assert.That(connected, Is.False);
+    });
   }
 
   private class PseudoPluginWithSessionCallback : IPlugin, INodeSessionCallback {

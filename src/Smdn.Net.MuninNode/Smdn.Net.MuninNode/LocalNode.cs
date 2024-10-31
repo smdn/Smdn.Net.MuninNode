@@ -17,13 +17,18 @@ public abstract partial class LocalNode : NodeBase {
   /// <summary>
   /// Initializes a new instance of the <see cref="LocalNode"/> class.
   /// </summary>
+  /// <param name="accessRule">
+  /// The <see cref="IAccessRule"/> to determine whether to accept or reject a remote host that connects to <see cref="LocalNode"/>.
+  /// </param>
   /// <param name="logger">
   /// The <see cref="ILogger"/> to report the situation.
   /// </param>
   protected LocalNode(
+    IAccessRule? accessRule,
     ILogger? logger = null
   )
     : base(
+      accessRule: accessRule,
       logger: logger
     )
   {
@@ -77,9 +82,4 @@ public abstract partial class LocalNode : NodeBase {
       throw;
     }
   }
-
-  protected override bool IsClientAcceptable(IPEndPoint remoteEndPoint)
-    => IPAddress.IsLoopback(
-      (remoteEndPoint ?? throw new ArgumentNullException(nameof(remoteEndPoint))).Address
-    );
 }

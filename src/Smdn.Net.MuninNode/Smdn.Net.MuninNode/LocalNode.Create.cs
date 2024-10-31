@@ -37,6 +37,7 @@ partial class LocalNode {
       IServiceProvider? serviceProvider = null
     )
       : base(
+        accessRule: serviceProvider?.GetService<IAccessRule>(),
         logger: serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<LocalNode>()
       )
     {

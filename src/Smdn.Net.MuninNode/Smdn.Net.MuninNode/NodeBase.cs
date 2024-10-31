@@ -40,14 +40,18 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
   protected ILogger? Logger { get; }
 
+  private readonly IAccessRule? accessRule;
+
   private Socket? server;
 
   public EndPoint LocalEndPoint => server?.LocalEndPoint ?? throw new InvalidOperationException("not yet bound or already disposed");
 
   protected NodeBase(
+    IAccessRule? accessRule,
     ILogger? logger
   )
   {
+    this.accessRule = accessRule;
     Logger = logger;
   }
 
@@ -131,8 +135,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     Logger?.LogInformation("started (end point: {LocalEndPoint})", server.LocalEndPoint);
   }
 
-  protected abstract bool IsClientAcceptable(IPEndPoint remoteEndPoint);
-
   /// <summary>
   /// Starts accepting multiple sessions.
   /// The <see cref="ValueTask" /> this method returns will never complete unless the cancellation requested by the <paramref name="cancellationToken" />.
@@ -211,7 +213,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
         return;
       }
 
-      if (!IsClientAcceptable(remoteEndPoint)) {
+      if (accessRule is not null && !accessRule.IsAcceptable(remoteEndPoint)) {
         Logger?.LogWarning("access refused: {RemoteEndPoint}", remoteEndPoint);
         return;
       }
