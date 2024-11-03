@@ -11,8 +11,9 @@ namespace Smdn.Net.MuninPlugin;
 /// Defines graph attributes that should be returned when the plugin is called with the 'config' argument.
 /// This type represents the collection of 'field name attributes'.
 /// </summary>
+/// <seealso cref="IPluginGraphAttributes"/>
 /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#global-attributes">Plugin reference - Global attributes</seealso>
-public sealed class PluginGraphAttributes {
+public sealed class PluginGraphAttributes : IPluginGraphAttributes {
   /// <summary>Gets a value for the <c>graph_title</c>.</summary>
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-title">Plugin reference - Global attributes - graph_title</seealso>
   public string Title { get; }
@@ -56,10 +57,7 @@ public sealed class PluginGraphAttributes {
     string category,
     string verticalLabel,
     bool scale,
-    string arguments,
-    TimeSpan? updateRate = null,
-    int? width = null,
-    int? height = null
+    string arguments
   )
     : this(
       title: title,
@@ -67,34 +65,9 @@ public sealed class PluginGraphAttributes {
       verticalLabel: verticalLabel,
       scale: scale,
       arguments: arguments,
-      updateRate: updateRate,
-      width: width,
-      height: height,
-      order: null
-    )
-  {
-  }
-
-  [Obsolete("This member will be deprecated in future version.")]
-  public PluginGraphAttributes(
-    string title,
-    string category,
-    string verticalLabel,
-    bool scale,
-    string arguments,
-    TimeSpan updateRate,
-    int? width = null,
-    int? height = null
-  )
-    : this(
-      title: title,
-      category: category,
-      verticalLabel: verticalLabel,
-      scale: scale,
-      arguments: arguments,
-      updateRate: updateRate,
-      width: width,
-      height: height,
+      updateRate: null,
+      width: null,
+      height: null,
       order: null
     )
   {
@@ -146,5 +119,23 @@ public sealed class PluginGraphAttributes {
       throw new ArgumentOutOfRangeException(nameof(updateRate), updateRate, "must be at least 1 seconds");
 
     UpdateRate = updateRate;
+  }
+
+  public IEnumerable<string> EnumerateAttributes()
+  {
+    yield return $"graph_title {Title}";
+    yield return $"graph_category {Category}";
+    yield return $"graph_args {Arguments}";
+    yield return $"graph_scale {(Scale ? "yes" : "no")}";
+    yield return $"graph_vlabel {VerticalLabel}";
+
+    if (UpdateRate.HasValue)
+      yield return $"update_rate {(int)UpdateRate.Value.TotalSeconds}";
+    if (Width.HasValue)
+      yield return $"graph_width {Width.Value}";
+    if (Height.HasValue)
+      yield return $"graph_height {Height.Value}";
+    if (!string.IsNullOrEmpty(Order))
+      yield return $"graph_order {Order}";
   }
 }

@@ -289,7 +289,7 @@ public class NodeBaseTests {
 
   private class PseudoPluginWithSessionCallback : IPlugin, INodeSessionCallback {
     public string Name => throw new NotImplementedException();
-    public PluginGraphAttributes GraphAttributes => throw new NotImplementedException();
+    public IPluginGraphAttributes GraphAttributes => throw new NotImplementedException();
     public IPluginDataSource DataSource => throw new NotImplementedException();
 
     private readonly bool setSessionCallbackNull;
@@ -683,7 +683,7 @@ public class NodeBaseTests {
       "config plugin1",
       new Action<IReadOnlyList<string>>(
         responseLines => {
-          AssertGraphConfigurations(responseLines, plugins[0]);
+          AssertGraphConfigurations(responseLines, (PluginGraphAttributes)plugins[0].GraphAttributes);
 
           // plugin1field1
           Assert.That(responseLines, Has.Member("plugin1field1.label plugin1field1"), "plugin1field1.label");
@@ -701,7 +701,7 @@ public class NodeBaseTests {
       "config plugin2",
       new Action<IReadOnlyList<string>>(
         responseLines => {
-          AssertGraphConfigurations(responseLines, plugins[1]);
+          AssertGraphConfigurations(responseLines, (PluginGraphAttributes)plugins[1].GraphAttributes);
 
           // plugin2field1
           Assert.That(responseLines, Has.Member("plugin2field1.label plugin2field1"), "plugin2field1.label");
@@ -712,17 +712,16 @@ public class NodeBaseTests {
 
     static void AssertGraphConfigurations(
       IReadOnlyList<string> responseLines,
-      IPlugin expectedPlugin
+      PluginGraphAttributes attributes
     )
     {
-      var graph = expectedPlugin.GraphAttributes;
-      var scaleString = graph.Scale ? "yes" : "no";
+      var scaleString = attributes.Scale ? "yes" : "no";
 
-      Assert.That(responseLines, Has.Member($"graph_title {graph.Title}"), "graph_title");
-      Assert.That(responseLines, Has.Member($"graph_category {graph.Category}"), "graph_category");
-      Assert.That(responseLines, Has.Member($"graph_args {graph.Arguments}"), "graph_args");
+      Assert.That(responseLines, Has.Member($"graph_title {attributes.Title}"), "graph_title");
+      Assert.That(responseLines, Has.Member($"graph_category {attributes.Category}"), "graph_category");
+      Assert.That(responseLines, Has.Member($"graph_args {attributes.Arguments}"), "graph_args");
       Assert.That(responseLines, Has.Member($"graph_scale {scaleString}"), "graph_scale");
-      Assert.That(responseLines, Has.Member($"graph_vlabel {graph.VerticalLabel}"), "graph_vlabel");
+      Assert.That(responseLines, Has.Member($"graph_vlabel {attributes.VerticalLabel}"), "graph_vlabel");
     }
   }
 

@@ -15,6 +15,8 @@ public class Plugin : IPlugin, IPluginDataSource, INodeSessionCallback {
   public IReadOnlyCollection<IPluginField> Fields { get; }
 
 #pragma warning disable CA1033
+  IPluginGraphAttributes IPlugin.GraphAttributes => GraphAttributes;
+
   IPluginDataSource IPlugin.DataSource => this;
 
   IReadOnlyCollection<IPluginField> IPluginDataSource.Fields => Fields;

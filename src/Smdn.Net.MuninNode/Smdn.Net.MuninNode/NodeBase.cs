@@ -822,24 +822,11 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       );
     }
 
-    var graphAttrs = plugin.GraphAttributes;
+    var responseLines = new List<string>(capacity: 20);
 
-    var responseLines = new List<string>() {
-      $"graph_title {graphAttrs.Title}",
-      $"graph_category {graphAttrs.Category}",
-      $"graph_args {graphAttrs.Arguments}",
-      $"graph_scale {(graphAttrs.Scale ? "yes" : "no")}",
-      $"graph_vlabel {graphAttrs.VerticalLabel}",
-    };
-
-    if (graphAttrs.UpdateRate.HasValue)
-      responseLines.Add($"update_rate {(int)graphAttrs.UpdateRate.Value.TotalSeconds}");
-    if (graphAttrs.Width.HasValue)
-      responseLines.Add($"graph_width {graphAttrs.Width.Value}");
-    if (graphAttrs.Height.HasValue)
-      responseLines.Add($"graph_height {graphAttrs.Height.Value}");
-    if (!string.IsNullOrEmpty(graphAttrs.Order))
-      responseLines.Add($"graph_order {graphAttrs.Order}");
+    responseLines.AddRange(
+      plugin.GraphAttributes.EnumerateAttributes()
+    );
 
     // The fields referenced by {fieldname}.negative must be defined ahread of others,
     // and thus lists the negative field settings first.
