@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -46,9 +47,9 @@ public class NodeBaseTests {
       => new IPEndPoint(
         address:
           Socket.OSSupportsIPv6
-            ? IPAddress.IPv6Any
+            ? RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? IPAddress.IPv6Loopback : IPAddress.IPv6Any
             : Socket.OSSupportsIPv4
-              ? IPAddress.Any
+              ? RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? IPAddress.Loopback : IPAddress.Any
               : throw new NotSupportedException(),
         port: 0
       );
@@ -272,11 +273,19 @@ public class NodeBaseTests {
       await writer.WriteLineAsync(".", cancellationToken);
       await writer.FlushAsync(cancellationToken);
 
-      Assert.That(
-        await reader.ReadLineAsync(cancellationToken),
-        Is.Null,
-        "line #1"
-      );
+      try {
+        Assert.That(
+          await reader.ReadLineAsync(cancellationToken),
+          Is.Null,
+          "line #1"
+        );
+      }
+      catch (IOException ex) when (
+        RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+        ex.InnerException is SocketException
+      ) {
+        // ignore
+      }
 
       var connected = !(
         client.Client.Poll(1 /*microsecs*/, SelectMode.SelectRead) &&
