@@ -10,8 +10,8 @@ using Microsoft.Extensions.Logging;
 using Smdn.Net.MuninNode;
 using Smdn.Net.MuninPlugin;
 
-const string nodeHostName = "test.munin-node.localhost";
-const int nodePort = 14949;
+const string NodeHostName = "test.munin-node.localhost";
+const int NodePort = 14949;
 
 double? FetchValue1() => Random.Shared.Next(0, 10);
 double? FetchValue2() => Random.Shared.Next(0, 10);
@@ -45,8 +45,8 @@ services.AddLogging(
 
 await using var node = new LocalNode(
   plugins: plugins,
-  hostName: nodeHostName,
-  port: nodePort,
+  hostName: NodeHostName,
+  port: NodePort,
   serviceProvider: services.BuildServiceProvider()
 );
 

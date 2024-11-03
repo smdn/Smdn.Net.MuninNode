@@ -10,8 +10,8 @@ using Microsoft.Extensions.Logging;
 using Smdn.Net.MuninNode;
 using Smdn.Net.MuninPlugin;
 
-const string nodeHostName = "test.munin-node.localhost";
-const int nodePort = 14949;
+const string NodeHostName = "test.munin-node.localhost";
+const int NodePort = 14949;
 
 var startAt = DateTime.Now;
 
@@ -19,7 +19,7 @@ var startAt = DateTime.Now;
 var plugins = new[] {
   PluginFactory.CreatePlugin(
     name: "uptime",
-    fieldLabel: nodeHostName,
+    fieldLabel: NodeHostName,
     // Specify 'AREA' as the drawing style for values on the graph
     fieldGraphStyle: PluginFieldGraphStyle.Area,
     // Set the number of minutes elapsed from the start time of the process as the 'uptime' value.
@@ -29,7 +29,7 @@ var plugins = new[] {
       // 'Well known categories' are defined by Munin.
       // See https://guide.munin-monitoring.org/en/latest/reference/graph-category.html
       category: "system",
-      title: $"Uptime of {nodeHostName}",
+      title: $"Uptime of {NodeHostName}",
       verticalLabel: "Uptime [minutes]",
       scale: false,
       // Specify arguments for graph drawing. See below for more information about graph arguments:
@@ -56,8 +56,8 @@ services.AddLogging(
 // Create LocalNode
 await using var node = new LocalNode(
   plugins: plugins,
-  hostName: nodeHostName,
-  port: nodePort,
+  hostName: NodeHostName,
+  port: NodePort,
   serviceProvider: services.BuildServiceProvider()
 );
 
