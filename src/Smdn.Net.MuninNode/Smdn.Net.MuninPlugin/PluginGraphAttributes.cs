@@ -52,6 +52,10 @@ public sealed class PluginGraphAttributes : IPluginGraphAttributes {
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-order">Plugin reference - Global attributes - graph_order</seealso>
   public string? Order { get; }
 
+  /// <summary>Gets a value for the <c>graph_total</c>.</summary>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-total">Plugin reference - Global attributes - graph_total</seealso>
+  public string? TotalValueLabel { get; }
+
   public PluginGraphAttributes(
     string title,
     string category,
@@ -68,7 +72,8 @@ public sealed class PluginGraphAttributes : IPluginGraphAttributes {
       updateRate: null,
       width: null,
       height: null,
-      order: null
+      order: null,
+      totalValueLabel: null
     )
   {
   }
@@ -82,7 +87,8 @@ public sealed class PluginGraphAttributes : IPluginGraphAttributes {
     TimeSpan? updateRate,
     int? width,
     int? height,
-    IEnumerable<string>? order
+    IEnumerable<string>? order,
+    string? totalValueLabel
   )
   {
     if (title == null)
@@ -114,6 +120,7 @@ public sealed class PluginGraphAttributes : IPluginGraphAttributes {
     Width = width;
     Height = height;
     Order = order is null ? null : string.Join(" ", order);
+    TotalValueLabel = totalValueLabel;
 
     if (updateRate.HasValue && updateRate.Value < TimeSpan.FromSeconds(1.0))
       throw new ArgumentOutOfRangeException(nameof(updateRate), updateRate, "must be at least 1 seconds");
@@ -137,5 +144,7 @@ public sealed class PluginGraphAttributes : IPluginGraphAttributes {
       yield return $"graph_height {Height.Value}";
     if (!string.IsNullOrEmpty(Order))
       yield return $"graph_order {Order}";
+    if (!string.IsNullOrEmpty(TotalValueLabel))
+      yield return $"graph_total {TotalValueLabel}";
   }
 }
