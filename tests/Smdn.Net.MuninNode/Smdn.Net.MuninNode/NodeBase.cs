@@ -538,6 +538,40 @@ public class NodeBaseTests {
     );
   }
 
+  private static Task GetCommandResponseAsync(
+    IReadOnlyList<IPlugin> plugins,
+    Func<string> getCommand,
+    Action<IReadOnlyList<string>> assertResponseLines
+  )
+    => StartSession(
+      plugins: plugins,
+      action: async (node, client, writer, reader, cancellationToken) => {
+        await writer.WriteLineAsync(getCommand(), cancellationToken);
+        await writer.FlushAsync(cancellationToken);
+
+        var lines = new List<string>();
+
+        try {
+          for (; ; ) {
+            var line = await reader.ReadLineAsync(cancellationToken);
+
+            if (line is null)
+              break;
+
+            lines.Add(line);
+
+            if (line == ".")
+              break;
+          }
+        }
+        catch (IOException ex) when (ex.InnerException is SocketException) {
+          // ignore
+        }
+
+        assertResponseLines(lines);
+      }
+    );
+
   private static System.Collections.IEnumerable YieldTestCases_ProcessCommandAsync_FetchCommand()
   {
     var graphAttrs = new PluginGraphAttributes(
@@ -595,29 +629,22 @@ public class NodeBaseTests {
   }
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_FetchCommand))]
-  public async Task ProcessCommandAsync_FetchCommand(
+  public Task ProcessCommandAsync_FetchCommand(
     IReadOnlyList<IPlugin> plugins,
     string command,
     string[] expectedResponseLines
   )
-  {
-    await StartSession(
+    => GetCommandResponseAsync(
       plugins: plugins,
-      action: async (node, client, writer, reader, cancellationToken) => {
-        await writer.WriteLineAsync(command, cancellationToken);
-        await writer.FlushAsync(cancellationToken);
-
-        var totalLineCount = 0;
+      getCommand: () => command,
+      assertResponseLines: lines => {
+        Assert.That(lines.Count, Is.EqualTo(expectedResponseLines.Length), nameof(lines.Count));
 
         foreach (var (expectedResponseLine, lineNumber) in expectedResponseLines.Select(static (line, index) => (line, index))) {
-          Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo(expectedResponseLine), $"line #{lineNumber}");
-          totalLineCount++;
+          Assert.That(lines[lineNumber], Is.EqualTo(expectedResponseLine), $"line #{lineNumber}");
         }
-
-        Assert.That(totalLineCount, Is.EqualTo(expectedResponseLines.Length), nameof(totalLineCount));
       }
     );
-  }
 
   [Test]
   public async Task ProcessCommandAsync_ConfigCommand_UnknownService()
@@ -638,14 +665,13 @@ public class NodeBaseTests {
       ),
     };
 
-    await StartSession(
+    await GetCommandResponseAsync(
       plugins: plugins,
-      action: async static (node, client, writer, reader, cancellationToken) => {
-        await writer.WriteLineAsync("config nonexistentplugin", cancellationToken);
-        await writer.FlushAsync(cancellationToken);
-
-        Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo("# Unknown service"), "line #1");
-        Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo("."), "line #2");
+      getCommand: () => "config nonexistentplugin",
+      assertResponseLines: lines => {
+        Assert.That(lines.Count, Is.EqualTo(2), "# of lines");
+        Assert.That(lines[0], Is.EqualTo("# Unknown service"), "line #1");
+        Assert.That(lines[1], Is.EqualTo("."), "line #2");
       }
     );
   }
@@ -726,36 +752,16 @@ public class NodeBaseTests {
   }
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand))]
-  public async Task ProcessCommandAsync_ConfigCommand(
+  public Task ProcessCommandAsync_ConfigCommand(
     IReadOnlyList<IPlugin> plugins,
     string command,
     Action<IReadOnlyList<string>> assertResponseLines
   )
-  {
-    await StartSession(
+    => GetCommandResponseAsync(
       plugins: plugins,
-      action: async (node, client, writer, reader, cancellationToken) => {
-        await writer.WriteLineAsync(command, cancellationToken);
-        await writer.FlushAsync(cancellationToken);
-
-        var lines = new List<string>();
-
-        for (; ; ) {
-          var line = await reader.ReadLineAsync(cancellationToken);
-
-          if (line is null)
-            break;
-
-          lines.Add(line);
-
-          if (line == ".")
-            break;
-        }
-
-        assertResponseLines(lines);
-      }
+      getCommand: () => command,
+      assertResponseLines: assertResponseLines
     );
-  }
 
   private static System.Collections.IEnumerable YieldTestCases_ProcessCommandAsync_ConfigCommand_OptionalAttributes()
   {
@@ -845,35 +851,15 @@ public class NodeBaseTests {
   }
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand_OptionalAttributes))]
-  public async Task ProcessCommandAsync_ConfigCommand_OptionalAttributes(
+  public Task ProcessCommandAsync_ConfigCommand_OptionalAttributes(
     IPlugin plugin,
     Action<IReadOnlyList<string>> assertResponseLines
   )
-  {
-    await StartSession(
+    => GetCommandResponseAsync(
       plugins: new[] { plugin },
-      action: async (node, client, writer, reader, cancellationToken) => {
-        await writer.WriteLineAsync($"config {plugin.Name}", cancellationToken);
-        await writer.FlushAsync(cancellationToken);
-
-        var lines = new List<string>();
-
-        for (; ; ) {
-          var line = await reader.ReadLineAsync(cancellationToken);
-
-          if (line is null)
-            break;
-
-          lines.Add(line);
-
-          if (line == ".")
-            break;
-        }
-
-        assertResponseLines(lines);
-      }
+      getCommand: () => $"config {plugin.Name}",
+      assertResponseLines: assertResponseLines
     );
-  }
 
   private static System.Collections.IEnumerable YieldTestCases_ProcessCommandAsync_ConfigCommand_GraphOrder()
   {
@@ -920,35 +906,15 @@ public class NodeBaseTests {
   }
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand_GraphOrder))]
-  public async Task ProcessCommandAsync_ConfigCommand_GraphOrder(
+  public Task ProcessCommandAsync_ConfigCommand_GraphOrder(
     IPlugin plugin,
     Action<IReadOnlyList<string>> assertResponseLines
   )
-  {
-    await StartSession(
+    => GetCommandResponseAsync(
       plugins: new[] { plugin },
-      action: async (node, client, writer, reader, cancellationToken) => {
-        await writer.WriteLineAsync($"config {plugin.Name}", cancellationToken);
-        await writer.FlushAsync(cancellationToken);
-
-        var lines = new List<string>();
-
-        for (; ; ) {
-          var line = await reader.ReadLineAsync(cancellationToken);
-
-          if (line is null)
-            break;
-
-          lines.Add(line);
-
-          if (line == ".")
-            break;
-        }
-
-        assertResponseLines(lines);
-      }
+      getCommand: () => $"config {plugin.Name}",
+      assertResponseLines: assertResponseLines
     );
-  }
 
   private static System.Collections.IEnumerable YieldTestCases_ProcessCommandAsync_ConfigCommand_GraphTotal()
   {
@@ -994,35 +960,15 @@ public class NodeBaseTests {
   }
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand_GraphTotal))]
-  public async Task ProcessCommandAsync_ConfigCommand_GraphTotal(
+  public Task ProcessCommandAsync_ConfigCommand_GraphTotal(
     IPlugin plugin,
     Action<IReadOnlyList<string>> assertResponseLines
   )
-  {
-    await StartSession(
+    => GetCommandResponseAsync(
       plugins: new[] { plugin },
-      action: async (node, client, writer, reader, cancellationToken) => {
-        await writer.WriteLineAsync($"config {plugin.Name}", cancellationToken);
-        await writer.FlushAsync(cancellationToken);
-
-        var lines = new List<string>();
-
-        for (; ; ) {
-          var line = await reader.ReadLineAsync(cancellationToken);
-
-          if (line is null)
-            break;
-
-          lines.Add(line);
-
-          if (line == ".")
-            break;
-        }
-
-        assertResponseLines(lines);
-      }
+      getCommand: () => $"config {plugin.Name}",
+      assertResponseLines: assertResponseLines
     );
-  }
 
   [TestCase(PluginFieldGraphStyle.Default, null, null)]
   [TestCase(PluginFieldGraphStyle.Area, "AREA", null)]
@@ -1063,31 +1009,10 @@ public class NodeBaseTests {
     };
 
     try {
-      await StartSession(
+      await GetCommandResponseAsync(
         plugins: plugins,
-        action: async (node, client, writer, reader, cancellationToken) => {
-          await writer.WriteLineAsync("config plugin", cancellationToken);
-          await writer.FlushAsync(cancellationToken);
-
-          var lines = new List<string>();
-
-          try {
-            for (; ; ) {
-              var line = await reader.ReadLineAsync(cancellationToken);
-
-              if (line is null)
-                break;
-
-              lines.Add(line);
-
-              if (line == ".")
-                break;
-            }
-          }
-          catch (IOException ex) when (ex.InnerException is SocketException) {
-            // ignore
-          }
-
+        getCommand: () => "config plugin",
+        assertResponseLines: lines => {
           if (expectedFieldDrawAttribute is null)
             Assert.That(lines, Has.No.Member("field.draw"));
           else
@@ -1162,31 +1087,10 @@ public class NodeBaseTests {
       ),
     };
 
-    await StartSession(
+    await GetCommandResponseAsync(
       plugins: plugins,
-      action: async (node, client, writer, reader, cancellationToken) => {
-        await writer.WriteLineAsync("config plugin", cancellationToken);
-        await writer.FlushAsync(cancellationToken);
-
-        var lines = new List<string>();
-
-        try {
-          for (; ; ) {
-            var line = await reader.ReadLineAsync(cancellationToken);
-
-            if (line is null)
-              break;
-
-            lines.Add(line);
-
-            if (line == ".")
-              break;
-          }
-        }
-        catch (IOException ex) when (ex.InnerException is SocketException) {
-          // ignore
-        }
-
+      getCommand: () => "config plugin",
+      assertResponseLines: lines => {
         if (expectedFieldWarningAttributeLine is null)
           Assert.That(lines, Has.No.Member(expectedFieldWarningAttributeLine));
         else
@@ -1240,40 +1144,21 @@ public class NodeBaseTests {
       ),
     };
 
-    await StartSession(
+    await GetCommandResponseAsync(
       plugins: plugins,
-      action: async (node, client, writer, reader, cancellationToken) => {
-        await writer.WriteLineAsync("config plugin", cancellationToken);
-        await writer.FlushAsync(cancellationToken);
-
-        var lines = new List<string>();
-
-        try {
-          for (; ;) {
-            var line = await reader.ReadLineAsync(cancellationToken);
-
-            if (line is null)
-              break;
-
-            lines.Add(line);
-
-            if (line == ".")
-              break;
-          }
-        }
-        catch (IOException ex) when (ex.InnerException is SocketException) {
-          // ignore
-        }
-
+      getCommand: () => "config plugin",
+      assertResponseLines: lines => {
         var expectedAttrNegativeLine = $"{PositiveFieldName}.negative {NegativeFieldName}";
         var expectedAttrGraphLine = $"{NegativeFieldName}.graph no";
 
         Assert.That(lines, Has.Member(expectedAttrNegativeLine));
         Assert.That(lines, Has.Member(expectedAttrGraphLine));
 
+        var ls = lines.ToList();
+
         Assert.That(
-          lines.IndexOf(expectedAttrGraphLine),
-          Is.LessThan(lines.IndexOf(expectedAttrNegativeLine)),
+          ls.IndexOf(expectedAttrGraphLine),
+          Is.LessThan(ls.IndexOf(expectedAttrNegativeLine)),
           "negative field's attributes must be listed first"
         );
       }
