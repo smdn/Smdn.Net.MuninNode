@@ -78,7 +78,7 @@ public class NodeBaseTests {
     out StreamReader reader
   )
   {
-    var client = new TcpClient();
+    var client = new TcpClient(endPoint.AddressFamily);
 
     client.Connect(endPoint);
 
