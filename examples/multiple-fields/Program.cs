@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Net;
 using System.Threading;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -43,10 +44,11 @@ services.AddLogging(
     .AddFilter(static level => LogLevel.Trace <= level)
 );
 
-await using var node = new LocalNode(
+await using var node = LocalNode.Create(
   plugins: plugins,
-  hostName: NodeHostName,
   port: NodePort,
+  hostName: NodeHostName,
+  addressListAllowFrom: [IPAddress.Loopback, IPAddress.IPv6Loopback],
   serviceProvider: services.BuildServiceProvider()
 );
 
