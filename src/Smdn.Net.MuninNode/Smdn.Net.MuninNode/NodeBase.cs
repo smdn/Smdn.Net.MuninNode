@@ -457,20 +457,13 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       var reader = new SequenceReader<byte>(buffer);
       const byte LF = (byte)'\n';
 
-#pragma warning disable SA1003
       if (
-#if LANG_VERSION_11_OR_GREATER
-        !reader.TryReadTo(out line, delimiter: "\r\n"u8, advancePastDelimiter: true)
-#else
-        !reader.TryReadTo(out line, delimiter: CRLF.Span, advancePastDelimiter: true)
-#endif
-        &&
+        !reader.TryReadTo(out line, delimiter: "\r\n"u8, advancePastDelimiter: true) &&
         !reader.TryReadTo(out line, delimiter: LF, advancePastDelimiter: true)
       ) {
         line = default;
         return false;
       }
-#pragma warning restore SA1003
 
 #if SYSTEM_BUFFERS_SEQUENCEREADER_UNREADSEQUENCE
       buffer = reader.UnreadSequence;
@@ -481,10 +474,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       return true;
     }
   }
-
-#if !LANG_VERSION_11_OR_GREATER
-  private static readonly ReadOnlyMemory<byte> CRLF = Encoding.ASCII.GetBytes("\r\n");
-#endif
 
   private static bool ExpectCommand(
     ReadOnlySequence<byte> commandLine,
@@ -521,7 +510,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
   private static readonly byte CommandQuitShort = (byte)'.';
 
-#if LANG_VERSION_11_OR_GREATER
   private ValueTask RespondToCommandAsync(
     Socket client,
     ReadOnlySequence<byte> commandLine,
@@ -566,62 +554,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       );
     }
   }
-#else
-  private static readonly ReadOnlyMemory<byte> commandFetch       = Encoding.ASCII.GetBytes("fetch");
-  private static readonly ReadOnlyMemory<byte> commandNodes       = Encoding.ASCII.GetBytes("nodes");
-  private static readonly ReadOnlyMemory<byte> commandList        = Encoding.ASCII.GetBytes("list");
-  private static readonly ReadOnlyMemory<byte> commandConfig      = Encoding.ASCII.GetBytes("config");
-  private static readonly ReadOnlyMemory<byte> commandQuit        = Encoding.ASCII.GetBytes("quit");
-  private static readonly ReadOnlyMemory<byte> commandCap         = Encoding.ASCII.GetBytes("cap");
-  private static readonly ReadOnlyMemory<byte> commandVersion     = Encoding.ASCII.GetBytes("version");
-
-  private ValueTask RespondToCommandAsync(
-    Socket client,
-    ReadOnlySequence<byte> commandLine,
-    CancellationToken cancellationToken
-  )
-  {
-    cancellationToken.ThrowIfCancellationRequested();
-
-    if (ExpectCommand(commandLine, commandFetch.Span, out var fetchArguments)) {
-      return ProcessCommandFetchAsync(client, fetchArguments, cancellationToken);
-    }
-    else if (ExpectCommand(commandLine, commandNodes.Span, out _)) {
-      return ProcessCommandNodesAsync(client, cancellationToken);
-    }
-    else if (ExpectCommand(commandLine, commandList.Span, out var listArguments)) {
-      return ProcessCommandListAsync(client, listArguments, cancellationToken);
-    }
-    else if (ExpectCommand(commandLine, commandConfig.Span, out var configArguments)) {
-      return ProcessCommandConfigAsync(client, configArguments, cancellationToken);
-    }
-    else if (
-      ExpectCommand(commandLine, commandQuit.Span, out _) ||
-      (commandLine.Length == 1 && commandLine.FirstSpan[0] == commandQuitShort)
-    ) {
-      client.Close();
-#if SYSTEM_THREADING_TASKS_VALUETASK_COMPLETEDTASK
-      return ValueTask.CompletedTask;
-#else
-      return default;
-#endif
-    }
-    else if (ExpectCommand(commandLine, commandCap.Span, out var capArguments)) {
-      return ProcessCommandCapAsync(client, capArguments, cancellationToken);
-    }
-    else if (ExpectCommand(commandLine, commandVersion.Span, out _)) {
-      return ProcessCommandVersionAsync(client, cancellationToken);
-    }
-    else {
-      return SendResponseAsync(
-        client: client,
-        encoding: Encoding,
-        responseLine: "# Unknown command. Try cap, list, nodes, config, fetch, version or quit",
-        cancellationToken: cancellationToken
-      );
-    }
-  }
-#endif
 
 #pragma warning disable IDE0230
   private static readonly ReadOnlyMemory<byte> EndOfLine = new[] { (byte)'\n' };
