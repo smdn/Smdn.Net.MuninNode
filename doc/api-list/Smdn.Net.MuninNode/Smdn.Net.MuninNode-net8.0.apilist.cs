@@ -1,7 +1,7 @@
-// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-1.3.0)
+// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-2.0.0)
 //   Name: Smdn.Net.MuninNode
-//   AssemblyVersion: 1.3.0.0
-//   InformationalVersion: 1.3.0+191d215fe57392cb544e2ffea221644a1007cfc0
+//   AssemblyVersion: 2.0.0.0
+//   InformationalVersion: 2.0.0+0c4121c0bc87932e6486c3b38a123cb59460ac02
 //   TargetFramework: .NETCoreApp,Version=v8.0
 //   Configuration: Release
 //   Referenced assemblies:
@@ -27,43 +27,43 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Smdn.Net.MuninNode;
 using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode {
-  public class LocalNode : NodeBase {
-    public LocalNode(IPluginProvider pluginProvider, string hostName, int port, ILogger? logger = null) {}
-    public LocalNode(IPluginProvider pluginProvider, string hostName, int port, IServiceProvider? serviceProvider = null) {}
-    public LocalNode(IReadOnlyCollection<IPlugin> plugins, int port, IServiceProvider? serviceProvider = null) {}
-    public LocalNode(IReadOnlyCollection<IPlugin> plugins, string hostName, int port, IServiceProvider? serviceProvider = null) {}
+  public interface IAccessRule {
+    bool IsAcceptable(IPEndPoint remoteEndPoint);
+  }
 
-    public IPEndPoint LocalEndPoint { get; }
+  public static class IAccessRuleServiceCollectionExtensions {
+    public static IServiceCollection AddMuninNodeAccessRule(this IServiceCollection services, IAccessRule accessRule) {}
+    public static IServiceCollection AddMuninNodeAccessRule(this IServiceCollection services, IReadOnlyList<IPAddress> addressListAllowFrom) {}
+  }
+
+  public abstract class LocalNode : NodeBase {
+    public static LocalNode Create(IPluginProvider pluginProvider, int port, string? hostName = null, IReadOnlyList<IPAddress>? addressListAllowFrom = null, IServiceProvider? serviceProvider = null) {}
+    public static LocalNode Create(IReadOnlyCollection<IPlugin> plugins, int port, string? hostName = null, IReadOnlyList<IPAddress>? addressListAllowFrom = null, IServiceProvider? serviceProvider = null) {}
+
+    protected LocalNode(IAccessRule? accessRule, ILogger? logger = null) {}
 
     protected override Socket CreateServerSocket() {}
-    protected override bool IsClientAcceptable(IPEndPoint remoteEndPoint) {}
+    protected virtual EndPoint GetLocalEndPointToBind() {}
   }
 
   public abstract class NodeBase :
     IAsyncDisposable,
     IDisposable
   {
-    private protected class PluginProvider : IPluginProvider {
-      public PluginProvider(IReadOnlyCollection<IPlugin> plugins) {}
-
-      public IReadOnlyCollection<IPlugin> Plugins { get; }
-      public INodeSessionCallback? SessionCallback { get; }
-    }
-
-    protected NodeBase(IPluginProvider pluginProvider, string hostName, ILogger? logger) {}
-    protected NodeBase(IReadOnlyCollection<IPlugin> plugins, string hostName, ILogger? logger) {}
+    protected NodeBase(IAccessRule? accessRule, ILogger? logger) {}
 
     public virtual Encoding Encoding { get; }
-    public string HostName { get; }
+    public abstract string HostName { get; }
+    public EndPoint LocalEndPoint { get; }
     protected ILogger? Logger { get; }
     public virtual Version NodeVersion { get; }
-    [Obsolete("This member will be deprecated in future version.")]
-    public IReadOnlyCollection<IPlugin> Plugins { get; }
+    public abstract IPluginProvider PluginProvider { get; }
 
     public async ValueTask AcceptAsync(bool throwIfCancellationRequested, CancellationToken cancellationToken) {}
     public async ValueTask AcceptSingleSessionAsync(CancellationToken cancellationToken = default) {}
@@ -72,8 +72,8 @@ namespace Smdn.Net.MuninNode {
     public void Dispose() {}
     public async ValueTask DisposeAsync() {}
     protected virtual async ValueTask DisposeAsyncCore() {}
-    protected abstract bool IsClientAcceptable(IPEndPoint remoteEndPoint);
     public void Start() {}
+    protected void ThrowIfPluginProviderIsNull() {}
   }
 }
 
@@ -85,7 +85,7 @@ namespace Smdn.Net.MuninPlugin {
 
   public interface IPlugin {
     IPluginDataSource DataSource { get; }
-    PluginGraphAttributes GraphAttributes { get; }
+    IPluginGraphAttributes GraphAttributes { get; }
     string Name { get; }
     INodeSessionCallback? SessionCallback { get; }
   }
@@ -99,6 +99,10 @@ namespace Smdn.Net.MuninPlugin {
     string Name { get; }
 
     ValueTask<string> GetFormattedValueStringAsync(CancellationToken cancellationToken);
+  }
+
+  public interface IPluginGraphAttributes {
+    IEnumerable<string> EnumerateAttributes();
   }
 
   public interface IPluginProvider {
@@ -132,6 +136,7 @@ namespace Smdn.Net.MuninPlugin {
     public PluginGraphAttributes GraphAttributes { get; }
     public string Name { get; }
     IPluginDataSource IPlugin.DataSource { get; }
+    IPluginGraphAttributes IPlugin.GraphAttributes { get; }
     INodeSessionCallback? IPlugin.SessionCallback { get; }
     IReadOnlyCollection<IPluginField> IPluginDataSource.Fields { get; }
 
@@ -170,11 +175,9 @@ namespace Smdn.Net.MuninPlugin {
     async ValueTask<string> IPluginField.GetFormattedValueStringAsync(CancellationToken cancellationToken) {}
   }
 
-  public sealed class PluginGraphAttributes {
-    [Obsolete("This member will be deprecated in future version.")]
-    public PluginGraphAttributes(string title, string category, string verticalLabel, bool scale, string arguments, TimeSpan updateRate, int? width = null, int? height = null) {}
-    public PluginGraphAttributes(string title, string category, string verticalLabel, bool scale, string arguments, TimeSpan? updateRate = null, int? width = null, int? height = null) {}
-    public PluginGraphAttributes(string title, string category, string verticalLabel, bool scale, string arguments, TimeSpan? updateRate, int? width, int? height, IEnumerable<string>? order) {}
+  public sealed class PluginGraphAttributes : IPluginGraphAttributes {
+    public PluginGraphAttributes(string title, string category, string verticalLabel, bool scale, string arguments) {}
+    public PluginGraphAttributes(string title, string category, string verticalLabel, bool scale, string arguments, TimeSpan? updateRate, int? width, int? height, IEnumerable<string>? order, string? totalValueLabel) {}
 
     public string Arguments { get; }
     public string Category { get; }
@@ -182,9 +185,12 @@ namespace Smdn.Net.MuninPlugin {
     public string? Order { get; }
     public bool Scale { get; }
     public string Title { get; }
+    public string? TotalValueLabel { get; }
     public TimeSpan? UpdateRate { get; }
     public string VerticalLabel { get; }
     public int? Width { get; }
+
+    public IEnumerable<string> EnumerateAttributes() {}
   }
 
   public readonly struct PluginFieldAttributes {
