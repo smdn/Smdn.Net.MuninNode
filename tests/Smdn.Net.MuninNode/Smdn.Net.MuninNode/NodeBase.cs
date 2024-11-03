@@ -52,19 +52,25 @@ public class NodeBaseTests {
               : throw new NotSupportedException(),
         port: 0
       );
+
+    public IPEndPoint LocalEndPointToConnect
+      => new(
+        address: Socket.OSSupportsIPv6 ? IPAddress.IPv6Any : IPAddress.Any,
+        port: ((IPEndPoint)LocalEndPoint).Port
+      );
   }
 
-  private static NodeBase CreateNode()
+  private static TestLocalNode CreateNode()
     => CreateNode(accessRule: null, plugins: Array.Empty<IPlugin>());
 
-  private static NodeBase CreateNode(IAccessRule? accessRule)
+  private static TestLocalNode CreateNode(IAccessRule? accessRule)
     => CreateNode(accessRule: accessRule, plugins: Array.Empty<IPlugin>());
 
-  private static NodeBase CreateNode(IReadOnlyList<IPlugin> plugins)
+  private static TestLocalNode CreateNode(IReadOnlyList<IPlugin> plugins)
     => CreateNode(accessRule: null, plugins: plugins);
 
-  private static NodeBase CreateNode(IAccessRule? accessRule, IReadOnlyList<IPlugin> plugins)
-    => new TestLocalNode(accessRule, plugins);
+  private static TestLocalNode CreateNode(IAccessRule? accessRule, IReadOnlyList<IPlugin> plugins)
+    => new(accessRule, plugins);
 
   private static TcpClient CreateClient(
     IPEndPoint endPoint,
@@ -122,7 +128,7 @@ public class NodeBaseTests {
       cts.Token
     );
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out var reader);
+    using var client = CreateClient(node.LocalEndPointToConnect, out var writer, out var reader);
 
     try {
       reader.ReadLine(); // banner
@@ -157,7 +163,7 @@ public class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out var reader);
+    using var client = CreateClient(node.LocalEndPointToConnect, out var writer, out var reader);
 
     var banner = reader.ReadLine();
 
@@ -202,7 +208,7 @@ public class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out _, out _);
+    using var client = CreateClient(node.LocalEndPointToConnect, out _, out _);
 
     client.Close();
 
@@ -218,7 +224,7 @@ public class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out _, out var reader);
+    using var client = CreateClient(node.LocalEndPointToConnect, out _, out var reader);
 
     reader.ReadLine(); // read banner
 
@@ -335,7 +341,7 @@ public class NodeBaseTests {
     Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(0), nameof(plugin.StartedSessionIds));
     Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out var reader);
+    using var client = CreateClient(node.LocalEndPointToConnect, out var writer, out var reader);
 
     var banner = reader.ReadLine();
 
@@ -383,7 +389,7 @@ public class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptAsync(throwIfCancellationRequested, cts.Token));
 
-    using var client0 = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer0, out var reader0);
+    using var client0 = CreateClient(node.LocalEndPointToConnect, out var writer0, out var reader0);
 
     reader0.ReadLine();
     writer0.WriteLine(".");
@@ -391,7 +397,7 @@ public class NodeBaseTests {
 
     Assert.That(taskAccept.Wait(TimeSpan.FromSeconds(1.0)), Is.False, "task must not be completed");
 
-    using var client1 = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer1, out var reader1);
+    using var client1 = CreateClient(node.LocalEndPointToConnect, out var writer1, out var reader1);
 
     reader1.ReadLine();
     writer1.WriteLine(".");
@@ -417,7 +423,7 @@ public class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out _);
+    using var client = CreateClient(node.LocalEndPointToConnect, out var writer, out _);
 
     writer.Write(".");
     writer.Write(eol);
