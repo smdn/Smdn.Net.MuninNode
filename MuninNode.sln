@@ -1,0 +1,52 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Smdn.Net.MuninNode", "src\Smdn.Net.MuninNode\Smdn.Net.MuninNode.csproj", "{DAC6756C-24D7-403F-A3D6-C573B6AA4A2E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "multiple-fields", "examples\multiple-fields\multiple-fields.csproj", "{8C2FDAA2-B21F-4055-816D-B73BEA2CA991}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "local-node-uptime", "examples\local-node-uptime\local-node-uptime.csproj", "{43641D75-9327-42D7-8C7F-9A91F737A1C5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E3D3E473-95E2-4A68-9416-F210DAC57404}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{3A0BF316-8300-4B36-B1A4-5D7813E0E728}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0A0B3E22-E38B-46AD-B101-110D25E3AAD9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Smdn.Net.MuninNode.Tests", "tests\Smdn.Net.MuninNode\Smdn.Net.MuninNode.Tests.csproj", "{27C3F87B-5C59-44F9-96F9-25528972DA70}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DAC6756C-24D7-403F-A3D6-C573B6AA4A2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DAC6756C-24D7-403F-A3D6-C573B6AA4A2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DAC6756C-24D7-403F-A3D6-C573B6AA4A2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DAC6756C-24D7-403F-A3D6-C573B6AA4A2E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C2FDAA2-B21F-4055-816D-B73BEA2CA991}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C2FDAA2-B21F-4055-816D-B73BEA2CA991}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C2FDAA2-B21F-4055-816D-B73BEA2CA991}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C2FDAA2-B21F-4055-816D-B73BEA2CA991}.Release|Any CPU.Build.0 = Release|Any CPU
+		{43641D75-9327-42D7-8C7F-9A91F737A1C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43641D75-9327-42D7-8C7F-9A91F737A1C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43641D75-9327-42D7-8C7F-9A91F737A1C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43641D75-9327-42D7-8C7F-9A91F737A1C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{27C3F87B-5C59-44F9-96F9-25528972DA70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27C3F87B-5C59-44F9-96F9-25528972DA70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27C3F87B-5C59-44F9-96F9-25528972DA70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27C3F87B-5C59-44F9-96F9-25528972DA70}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DAC6756C-24D7-403F-A3D6-C573B6AA4A2E} = {E3D3E473-95E2-4A68-9416-F210DAC57404}
+		{43641D75-9327-42D7-8C7F-9A91F737A1C5} = {3A0BF316-8300-4B36-B1A4-5D7813E0E728}
+		{8C2FDAA2-B21F-4055-816D-B73BEA2CA991} = {3A0BF316-8300-4B36-B1A4-5D7813E0E728}
+		{27C3F87B-5C59-44F9-96F9-25528972DA70} = {0A0B3E22-E38B-46AD-B101-110D25E3AAD9}
+	EndGlobalSection
+EndGlobal
