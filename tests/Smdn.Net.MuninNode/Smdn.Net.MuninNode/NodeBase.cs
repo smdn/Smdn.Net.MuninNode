@@ -612,8 +612,8 @@ public class NodeBaseTests {
       plugins,
       "fetch plugin1",
       new[] {
-        "plugin1field1.value 1.1",
-        "plugin1field2.value 1.2",
+        "plugin1field1.value 1,1",
+        "plugin1field2.value 1,2",
         "."
       }
     };
@@ -622,7 +622,7 @@ public class NodeBaseTests {
       plugins,
       "fetch plugin2",
       new[] {
-        "plugin2field1.value 2.1",
+        "plugin2field1.value 2,1",
         "."
       }
     };
