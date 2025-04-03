@@ -638,7 +638,42 @@ public class NodeBaseTests {
   }
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_FetchCommand))]
-  public Task ProcessCommandAsync_FetchCommand(
+  [SetCulture("")]
+  public Task ProcessCommandAsync_FetchCommand_InvariantCulture(
+    IReadOnlyList<IPlugin> plugins,
+    string command,
+    string[] expectedResponseLines
+  )
+    => ProcessCommandAsync_FetchCommand(plugins, command, expectedResponseLines);
+
+  [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_FetchCommand))]
+  [SetCulture("ja_JP")]
+  public Task ProcessCommandAsync_FetchCommand_JA_JP(
+    IReadOnlyList<IPlugin> plugins,
+    string command,
+    string[] expectedResponseLines
+  )
+    => ProcessCommandAsync_FetchCommand(plugins, command, expectedResponseLines);
+
+  [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_FetchCommand))]
+  [SetCulture("fr_CH")]
+  public Task ProcessCommandAsync_FetchCommand_FR_CH(
+    IReadOnlyList<IPlugin> plugins,
+    string command,
+    string[] expectedResponseLines
+  )
+    => ProcessCommandAsync_FetchCommand(plugins, command, expectedResponseLines);
+
+  [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_FetchCommand))]
+  [SetCulture("ar_AE")]
+  public Task ProcessCommandAsync_FetchCommand_AR_AE(
+    IReadOnlyList<IPlugin> plugins,
+    string command,
+    string[] expectedResponseLines
+  )
+    => ProcessCommandAsync_FetchCommand(plugins, command, expectedResponseLines);
+
+  private Task ProcessCommandAsync_FetchCommand(
     IReadOnlyList<IPlugin> plugins,
     string command,
     string[] expectedResponseLines
