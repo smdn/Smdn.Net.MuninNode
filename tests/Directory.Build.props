@@ -25,7 +25,7 @@ SPDX-License-Identifier: MIT
   />
 
   <ItemGroup Condition=" '$(IsTestProject)' == 'true' ">
-    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit" Version="4.3.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1"/>
   </ItemGroup>
@@ -33,7 +33,7 @@ SPDX-License-Identifier: MIT
   <ItemGroup>
     <PackageReference
       Include="Smdn.MSBuild.DefineConstants.NETSdkApi"
-      Version="[1.4.8]"
+      Version="[1.5.1]"
       PrivateAssets="all"
       IncludeAssets="build"
     />
