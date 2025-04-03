@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -86,7 +87,7 @@ public abstract class PluginFieldBase : IPluginField {
 
     var value = await FetchValueAsync(cancellationToken).ConfigureAwait(false);
 
-    return value?.ToString(provider: null) ?? UnknownValueString; // TODO: format specifier
+    return value?.ToString(provider: CultureInfo.InvariantCulture) ?? UnknownValueString;
   }
 #pragma warning restore CA1033
 
