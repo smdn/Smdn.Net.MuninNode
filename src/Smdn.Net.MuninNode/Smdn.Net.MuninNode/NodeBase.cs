@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
 
+using Smdn.Net.MuninNode.AccessRules;
 using Smdn.Net.MuninPlugin;
 #if !SYSTEM_TEXT_ENCODINGEXTENSIONS
 using Smdn.Text.Encodings;
