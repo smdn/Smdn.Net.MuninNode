@@ -123,8 +123,8 @@ public class PluginFieldBaseTests {
     => IPluginField_GetFormattedValueStringAsync_DecimalPoint();
 
   [Test]
-  [SetCulture("ar_AA")]
-  public Task IPluginField_GetFormattedValueStringAsync_DecimalPoint_AR_AA()
+  [SetCulture("ar_AE")]
+  public Task IPluginField_GetFormattedValueStringAsync_DecimalPoint_AR_AE()
     => IPluginField_GetFormattedValueStringAsync_DecimalPoint();
 
   private async Task IPluginField_GetFormattedValueStringAsync_DecimalPoint()

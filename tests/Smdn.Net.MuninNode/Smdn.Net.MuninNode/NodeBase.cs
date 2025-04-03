@@ -665,8 +665,8 @@ public class NodeBaseTests {
     => ProcessCommandAsync_FetchCommand(plugins, command, expectedResponseLines);
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_FetchCommand))]
-  [SetCulture("ar_AA")]
-  public Task ProcessCommandAsync_FetchCommand_AR_AA(
+  [SetCulture("ar_AE")]
+  public Task ProcessCommandAsync_FetchCommand_AR_AE(
     IReadOnlyList<IPlugin> plugins,
     string command,
     string[] expectedResponseLines
