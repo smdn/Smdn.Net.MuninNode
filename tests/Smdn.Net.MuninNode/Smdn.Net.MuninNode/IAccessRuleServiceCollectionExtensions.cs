@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 using NUnit.Framework;
 
+using Smdn.Net.MuninNode.AccessRules;
+
 namespace Smdn.Net.MuninNode;
 
 [TestFixture]

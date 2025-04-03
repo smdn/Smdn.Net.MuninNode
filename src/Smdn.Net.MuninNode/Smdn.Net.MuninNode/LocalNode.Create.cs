@@ -7,6 +7,7 @@ using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
+using Smdn.Net.MuninNode.AccessRules;
 using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode;
