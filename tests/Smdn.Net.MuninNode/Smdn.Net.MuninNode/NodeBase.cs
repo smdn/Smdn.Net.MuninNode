@@ -11,6 +11,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
+
+using Smdn.Net.MuninNode.AccessRules;
 using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode;
