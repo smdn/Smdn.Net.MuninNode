@@ -93,4 +93,50 @@ public class PluginFieldBaseTests {
   [TestCase("LABEL#")]
   public void DefaultNameFromLabel_Invalid(string label)
     => Assert.Throws<ArgumentException>(() => new ConcretePluginField(label: label));
+
+  private class FloatingPointValuePluginField : PluginFieldBase {
+    private readonly double value;
+
+    public FloatingPointValuePluginField(double value)
+      : base(label: "label", name: "name")
+    {
+      this.value = value;
+    }
+
+    protected override ValueTask<double?> FetchValueAsync(CancellationToken cancellationToken)
+      => new(value);
+  }
+
+  [Test]
+  [SetCulture("")]
+  public Task IPluginField_GetFormattedValueStringAsync_DecimalPoint_InvariantCulture()
+    => IPluginField_GetFormattedValueStringAsync_DecimalPoint();
+
+  [Test]
+  [SetCulture("ja_JP")]
+  public Task IPluginField_GetFormattedValueStringAsync_DecimalPoint_JA_JP()
+    => IPluginField_GetFormattedValueStringAsync_DecimalPoint();
+
+  [Test]
+  [SetCulture("fr_CH")]
+  public Task IPluginField_GetFormattedValueStringAsync_DecimalPoint_FR_CH()
+    => IPluginField_GetFormattedValueStringAsync_DecimalPoint();
+
+  [Test]
+  [SetCulture("ar_AA")]
+  public Task IPluginField_GetFormattedValueStringAsync_DecimalPoint_AR_AA()
+    => IPluginField_GetFormattedValueStringAsync_DecimalPoint();
+
+  private async Task IPluginField_GetFormattedValueStringAsync_DecimalPoint()
+  {
+    const double RawFieldValue = 0.25;
+    const string ExpectedFormattedValueString = "0.25";
+
+    var f = new FloatingPointValuePluginField(RawFieldValue);
+
+    Assert.That(
+      await ((IPluginField)f).GetFormattedValueStringAsync(default).ConfigureAwait(false),
+      Is.EqualTo(ExpectedFormattedValueString)
+    );
+  }
 }
