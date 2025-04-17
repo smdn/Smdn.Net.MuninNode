@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
-namespace Smdn.Net.MuninNode;
+namespace Smdn.Net.MuninNode.AccessRules;
 
 internal sealed class AddressListAccessRule : IAccessRule {
   private readonly IReadOnlyList<IPAddress> addressListAllowFrom;

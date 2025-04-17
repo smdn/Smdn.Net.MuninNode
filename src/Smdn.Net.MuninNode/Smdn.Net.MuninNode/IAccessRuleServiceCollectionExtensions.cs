@@ -7,6 +7,8 @@ using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
+using Smdn.Net.MuninNode.AccessRules;
+
 namespace Smdn.Net.MuninNode;
 
 public static class IAccessRuleServiceCollectionExtensions {
