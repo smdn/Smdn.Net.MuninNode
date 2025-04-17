@@ -30,7 +30,7 @@ public class Plugin : IPlugin, IPluginDataSource, INodeSessionCallback {
     IReadOnlyCollection<IPluginField> fields
   )
   {
-    if (name == null)
+    if (name is null)
       throw new ArgumentNullException(nameof(name));
     if (name.Length == 0)
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(name));

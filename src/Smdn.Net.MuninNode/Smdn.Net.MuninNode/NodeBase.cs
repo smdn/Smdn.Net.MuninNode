@@ -584,7 +584,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     CancellationToken cancellationToken
   )
   {
-    if (responseLines == null)
+    if (responseLines is null)
       throw new ArgumentNullException(nameof(responseLines));
 
     cancellationToken.ThrowIfCancellationRequested();
@@ -685,7 +685,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       plugin => string.Equals(Encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal)
     );
 
-    if (plugin == null) {
+    if (plugin is null) {
       await SendResponseAsync(
         client,
         Encoding,
@@ -745,7 +745,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       plugin => string.Equals(Encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal)
     );
 
-    if (plugin == null) {
+    if (plugin is null) {
       return SendResponseAsync(
         client,
         Encoding,

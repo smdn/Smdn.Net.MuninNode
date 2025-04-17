@@ -121,7 +121,7 @@ public abstract class PluginFieldBase : IPluginField {
 
   private static string GetDefaultNameFromLabel(string label)
   {
-    if (label == null)
+    if (label is null)
       throw new ArgumentNullException(nameof(label));
     if (label.Length == 0)
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(label));

@@ -91,19 +91,19 @@ public sealed class PluginGraphAttributes : IPluginGraphAttributes {
     string? totalValueLabel
   )
   {
-    if (title == null)
+    if (title is null)
       throw new ArgumentNullException(nameof(title));
     if (title.Length == 0)
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(title));
-    if (category == null)
+    if (category is null)
       throw new ArgumentNullException(nameof(category));
     if (category.Length == 0)
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(category));
-    if (arguments == null)
+    if (arguments is null)
       throw new ArgumentNullException(nameof(arguments));
     if (arguments.Length == 0)
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(arguments));
-    if (verticalLabel == null)
+    if (verticalLabel is null)
       throw new ArgumentNullException(nameof(verticalLabel));
     if (verticalLabel.Length == 0)
       throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(verticalLabel));
