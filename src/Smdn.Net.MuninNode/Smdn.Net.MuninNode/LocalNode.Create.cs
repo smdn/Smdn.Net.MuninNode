@@ -128,7 +128,7 @@ partial class LocalNode {
       pluginProvider: pluginProvider ?? throw new ArgumentNullException(nameof(pluginProvider)),
       hostName: string.IsNullOrEmpty(hostName) ? DefaultHostName : hostName,
       port: port,
-      accessRule: addressListAllowFrom is null ? null : new AddressListAccessRule(addressListAllowFrom),
+      accessRule: addressListAllowFrom is null ? null : new AddressListAccessRule(addressListAllowFrom, shouldConsiderIPv4MappedIPv6Address: true),
       serviceProvider: serviceProvider
     );
 }
