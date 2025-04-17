@@ -17,9 +17,27 @@ public static class IAccessRuleServiceCollectionExtensions {
     IReadOnlyList<IPAddress> addressListAllowFrom
   )
     => AddMuninNodeAccessRule(
+      services: services,
+      addressListAllowFrom: addressListAllowFrom ?? throw new ArgumentNullException(nameof(addressListAllowFrom)),
+      shouldConsiderIPv4MappedIPv6Address: true
+    );
+
+  /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
+  /// <param name="addressListAllowFrom">The <see cref="IReadOnlyList{IPAddress}"/> indicates the read-only list of addresses allowed to access <see cref="NodeBase"/>.</param>
+  /// <param name="shouldConsiderIPv4MappedIPv6Address">
+  /// The value indicating whether the address resolution to be aware or not to be aware that
+  /// the IP address is an IPv4-mapped IPv6 address when comparing IP address.
+  /// </param>
+  public static IServiceCollection AddMuninNodeAccessRule(
+    this IServiceCollection services,
+    IReadOnlyList<IPAddress> addressListAllowFrom,
+    bool shouldConsiderIPv4MappedIPv6Address
+  )
+    => AddMuninNodeAccessRule(
       services: services ?? throw new ArgumentNullException(nameof(services)),
       accessRule: new AddressListAccessRule(
-        addressListAllowFrom: addressListAllowFrom ?? throw new ArgumentNullException(nameof(addressListAllowFrom))
+        addressListAllowFrom: addressListAllowFrom ?? throw new ArgumentNullException(nameof(addressListAllowFrom)),
+        shouldConsiderIPv4MappedIPv6Address: shouldConsiderIPv4MappedIPv6Address
       )
     );
 
