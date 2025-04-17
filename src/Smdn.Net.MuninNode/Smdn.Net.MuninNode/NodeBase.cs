@@ -151,13 +151,15 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     CancellationToken cancellationToken
   )
   {
+    Logger?.LogInformation("starting to accept");
+
     try {
       for (; ; ) {
         if (cancellationToken.IsCancellationRequested) {
           if (throwIfCancellationRequested)
             cancellationToken.ThrowIfCancellationRequested();
           else
-            return;
+            break;
         }
 
         await AcceptSingleSessionAsync(cancellationToken).ConfigureAwait(false);
@@ -166,9 +168,9 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     catch (OperationCanceledException ex) {
       if (throwIfCancellationRequested || ex.CancellationToken != cancellationToken)
         throw;
-
-      return;
     }
+
+    Logger?.LogInformation("stopped to accept");
   }
 
   /// <summary>
