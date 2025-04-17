@@ -115,4 +115,28 @@ public class IAccessRuleServiceCollectionExtensionsTests {
       Is.EqualTo(expected)
     );
   }
+
+  [TestCase("127.0.0.1", true)]
+  [TestCase("127.255.255.255", true)]
+  [TestCase("::1", true)]
+  [TestCase("::ffff:127.0.0.1", true)]
+  [TestCase("192.0.2.255", false)]
+  [TestCase("2001:db8::1", false)]
+  [TestCase("::ffff:192.0.2.255", false)]
+  public void AddMuninNodeLoopbackOnlyAccessRule(
+    string remoteAddress,
+    bool expected
+  )
+  {
+    var services = new ServiceCollection();
+
+    services.AddMuninNodeLoopbackOnlyAccessRule();
+
+    var accessRule = services.BuildServiceProvider().GetRequiredService<IAccessRule>();
+
+    Assert.That(
+      accessRule.IsAcceptable(new(IPAddress.Parse(remoteAddress), port: 0)),
+      Is.EqualTo(expected)
+    );
+  }
 }

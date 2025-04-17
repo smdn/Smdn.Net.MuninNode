@@ -44,6 +44,15 @@ public static class IAccessRuleServiceCollectionExtensions {
     );
 
   /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
+  public static IServiceCollection AddMuninNodeLoopbackOnlyAccessRule(
+    this IServiceCollection services
+  )
+    => AddMuninNodeAccessRule(
+      services: services,
+      accessRule: LoopbackOnlyAccessRule.Instance
+    );
+
+  /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
   /// <param name="accessRule">The <see cref="IAccessRule"/> which defines access rules to <see cref="NodeBase"/>.</param>
   public static IServiceCollection AddMuninNodeAccessRule(
     this IServiceCollection services,
