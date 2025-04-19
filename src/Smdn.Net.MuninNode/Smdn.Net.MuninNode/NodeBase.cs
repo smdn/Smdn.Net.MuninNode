@@ -46,6 +46,8 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
   public EndPoint LocalEndPoint => server?.LocalEndPoint ?? throw new InvalidOperationException("not yet bound or already disposed");
 
+  private readonly ArrayBufferWriter<byte> responseBuffer = new(initialCapacity: 1024); // TODO: define best initial capacity
+
   protected NodeBase(
     IAccessRule? accessRule,
     ILogger? logger
@@ -229,7 +231,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
       try {
         await SendResponseAsync(
           client,
-          Encoding,
           $"# munin node at {HostName}",
           cancellationToken
         ).ConfigureAwait(false);
@@ -550,7 +551,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     else {
       return SendResponseAsync(
         client,
-        Encoding,
         "# Unknown command. Try cap, list, nodes, config, fetch, version or quit",
         cancellationToken
       );
@@ -566,22 +566,19 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     ".",
   ];
 
-  private static ValueTask SendResponseAsync(
+  private ValueTask SendResponseAsync(
     Socket client,
-    Encoding encoding,
     string responseLine,
     CancellationToken cancellationToken
   )
     => SendResponseAsync(
       client: client,
-      encoding: encoding,
       responseLines: Enumerable.Repeat(responseLine, 1),
       cancellationToken: cancellationToken
     );
 
-  private static async ValueTask SendResponseAsync(
+  private async ValueTask SendResponseAsync(
     Socket client,
-    Encoding encoding,
     IEnumerable<string> responseLines,
     CancellationToken cancellationToken
   )
@@ -591,20 +588,37 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
     cancellationToken.ThrowIfCancellationRequested();
 
-    foreach (var responseLine in responseLines) {
-      var resp = encoding.GetBytes(responseLine);
+    try {
+      foreach (var responseLine in responseLines) {
+#if SYSTEM_TEXT_ENCODINGEXTENSIONS
+        _ = Encoding.GetBytes(responseLine, responseBuffer);
+
+        responseBuffer.Write(EndOfLine.Span);
+#else
+        var totalByteCount = Encoding.GetByteCount(responseLine) + EndOfLine.Length;
+        var buffer = responseBuffer.GetMemory(totalByteCount);
+        var bytesWritten = Encoding.GetBytes(responseLine, buffer.Span);
+
+        EndOfLine.CopyTo(buffer[bytesWritten..]);
+
+        bytesWritten += EndOfLine.Length;
+
+        responseBuffer.Advance(bytesWritten);
+#endif
+      }
 
       await client.SendAsync(
-        buffer: resp,
+        buffer: responseBuffer.WrittenMemory,
         socketFlags: SocketFlags.None,
         cancellationToken: cancellationToken
       ).ConfigureAwait(false);
-
-      await client.SendAsync(
-        buffer: EndOfLine,
-        socketFlags: SocketFlags.None,
-        cancellationToken: cancellationToken
-      ).ConfigureAwait(false);
+    }
+    finally {
+#if SYSTEM_BUFFERS_ARRAYBUFFERWRITER_RESETWRITTENCOUNT
+      responseBuffer.ResetWrittenCount();
+#else
+      responseBuffer.Clear();
+#endif
     }
   }
 
@@ -615,11 +629,10 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
   {
     return SendResponseAsync(
       client: client,
-      encoding: Encoding,
-      responseLines: new[] {
+      responseLines: [
         HostName,
         ".",
-      },
+      ],
       cancellationToken: cancellationToken
     );
   }
@@ -631,7 +644,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
   {
     return SendResponseAsync(
       client: client,
-      encoding: Encoding,
       responseLine: $"munins node on {HostName} version: {NodeVersion}",
       cancellationToken: cancellationToken
     );
@@ -650,7 +662,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     // XXX: ignores capability arguments
     return SendResponseAsync(
       client: client,
-      encoding: Encoding,
       responseLine: "cap",
       cancellationToken: cancellationToken
     );
@@ -669,7 +680,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     // XXX: ignore [node] arguments
     return SendResponseAsync(
       client: client,
-      encoding: Encoding,
       responseLine: string.Join(" ", PluginProvider.Plugins.Select(static plugin => plugin.Name)),
       cancellationToken: cancellationToken
     );
@@ -690,7 +700,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     if (plugin is null) {
       await SendResponseAsync(
         client,
-        Encoding,
         ResponseLinesUnknownService,
         cancellationToken
       ).ConfigureAwait(false);
@@ -712,7 +721,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
     await SendResponseAsync(
       client: client,
-      encoding: Encoding,
       responseLines: responseLines,
       cancellationToken: cancellationToken
     ).ConfigureAwait(false);
@@ -750,7 +758,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     if (plugin is null) {
       return SendResponseAsync(
         client,
-        Encoding,
         ResponseLinesUnknownService,
         cancellationToken
       );
@@ -816,7 +823,6 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
     return SendResponseAsync(
       client: client,
-      encoding: Encoding,
       responseLines: responseLines,
       cancellationToken: cancellationToken
     );
