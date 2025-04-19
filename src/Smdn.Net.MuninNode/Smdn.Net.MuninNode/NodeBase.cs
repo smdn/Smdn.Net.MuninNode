@@ -201,107 +201,129 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 #endif
       .ConfigureAwait(false);
 
-    IPEndPoint? remoteEndPoint = null;
+    // holds a reference to the endpoint before the client being disposed
+    var remoteEndPoint = client.RemoteEndPoint;
 
     try {
       cancellationToken.ThrowIfCancellationRequested();
 
-      remoteEndPoint = client.RemoteEndPoint as IPEndPoint;
-
-      if (remoteEndPoint is null) {
-        Logger?.LogWarning(
-          "cannot accept {RemoteEndPoint} ({RemoteEndPointAddressFamily})",
-          client.RemoteEndPoint?.ToString() ?? "(null)",
-          client.RemoteEndPoint?.AddressFamily
-        );
+      if (!CanAccept(client))
         return;
-      }
 
-      if (accessRule is not null && !accessRule.IsAcceptable(remoteEndPoint)) {
-        Logger?.LogWarning("access refused: {RemoteEndPoint}", remoteEndPoint);
-        return;
-      }
-
-      var sessionId = GenerateSessionId(server.LocalEndPoint, remoteEndPoint);
-
-      cancellationToken.ThrowIfCancellationRequested();
-
-      Logger?.LogDebug("[{RemoteEndPoint}] sending banner", remoteEndPoint);
-
-      try {
-        await SendResponseAsync(
-          client,
-          $"# munin node at {HostName}",
-          cancellationToken
-        ).ConfigureAwait(false);
-      }
-      catch (SocketException ex) when (
-        ex.SocketErrorCode is
-          SocketError.Shutdown or // EPIPE (32)
-          SocketError.ConnectionAborted or // WSAECONNABORTED (10053)
-          SocketError.OperationAborted or // ECANCELED (125)
-          SocketError.ConnectionReset // ECONNRESET (104)
-      ) {
-        Logger?.LogWarning(
-          "[{RemoteEndPoint}] client closed session while sending banner",
-          remoteEndPoint
-        );
-
-        return;
-      }
-#pragma warning disable CA1031
-      catch (Exception ex) {
-        Logger?.LogCritical(
-          ex,
-          "[{RemoteEndPoint}] unexpected exception occured while sending banner",
-          remoteEndPoint
-        );
-
-        return;
-      }
-#pragma warning restore CA1031
-
-      cancellationToken.ThrowIfCancellationRequested();
-
-      Logger?.LogInformation("[{RemoteEndPoint}] session started; ID={SessionId}", remoteEndPoint, sessionId);
-
-      try {
-        if (PluginProvider.SessionCallback is not null)
-          await PluginProvider.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
-
-        foreach (var plugin in PluginProvider.Plugins) {
-          if (plugin.SessionCallback is not null)
-            await plugin.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
-        }
-
-        // https://docs.microsoft.com/ja-jp/dotnet/standard/io/pipelines
-        var pipe = new Pipe();
-
-        await Task.WhenAll(
-          ReceiveCommandAsync(client, remoteEndPoint, pipe.Writer, cancellationToken),
-          ProcessCommandAsync(client, remoteEndPoint, pipe.Reader, cancellationToken)
-        ).ConfigureAwait(false);
-
-        Logger?.LogInformation("[{RemoteEndPoint}] session closed; ID={SessionId}", remoteEndPoint, sessionId);
-      }
-      finally {
-        foreach (var plugin in PluginProvider.Plugins) {
-          if (plugin.SessionCallback is not null)
-            await plugin.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
-        }
-
-        if (PluginProvider.SessionCallback is not null)
-          await PluginProvider.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
-      }
+      await ProcessSessionAsync(
+        client,
+        cancellationToken
+      ).ConfigureAwait(false);
     }
     finally {
       client.Close();
 
       Logger?.LogInformation("[{RemoteEndPoint}] connection closed", remoteEndPoint);
     }
+
+    bool CanAccept(Socket client)
+    {
+      if (client.RemoteEndPoint is not IPEndPoint remoteIPEndPoint) {
+        Logger?.LogWarning(
+          "cannot accept {RemoteEndPoint} ({RemoteEndPointAddressFamily})",
+          client.RemoteEndPoint?.ToString() ?? "(null)",
+          client.RemoteEndPoint?.AddressFamily
+        );
+
+        return false;
+      }
+
+      if (accessRule is not null && !accessRule.IsAcceptable(remoteIPEndPoint)) {
+        Logger?.LogWarning("access refused: {RemoteEndPoint}", remoteIPEndPoint);
+
+        return false;
+      }
+
+      return true;
+    }
   }
 
-  private static string GenerateSessionId(EndPoint? localEndPoint, IPEndPoint remoteEndPoint)
+  private async ValueTask ProcessSessionAsync(
+    Socket client,
+    CancellationToken cancellationToken
+  )
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    // holds a reference to the endpoint before the client being disposed
+    var remoteEndPoint = client.RemoteEndPoint;
+    var sessionId = GenerateSessionId(server!.LocalEndPoint, remoteEndPoint);
+
+    Logger?.LogDebug("[{RemoteEndPoint}] sending banner", remoteEndPoint);
+
+    try {
+      await SendResponseAsync(
+        client,
+        $"# munin node at {HostName}",
+        cancellationToken
+      ).ConfigureAwait(false);
+    }
+    catch (SocketException ex) when (
+      ex.SocketErrorCode is
+        SocketError.Shutdown or // EPIPE (32)
+        SocketError.ConnectionAborted or // WSAECONNABORTED (10053)
+        SocketError.OperationAborted or // ECANCELED (125)
+        SocketError.ConnectionReset // ECONNRESET (104)
+    ) {
+      Logger?.LogWarning(
+        "[{RemoteEndPoint}] client closed session while sending banner",
+        remoteEndPoint
+      );
+
+      return;
+    }
+#pragma warning disable CA1031
+    catch (Exception ex) {
+      Logger?.LogCritical(
+        ex,
+        "[{RemoteEndPoint}] unexpected exception occured while sending banner",
+        remoteEndPoint
+      );
+
+      return;
+    }
+#pragma warning restore CA1031
+
+    cancellationToken.ThrowIfCancellationRequested();
+
+    Logger?.LogInformation("[{RemoteEndPoint}] session started; ID={SessionId}", remoteEndPoint, sessionId);
+
+    try {
+      if (PluginProvider.SessionCallback is not null)
+        await PluginProvider.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+
+      foreach (var plugin in PluginProvider.Plugins) {
+        if (plugin.SessionCallback is not null)
+          await plugin.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+      }
+
+      // https://docs.microsoft.com/ja-jp/dotnet/standard/io/pipelines
+      var pipe = new Pipe();
+
+      await Task.WhenAll(
+        ReceiveCommandAsync(client, remoteEndPoint, pipe.Writer, cancellationToken),
+        ProcessCommandAsync(client, remoteEndPoint, pipe.Reader, cancellationToken)
+      ).ConfigureAwait(false);
+
+      Logger?.LogInformation("[{RemoteEndPoint}] session closed; ID={SessionId}", remoteEndPoint, sessionId);
+    }
+    finally {
+      foreach (var plugin in PluginProvider.Plugins) {
+        if (plugin.SessionCallback is not null)
+          await plugin.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+      }
+
+      if (PluginProvider.SessionCallback is not null)
+        await PluginProvider.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+    }
+  }
+
+  private static string GenerateSessionId(EndPoint? localEndPoint, EndPoint? remoteEndPoint)
   {
 #if SYSTEM_SECURITY_CRYPTOGRAPHY_SHA1_HASHSIZEINBYTES
     const int SHA1HashSizeInBytes = SHA1.HashSizeInBytes;
@@ -328,7 +350,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
   private async Task ReceiveCommandAsync(
     Socket socket,
-    IPEndPoint remoteEndPoint,
+    EndPoint? remoteEndPoint,
     PipeWriter writer,
     CancellationToken cancellationToken
   )
@@ -406,7 +428,7 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
   private async Task ProcessCommandAsync(
     Socket socket,
-    IPEndPoint remoteEndPoint,
+    EndPoint? remoteEndPoint,
     PipeReader reader,
     CancellationToken cancellationToken
   )
