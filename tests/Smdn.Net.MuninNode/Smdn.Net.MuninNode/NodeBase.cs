@@ -141,6 +141,38 @@ public class NodeBaseTests {
   }
 
   [Test]
+  public async Task Dispose()
+  {
+    await using var node = CreateNode();
+
+    Assert.That(node.Dispose, Throws.Nothing, "Dispose() #1");
+
+    Assert.That(() => _ = node.LocalEndPoint, Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(node.Start, Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(async () => await node.AcceptAsync(false, default), Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(async () => await node.AcceptSingleSessionAsync(default), Throws.TypeOf<ObjectDisposedException>());
+
+    Assert.That(node.Dispose, Throws.Nothing, "Dispose() #2");
+    Assert.That(node.DisposeAsync, Throws.Nothing, "DisposeAsync() after Dispose()");
+  }
+
+  [Test]
+  public async Task DisposeAsync()
+  {
+    await using var node = CreateNode();
+
+    Assert.That(node.DisposeAsync, Throws.Nothing, "DisposeAsync() #1");
+
+    Assert.That(() => _ = node.LocalEndPoint, Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(node.Start, Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(async () => await node.AcceptAsync(false, default), Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(async () => await node.AcceptSingleSessionAsync(default), Throws.TypeOf<ObjectDisposedException>());
+
+    Assert.That(node.DisposeAsync, Throws.Nothing, "DisposeAsync() #2");
+    Assert.That(node.Dispose, Throws.Nothing, "Dispose() after DisposeAsync()");
+  }
+
+  [Test]
   public async Task Start()
   {
     await using var node = CreateNode();

@@ -44,9 +44,17 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
   private Socket? server;
 
-  public EndPoint LocalEndPoint => server?.LocalEndPoint ?? throw new InvalidOperationException("not yet bound or already disposed");
+  public EndPoint LocalEndPoint {
+    get {
+      ThrowIfDisposed();
+
+      return server?.LocalEndPoint ?? throw new InvalidOperationException("not yet bound or already disposed");
+    }
+  }
 
   private readonly ArrayBufferWriter<byte> responseBuffer = new(initialCapacity: 1024); // TODO: define best initial capacity
+
+  private bool disposed;
 
   protected NodeBase(
     IAccessRule? accessRule,
@@ -94,6 +102,8 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     server?.Dispose();
     server = null;
 
+    disposed = true;
+
 #if !SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_REUSESOCKET_CANCELLATIONTOKEN
     return default;
 #endif
@@ -115,6 +125,14 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     server?.Close();
     server?.Dispose();
     server = null!;
+
+    disposed = true;
+  }
+
+  protected void ThrowIfDisposed()
+  {
+    if (disposed)
+      throw new ObjectDisposedException(GetType().FullName);
   }
 
   protected void ThrowIfPluginProviderIsNull()
@@ -127,6 +145,8 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
   public void Start()
   {
+    ThrowIfDisposed();
+
     if (server is not null)
       throw new InvalidOperationException("already started");
 
@@ -153,6 +173,8 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     CancellationToken cancellationToken
   )
   {
+    ThrowIfDisposed();
+
     Logger?.LogInformation("starting to accept");
 
     try {
@@ -186,6 +208,8 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
     CancellationToken cancellationToken = default
   )
   {
+    ThrowIfDisposed();
+
     if (server is null)
       throw new InvalidOperationException("not started or already closed");
 
