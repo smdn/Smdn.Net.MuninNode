@@ -3,8 +3,8 @@
 
 using System;
 using System.Buffers;
-using System.Net;
 using System.IO.Pipelines;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 

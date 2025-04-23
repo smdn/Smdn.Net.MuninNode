@@ -58,8 +58,7 @@ public class PseudoMuninNodeServerTests {
     await server.StartAsync(cancellationToken);
 
     _ = await server.AcceptAsync(cancellationToken);
-
-    var (client, writer, reader) = server.GetAcceptingClient(cancellationToken);
+    var (client, _, reader) = server.GetAcceptingClient(cancellationToken);
 
     Assert.That(client, Is.Not.Null);
 
@@ -86,8 +85,7 @@ public class PseudoMuninNodeServerTests {
     await server.StartAsync(cancellationToken);
 
     _ = await server.AcceptAsync(cancellationToken);
-
-    var (client, writer, reader) = server.GetAcceptingClient(cancellationToken);
+    var (client, writer, _) = server.GetAcceptingClient(cancellationToken);
 
     Assert.That(client, Is.Not.Null);
 
