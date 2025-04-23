@@ -16,32 +16,12 @@ namespace Smdn.Net.MuninNode;
 
 [TestFixture]
 public partial class NodeBaseTests {
-  private static Task StartSession(
-    Func<NodeBase, TcpClient, StreamWriter, StreamReader, CancellationToken, Task> action
-  )
-    => StartSession(
-      accessRule: null,
-      plugins: Array.Empty<IPlugin>(),
-      action: action
-    );
-
-  private static Task StartSession(
-    IReadOnlyList<IPlugin> plugins,
-    Func<NodeBase, TcpClient, StreamWriter, StreamReader, CancellationToken, Task> action
-  )
-    => StartSession(
-      accessRule: null,
-      plugins: plugins,
-      action: action
-    );
-
   private static async Task StartSession(
     IAccessRule? accessRule,
-    IReadOnlyList<IPlugin> plugins,
     Func<NodeBase, TcpClient, StreamWriter, StreamReader, CancellationToken, Task> action
   )
   {
-    await using var node = CreateNode(accessRule, plugins);
+    await using var node = CreateNode(accessRule, plugins: Array.Empty<IPlugin>());
 
     node.Start();
 
@@ -159,7 +139,6 @@ public partial class NodeBaseTests {
   {
     await StartSession(
       accessRule: new AcceptAllAccessRule(),
-      plugins: Array.Empty<IPlugin>(),
       async static (node, client, writer, reader, cancellationToken
     ) => {
       await writer.WriteLineAsync("command", cancellationToken);
@@ -189,7 +168,6 @@ public partial class NodeBaseTests {
   {
     await StartSession(
       accessRule: new RefuseAllAccessRule(),
-      plugins: Array.Empty<IPlugin>(),
       async static (node, client, writer, reader, cancellationToken
     ) => {
       await writer.WriteLineAsync(".", cancellationToken);

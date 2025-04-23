@@ -33,10 +33,12 @@ public partial class NodeBaseTests {
       IAccessRule? accessRule,
       IReadOnlyList<IPlugin> plugins
     )
+#pragma warning disable CS0618
       : base(
         accessRule: accessRule,
         logger: null
       )
+#pragma warning restore CS0618
     {
       PluginProvider = new ReadOnlyCollectionPluginProvider(plugins);
     }

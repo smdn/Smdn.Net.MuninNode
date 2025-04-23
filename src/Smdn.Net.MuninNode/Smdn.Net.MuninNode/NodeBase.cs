@@ -23,6 +23,8 @@ using Smdn.Net.MuninPlugin;
 using Smdn.Text.Encodings;
 #endif
 
+using Smdn.Net.MuninNode.Transport;
+
 namespace Smdn.Net.MuninNode;
 
 /// <summary>
@@ -40,15 +42,51 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
   protected ILogger? Logger { get; }
 
+  private readonly IMuninNodeServerFactory serverFactory;
   private readonly IAccessRule? accessRule;
 
-  private Socket? server;
+  private IMuninNodeServer? server;
 
+  /// <summary>
+  /// Gets the <see cref="IMuninNodeServer"/> used by the current instance.
+  /// </summary>
+  /// <exception cref="ObjectDisposedException">
+  /// Attempted to read a property value after the instance was disposed.
+  /// </exception>
+  /// <value>
+  /// <see langword="null"/> if the <see cref="Start"/> method has not been called.
+  /// </value>
+  protected IMuninNodeServer? Server {
+    get {
+      ThrowIfDisposed();
+
+      return server;
+    }
+  }
+
+  /// <summary>
+  /// Gets the <see cref="EndPoint"/> actually bound with the current instance.
+  /// </summary>
+  /// <exception cref="InvalidOperationException">
+  /// The <see cref="Start"/> method has not been called.
+  /// </exception>
+  /// <exception cref="NotSupportedException">
+  /// Getting endpoint from this instance is not supported.
+  /// </exception>
+  /// <exception cref="ObjectDisposedException">
+  /// Attempted to read a property value after the instance was disposed.
+  /// </exception>
+  /// <seealso cref="GetLocalEndPointToBind"/>
   public EndPoint LocalEndPoint {
     get {
       ThrowIfDisposed();
 
-      return server?.LocalEndPoint ?? throw new InvalidOperationException("not yet bound or already disposed");
+      if (server is null)
+        throw new InvalidOperationException("not yet started");
+      if (server.EndPoint is null)
+        throw new NotSupportedException("this instance does not have endpoint");
+
+      return server.EndPoint;
     }
   }
 
@@ -57,10 +95,12 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   private bool disposed;
 
   protected NodeBase(
+    IMuninNodeServerFactory serverFactory,
     IAccessRule? accessRule,
     ILogger? logger
   )
   {
+    this.serverFactory = serverFactory ?? throw new ArgumentNullException(nameof(serverFactory));
     this.accessRule = accessRule;
     Logger = logger;
   }
@@ -79,34 +119,14 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     GC.SuppressFinalize(this);
   }
 
-  protected virtual
-#if SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_REUSESOCKET_CANCELLATIONTOKEN
-  async
-#endif
-  ValueTask DisposeAsyncCore()
+  protected virtual async ValueTask DisposeAsyncCore()
   {
-    try {
-      if (server is not null && server.Connected) {
-#if SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_REUSESOCKET_CANCELLATIONTOKEN
-        await server.DisconnectAsync(reuseSocket: false).ConfigureAwait(false);
-#else
-        server.Disconnect(reuseSocket: false);
-#endif
-      }
-    }
-    catch (SocketException) {
-      // swallow
-    }
+    if (server is not null)
+      await server.DisposeAsync().ConfigureAwait(false);
 
-    server?.Close();
-    server?.Dispose();
     server = null;
 
     disposed = true;
-
-#if !SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_REUSESOCKET_CANCELLATIONTOKEN
-    return default;
-#endif
   }
 
   protected virtual void Dispose(bool disposing)
@@ -114,15 +134,6 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     if (!disposing)
       return;
 
-    try {
-      if (server is not null && server.Connected)
-        server.Disconnect(reuseSocket: false);
-    }
-    catch (SocketException) {
-      // swallow
-    }
-
-    server?.Close();
     server?.Dispose();
     server = null!;
 
@@ -222,16 +233,12 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
     Logger?.LogInformation("accepting...");
 
-    var client = await server
-#if SYSTEM_NET_SOCKETS_SOCKET_ACCEPTASYNC_CANCELLATIONTOKEN
-      .AcceptAsync(cancellationToken: cancellationToken)
-#else
-      .AcceptAsync()
-#endif
-      .ConfigureAwait(false);
+    var client = await server.AcceptAsync(
+      cancellationToken: cancellationToken
+    ).ConfigureAwait(false);
 
     // holds a reference to the endpoint before the client being disposed
-    var remoteEndPoint = client.RemoteEndPoint;
+    var remoteEndPoint = client.EndPoint;
 
     try {
       cancellationToken.ThrowIfCancellationRequested();
@@ -245,18 +252,18 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       ).ConfigureAwait(false);
     }
     finally {
-      client.Close();
+      await client.DisposeAsync().ConfigureAwait(false);
 
       Logger?.LogInformation("[{RemoteEndPoint}] connection closed", remoteEndPoint);
     }
 
-    bool CanAccept(Socket client)
+    bool CanAccept(IMuninNodeClient client)
     {
-      if (client.RemoteEndPoint is not IPEndPoint remoteIPEndPoint) {
+      if (client.EndPoint is not IPEndPoint remoteIPEndPoint) {
         Logger?.LogWarning(
           "cannot accept {RemoteEndPoint} ({RemoteEndPointAddressFamily})",
-          client.RemoteEndPoint?.ToString() ?? "(null)",
-          client.RemoteEndPoint?.AddressFamily
+          client.EndPoint?.ToString() ?? "(null)",
+          client.EndPoint?.AddressFamily
         );
 
         return false;
@@ -273,15 +280,15 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   }
 
   private async ValueTask ProcessSessionAsync(
-    Socket client,
+    IMuninNodeClient client,
     CancellationToken cancellationToken
   )
   {
     cancellationToken.ThrowIfCancellationRequested();
 
     // holds a reference to the endpoint before the client being disposed
-    var remoteEndPoint = client.RemoteEndPoint;
-    var sessionId = GenerateSessionId(server!.LocalEndPoint, remoteEndPoint);
+    var remoteEndPoint = client.EndPoint;
+    var sessionId = GenerateSessionId(server!.EndPoint, remoteEndPoint);
 
     Logger?.LogDebug("[{RemoteEndPoint}] sending banner", remoteEndPoint);
 
@@ -292,13 +299,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
         cancellationToken
       ).ConfigureAwait(false);
     }
-    catch (SocketException ex) when (
-      ex.SocketErrorCode is
-        SocketError.Shutdown or // EPIPE (32)
-        SocketError.ConnectionAborted or // WSAECONNABORTED (10053)
-        SocketError.OperationAborted or // ECANCELED (125)
-        SocketError.ConnectionReset // ECONNRESET (104)
-    ) {
+    catch (MuninNodeClientDisconnectedException) {
       Logger?.LogWarning(
         "[{RemoteEndPoint}] client closed session while sending banner",
         remoteEndPoint
@@ -378,53 +379,20 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   }
 
   private async Task ReceiveCommandAsync(
-    Socket socket,
+    IMuninNodeClient client,
     EndPoint? remoteEndPoint,
     PipeWriter writer,
     CancellationToken cancellationToken
   )
   {
-    const int MinimumBufferSize = 256;
-
     for (; ; ) {
       cancellationToken.ThrowIfCancellationRequested();
 
-      var memory = writer.GetMemory(MinimumBufferSize);
-
       try {
-        if (!socket.Connected)
+        var count = await client.ReceiveAsync(writer, cancellationToken).ConfigureAwait(false);
+
+        if (count == 0)
           break;
-
-        var bytesRead = await socket.ReceiveAsync(
-          buffer: memory,
-          socketFlags: SocketFlags.None,
-          cancellationToken: cancellationToken
-        ).ConfigureAwait(false);
-
-        if (bytesRead == 0)
-          break;
-
-        writer.Advance(bytesRead);
-      }
-      catch (SocketException ex) when (
-        ex.SocketErrorCode is
-          SocketError.OperationAborted or // ECANCELED (125)
-          SocketError.ConnectionReset // ECONNRESET (104)
-      ) {
-        Logger?.LogInformation(
-          "[{RemoteEndPoint}] expected socket exception ({NumericSocketErrorCode} {SocketErrorCode})",
-          remoteEndPoint,
-          (int)ex.SocketErrorCode,
-          ex.SocketErrorCode
-        );
-        break; // expected exception
-      }
-      catch (ObjectDisposedException) {
-        Logger?.LogInformation(
-          "[{RemoteEndPoint}] socket has been disposed",
-          remoteEndPoint
-        );
-        break; // expected exception
       }
       catch (OperationCanceledException) {
         Logger?.LogInformation(
@@ -435,12 +403,12 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       }
 #pragma warning disable CA1031
       catch (Exception ex) {
-        Logger?.LogCritical(
+        Logger?.LogError(
           ex,
           "[{RemoteEndPoint}] unexpected exception while receiving",
           remoteEndPoint
         );
-        break;
+        break; // swallow
       }
 #pragma warning restore CA1031
 
@@ -456,7 +424,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   }
 
   private async Task ProcessCommandAsync(
-    Socket socket,
+    IMuninNodeClient client,
     EndPoint? remoteEndPoint,
     PipeReader reader,
     CancellationToken cancellationToken
@@ -473,11 +441,18 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       try {
         while (TryReadLine(ref buffer, out var line)) {
           await RespondToCommandAsync(
-            client: socket,
+            client: client,
             commandLine: line,
             cancellationToken: cancellationToken
           ).ConfigureAwait(false);
         }
+      }
+      catch (MuninNodeClientDisconnectedException) {
+        Logger?.LogInformation(
+          "[{RemoteEndPoint}] client disconnected",
+          remoteEndPoint
+        );
+        break; // expected exception
       }
       catch (OperationCanceledException) {
         Logger?.LogInformation(
@@ -494,8 +469,8 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
           remoteEndPoint
         );
 
-        if (socket.Connected)
-          socket.Close();
+        await client.DisconnectAsync(cancellationToken).ConfigureAwait(false);
+
         break;
       }
 #pragma warning restore CA1031
@@ -565,7 +540,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   private static readonly byte CommandQuitShort = (byte)'.';
 
   private ValueTask RespondToCommandAsync(
-    Socket client,
+    IMuninNodeClient client,
     ReadOnlySequence<byte> commandLine,
     CancellationToken cancellationToken
   )
@@ -586,12 +561,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       ExpectCommand(commandLine, "quit"u8, out _) ||
       (commandLine.Length == 1 && commandLine.FirstSpan[0] == CommandQuitShort)
     ) {
-      client.Close();
-#if SYSTEM_THREADING_TASKS_VALUETASK_COMPLETEDTASK
-      return ValueTask.CompletedTask;
-#else
-      return default;
-#endif
+      return client.DisconnectAsync(cancellationToken);
     }
     else if (ExpectCommand(commandLine, "cap"u8, out var capArguments)) {
       return ProcessCommandCapAsync(client, capArguments, cancellationToken);
@@ -618,7 +588,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   ];
 
   private ValueTask SendResponseAsync(
-    Socket client,
+    IMuninNodeClient client,
     string responseLine,
     CancellationToken cancellationToken
   )
@@ -629,7 +599,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     );
 
   private async ValueTask SendResponseAsync(
-    Socket client,
+    IMuninNodeClient client,
     IEnumerable<string> responseLines,
     CancellationToken cancellationToken
   )
@@ -660,7 +630,6 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
       await client.SendAsync(
         buffer: responseBuffer.WrittenMemory,
-        socketFlags: SocketFlags.None,
         cancellationToken: cancellationToken
       ).ConfigureAwait(false);
     }
@@ -674,7 +643,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   }
 
   private ValueTask ProcessCommandNodesAsync(
-    Socket client,
+    IMuninNodeClient client,
     CancellationToken cancellationToken
   )
   {
@@ -689,7 +658,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   }
 
   private ValueTask ProcessCommandVersionAsync(
-    Socket client,
+    IMuninNodeClient client,
     CancellationToken cancellationToken
   )
   {
@@ -701,7 +670,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   }
 
   private ValueTask ProcessCommandCapAsync(
-    Socket client,
+    IMuninNodeClient client,
 #pragma warning disable IDE0060
     ReadOnlySequence<byte> arguments,
 #pragma warning restore IDE0060
@@ -719,7 +688,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   }
 
   private ValueTask ProcessCommandListAsync(
-    Socket client,
+    IMuninNodeClient client,
 #pragma warning disable IDE0060
     ReadOnlySequence<byte> arguments,
 #pragma warning restore IDE0060
@@ -737,7 +706,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   }
 
   private async ValueTask ProcessCommandFetchAsync(
-    Socket client,
+    IMuninNodeClient client,
     ReadOnlySequence<byte> arguments,
     CancellationToken cancellationToken
   )
@@ -795,7 +764,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     };
 
   private ValueTask ProcessCommandConfigAsync(
-    Socket client,
+    IMuninNodeClient client,
     ReadOnlySequence<byte> arguments,
     CancellationToken cancellationToken
   )
