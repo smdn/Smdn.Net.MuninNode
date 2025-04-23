@@ -141,8 +141,6 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       throw new InvalidOperationException($"{nameof(PluginProvider)} cannot be null");
   }
 
-  protected abstract Socket CreateServerSocket();
-
   /// <summary>
   /// Gets the <see cref="EndPoint"/> to be bound as the <c>Munin-Node</c>'s endpoint.
   /// </summary>
@@ -163,20 +161,6 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
             : throw new NotSupportedException(),
       port: 0
     );
-
-  public void Start()
-  {
-    ThrowIfDisposed();
-
-    if (server is not null)
-      throw new InvalidOperationException("already started");
-
-    Logger?.LogInformation($"starting");
-
-    server = CreateServerSocket() ?? throw new InvalidOperationException("cannot start server");
-
-    Logger?.LogInformation("started (end point: {LocalEndPoint})", server.LocalEndPoint);
-  }
 
   /// <summary>
   /// Starts accepting multiple sessions.
