@@ -29,7 +29,7 @@ namespace Smdn.Net.MuninNode;
 /// Provides an extensible base class with basic Munin-Node functionality.
 /// </summary>
 /// <seealso href="https://guide.munin-monitoring.org/en/latest/node/index.html">The Munin node</seealso>
-public abstract class NodeBase : IDisposable, IAsyncDisposable {
+public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposable {
   private static readonly Version DefaultNodeVersion = new(1, 0, 0, 0);
 
   public abstract IPluginProvider PluginProvider { get; }
