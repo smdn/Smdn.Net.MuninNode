@@ -5,6 +5,8 @@ using System.Net.Sockets;
 
 using Microsoft.Extensions.Logging;
 
+using Smdn.Net.MuninNode.Transport;
+
 namespace Smdn.Net.MuninNode;
 
 #pragma warning disable IDE0040
@@ -19,7 +21,7 @@ partial class LocalNode {
   /// <param name="logger">
   /// The <see cref="ILogger"/> to report the situation.
   /// </param>
-  [Obsolete("This constructor will be deprecated in the future.")]
+  [Obsolete($"Use a constructor overload that takes {nameof(IMuninNodeServerFactory)} as an argument.")]
   protected LocalNode(
     IAccessRule? accessRule,
     ILogger? logger = null
@@ -31,34 +33,7 @@ partial class LocalNode {
   {
   }
 
-  [Obsolete("This method will be deprecated in the future.")]
+  [Obsolete($"Use {nameof(IMuninNodeServerFactory)} and {nameof(StartAsync)} instead.")]
   protected override Socket CreateServerSocket()
-  {
-    const int MaxClients = 1;
-
-    Socket? server = null;
-
-    try {
-      var endPoint = GetLocalEndPointToBind();
-
-      server = new Socket(
-        endPoint.AddressFamily,
-        SocketType.Stream,
-        ProtocolType.Tcp
-      );
-
-      if (endPoint.AddressFamily == AddressFamily.InterNetworkV6 && Socket.OSSupportsIPv4)
-        server.DualMode = true;
-
-      server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-      server.Bind(endPoint);
-      server.Listen(MaxClients);
-
-      return server;
-    }
-    catch {
-      server?.Dispose();
-      throw;
-    }
-  }
+    => MuninNodeServer.CreateServerSocket(endPoint: GetLocalEndPointToBind());
 }
