@@ -116,15 +116,47 @@ public class IAccessRuleServiceCollectionExtensionsTests {
     );
   }
 
-  [TestCase("127.0.0.1", true)]
-  [TestCase("127.255.255.255", true)]
-  [TestCase("::1", true)]
-  [TestCase("::ffff:127.0.0.1", true)]
-  [TestCase("192.0.2.255", false)]
-  [TestCase("2001:db8::1", false)]
-  [TestCase("::ffff:192.0.2.255", false)]
+  private static System.Collections.IEnumerable YieldTestCases_AddMuninNodeAccessRule_IReadOnlyListOfIPAddress_Loopback()
+  {
+    yield return new object[] { IPAddress.Parse("127.0.0.1"), true };
+    yield return new object[] { IPAddress.Parse("::1"), true };
+    yield return new object[] { IPAddress.Parse("::ffff:127.0.0.1"), true };
+    yield return new object[] { IPAddress.Parse("192.0.2.255"), false };
+    yield return new object[] { IPAddress.Parse("2001:db8::1"), false };
+    yield return new object[] { IPAddress.Parse("::ffff:192.0.2.255"), false };
+  }
+
+  [TestCaseSource(nameof(YieldTestCases_AddMuninNodeAccessRule_IReadOnlyListOfIPAddress_Loopback))]
+  public void AddMuninNodeAccessRule_IReadOnlyListOfIPAddress_Loopback(
+    IPAddress remoteAddress,
+    bool expected
+  )
+  {
+    var services = new ServiceCollection();
+
+    services.AddMuninNodeAccessRule([IPAddress.Loopback, IPAddress.IPv6Loopback]);
+
+    var accessRule = services.BuildServiceProvider().GetRequiredService<IAccessRule>();
+
+    Assert.That(
+      accessRule.IsAcceptable(new(remoteAddress, port: 0)),
+      Is.EqualTo(expected)
+    );
+  }
+
+  private static System.Collections.IEnumerable YieldTestCases_AddMuninNodeLoopbackOnlyAccessRule()
+  {
+    foreach (var testCase in YieldTestCases_AddMuninNodeAccessRule_IReadOnlyListOfIPAddress_Loopback()) {
+      yield return testCase;
+    }
+
+    yield return new object[] { IPAddress.Parse("127.0.0.255"), true };
+    yield return new object[] { IPAddress.Parse("127.255.255.255"), true };
+  }
+
+  [TestCaseSource(nameof(YieldTestCases_AddMuninNodeLoopbackOnlyAccessRule))]
   public void AddMuninNodeLoopbackOnlyAccessRule(
-    string remoteAddress,
+    IPAddress remoteAddress,
     bool expected
   )
   {
@@ -135,7 +167,7 @@ public class IAccessRuleServiceCollectionExtensionsTests {
     var accessRule = services.BuildServiceProvider().GetRequiredService<IAccessRule>();
 
     Assert.That(
-      accessRule.IsAcceptable(new(IPAddress.Parse(remoteAddress), port: 0)),
+      accessRule.IsAcceptable(new(remoteAddress, port: 0)),
       Is.EqualTo(expected)
     );
   }
