@@ -143,6 +143,27 @@ public abstract class NodeBase : IDisposable, IAsyncDisposable {
 
   protected abstract Socket CreateServerSocket();
 
+  /// <summary>
+  /// Gets the <see cref="EndPoint"/> to be bound as the <c>Munin-Node</c>'s endpoint.
+  /// </summary>
+  /// <returns>
+  /// An <see cref="EndPoint"/>.
+  /// The default implementation returns an <see cref="IPEndPoint"/> with the port number <c>0</c>
+  /// and <see cref="IPAddress.IPv6Loopback"/>/<see cref="IPAddress.Loopback"/>.
+  /// </returns>
+  /// <seealso cref="Start"/>
+  /// <seealso cref="LocalEndPoint"/>
+  protected virtual EndPoint GetLocalEndPointToBind()
+    => new IPEndPoint(
+      address:
+        Socket.OSSupportsIPv6
+          ? IPAddress.IPv6Loopback
+          : Socket.OSSupportsIPv4
+            ? IPAddress.Loopback
+            : throw new NotSupportedException(),
+      port: 0
+    );
+
   public void Start()
   {
     ThrowIfDisposed();

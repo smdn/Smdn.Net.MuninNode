@@ -1,7 +1,5 @@
 // SPDX-FileCopyrightText: 2023 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
-using System;
-using System.Net;
 using System.Net.Sockets;
 
 using Microsoft.Extensions.Logging;
@@ -33,25 +31,6 @@ public abstract partial class LocalNode : NodeBase {
     )
   {
   }
-
-  /// <summary>
-  /// Gets the <see cref="EndPoint"/> to be bound as the <c>Munin-Node</c>'s endpoint.
-  /// </summary>
-  /// <returns>
-  /// An <see cref="EndPoint"/>.
-  /// The default implementation returns an <see cref="IPEndPoint"/> with the port number <c>0</c>
-  /// and <see cref="IPAddress.IPv6Loopback"/>/<see cref="IPAddress.Loopback"/>.
-  /// </returns>
-  protected virtual EndPoint GetLocalEndPointToBind()
-    => new IPEndPoint(
-      address:
-        Socket.OSSupportsIPv6
-          ? IPAddress.IPv6Loopback
-          : Socket.OSSupportsIPv4
-            ? IPAddress.Loopback
-            : throw new NotSupportedException(),
-      port: 0
-    );
 
   protected override Socket CreateServerSocket()
   {
