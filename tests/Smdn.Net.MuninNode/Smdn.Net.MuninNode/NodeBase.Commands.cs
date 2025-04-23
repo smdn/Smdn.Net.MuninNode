@@ -89,7 +89,7 @@ partial class NodeBaseTests {
   {
     await using var node = new PseudoMuninNode(accessRule, plugins);
 
-    node.Start();
+    await node.StartAsync(cancellationToken);
 
     var taskAccept = Task.Run(
       async () => await node.AcceptSingleSessionAsync(cancellationToken),

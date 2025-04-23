@@ -93,6 +93,8 @@ public partial class NodeBaseTests {
 #pragma warning disable CS0618
     Assert.That(node.Start, Throws.TypeOf<ObjectDisposedException>());
 #pragma warning restore CS0618
+    Assert.That(() => node.StartAsync(default), Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(async () => await node.StartAsync(default), Throws.TypeOf<ObjectDisposedException>());
     Assert.That(async () => await node.AcceptAsync(false, default), Throws.TypeOf<ObjectDisposedException>());
     Assert.That(async () => await node.AcceptSingleSessionAsync(default), Throws.TypeOf<ObjectDisposedException>());
 
@@ -111,6 +113,8 @@ public partial class NodeBaseTests {
 #pragma warning disable CS0618
     Assert.That(node.Start, Throws.TypeOf<ObjectDisposedException>());
 #pragma warning restore CS0618
+    Assert.That(() => node.StartAsync(default), Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(async () => await node.StartAsync(default), Throws.TypeOf<ObjectDisposedException>());
     Assert.That(async () => await node.AcceptAsync(false, default), Throws.TypeOf<ObjectDisposedException>());
     Assert.That(async () => await node.AcceptSingleSessionAsync(default), Throws.TypeOf<ObjectDisposedException>());
 
@@ -129,6 +133,19 @@ public partial class NodeBaseTests {
     Assert.DoesNotThrow(node.Start);
     Assert.Throws<InvalidOperationException>(node.Start, "already started");
 #pragma warning restore CS0618
+
+    Assert.That(() => _ = node.LocalEndPoint, Throws.Nothing, $"{nameof(node.LocalEndPoint)} after start");
+  }
+
+  [Test]
+  public async Task StartAsync()
+  {
+    await using var node = CreateNode();
+
+    Assert.That(() => _ = node.LocalEndPoint, Throws.InvalidOperationException, $"{nameof(node.LocalEndPoint)} before start");
+
+    Assert.That(async () => await node.StartAsync(default), Throws.Nothing);
+    Assert.That(async () => await node.StartAsync(default), Throws.InvalidOperationException, "already started");
 
     Assert.That(() => _ = node.LocalEndPoint, Throws.Nothing, $"{nameof(node.LocalEndPoint)} after start");
   }

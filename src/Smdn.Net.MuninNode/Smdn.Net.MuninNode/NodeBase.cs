@@ -54,7 +54,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   /// Attempted to read a property value after the instance was disposed.
   /// </exception>
   /// <value>
-  /// <see langword="null"/> if the <see cref="Start"/> method has not been called.
+  /// <see langword="null"/> if the <see cref="Start"/> or <see cref="StartAsync"/> method has not been called.
   /// </value>
   protected IMuninNodeServer? Server {
     get {
@@ -68,7 +68,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   /// Gets the <see cref="EndPoint"/> actually bound with the current instance.
   /// </summary>
   /// <exception cref="InvalidOperationException">
-  /// The <see cref="Start"/> method has not been called.
+  /// The <see cref="Start"/> or <see cref="StartAsync"/> method has not been called.
   /// </exception>
   /// <exception cref="NotSupportedException">
   /// Getting endpoint from this instance is not supported.
@@ -160,7 +160,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   /// The default implementation returns an <see cref="IPEndPoint"/> with the port number <c>0</c>
   /// and <see cref="IPAddress.IPv6Loopback"/>/<see cref="IPAddress.Loopback"/>.
   /// </returns>
-  /// <seealso cref="Start"/>
+  /// <seealso cref="StartAsync"/>
   /// <seealso cref="LocalEndPoint"/>
   protected virtual EndPoint GetLocalEndPointToBind()
     => new IPEndPoint(
@@ -172,6 +172,50 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
             : throw new NotSupportedException(),
       port: 0
     );
+
+  /// <summary>
+  /// Starts the <c>Munin-Node</c> and prepares to accept connections from clients.
+  /// </summary>
+  /// <param name="cancellationToken">
+  /// The <see cref="CancellationToken"/> to monitor for cancellation requests.
+  /// </param>
+  /// <returns>
+  /// The <see cref="ValueTask"/> that represents the asynchronous operation,
+  /// starting the <c>Munin-Node</c> instance.
+  /// </returns>
+  /// <exception cref="InvalidOperationException">
+  /// It is already in the started state. Or, the socket is not created.
+  /// </exception>
+  /// <seealso cref="GetLocalEndPointToBind"/>
+  public ValueTask StartAsync(CancellationToken cancellationToken = default)
+  {
+    ThrowIfDisposed();
+
+    if (server is not null)
+      throw new InvalidOperationException("already started");
+
+    return StartAsyncCore();
+
+    async ValueTask StartAsyncCore()
+    {
+      cancellationToken.ThrowIfCancellationRequested();
+
+      Logger?.LogInformation("starting");
+
+      server = await serverFactory.CreateAsync(
+        endPoint: GetLocalEndPointToBind(),
+        node: this,
+        cancellationToken: cancellationToken
+      ).ConfigureAwait(false);
+
+      if (server is null)
+        throw new InvalidOperationException("cannot start server");
+
+      await server.StartAsync(cancellationToken).ConfigureAwait(false);
+
+      Logger?.LogInformation("started (end point: {EndPoint})", server.EndPoint);
+    }
+  }
 
   /// <summary>
   /// Starts accepting multiple sessions.

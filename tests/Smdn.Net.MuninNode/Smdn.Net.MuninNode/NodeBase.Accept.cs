@@ -23,7 +23,7 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode(accessRule, plugins: Array.Empty<IPlugin>());
 
-    node.Start();
+    await node.StartAsync();
 
     using var cts = new CancellationTokenSource(
       delay: TimeSpan.FromSeconds(5) // timeout for hung up
@@ -56,7 +56,7 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-    node.Start();
+    await node.StartAsync();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
@@ -87,7 +87,7 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-    node.Start();
+    await node.StartAsync();
 
     using var cts = new CancellationTokenSource(millisecondsDelay: delayMilliseconds);
 
@@ -101,7 +101,7 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-    node.Start();
+    await node.StartAsync();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
@@ -117,7 +117,7 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-    node.Start();
+    await node.StartAsync();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
@@ -237,7 +237,7 @@ public partial class NodeBaseTests {
 
     await using var node = CreateNode(plugins: new IPlugin[] { plugin });
 
-    node.Start();
+    await node.StartAsync();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
@@ -286,7 +286,7 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-    node.Start();
+    await node.StartAsync();
 
     using var cts = new CancellationTokenSource();
 

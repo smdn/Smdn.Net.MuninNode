@@ -62,16 +62,16 @@ partial class NodeBase {
     }
   }
 
-  [Obsolete($"Use {nameof(IMuninNodeServerFactory)} instead.")]
+  [Obsolete($"Use {nameof(IMuninNodeServerFactory)} and {nameof(StartAsync)} instead.")]
   protected virtual Socket CreateServerSocket()
     => throw new NotImplementedException(
       "This method will be deprecated in the future and its implementation has been disabled. " +
-      $"Use {nameof(IMuninNodeServerFactory)} instead."
+      $"Use {nameof(IMuninNodeServerFactory)} and {nameof(StartAsync)} instead."
     );
 
   [Obsolete(
     "This method will be deprecated in the future." +
-    $"Use {nameof(IMuninNodeServerFactory)} instead." +
+    $"Use {nameof(IMuninNodeServerFactory)} and {nameof(StartAsync)} instead." +
     $"Make sure to override {nameof(CreateServerSocket)} if you need to use this method."
   )]
   public void Start()
