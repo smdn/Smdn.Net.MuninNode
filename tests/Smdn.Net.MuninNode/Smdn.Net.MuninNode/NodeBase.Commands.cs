@@ -24,7 +24,7 @@ partial class NodeBaseTests {
 
     public PseudoMuninNode(IAccessRule? accessRule, IReadOnlyCollection<IPlugin>? plugins)
       : base(
-        serverFactory: new PseudoMuninNodeServerFactory(),
+        listenerFactory: new PseudoMuninNodeListenerFactory(),
         accessRule: accessRule,
         logger: null
       )
@@ -49,12 +49,12 @@ partial class NodeBaseTests {
     )
     GetAcceptingClient(CancellationToken cancellationToken)
     {
-      if (Server is null)
+      if (Listener is null)
         throw new InvalidOperationException("not yet started");
-      if (Server is not PseudoMuninNodeServer pseudoServer)
-        throw new InvalidOperationException("server type mismatch");
+      if (Listener is not PseudoMuninNodeListener pseudoListener)
+        throw new InvalidOperationException("listener type mismatch");
 
-      return pseudoServer.GetAcceptingClient(cancellationToken);
+      return pseudoListener.GetAcceptingClient(cancellationToken);
     }
   }
 

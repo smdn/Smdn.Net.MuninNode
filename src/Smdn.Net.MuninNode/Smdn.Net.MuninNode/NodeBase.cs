@@ -42,13 +42,13 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
   protected ILogger? Logger { get; }
 
-  private readonly IMuninNodeServerFactory serverFactory;
+  private readonly IMuninNodeListenerFactory listenerFactory;
   private readonly IAccessRule? accessRule;
 
-  private IMuninNodeServer? server;
+  private IMuninNodeListener? listener;
 
   /// <summary>
-  /// Gets the <see cref="IMuninNodeServer"/> used by the current instance.
+  /// Gets the <see cref="IMuninNodeListener"/> used by the current instance.
   /// </summary>
   /// <exception cref="ObjectDisposedException">
   /// Attempted to read a property value after the instance was disposed.
@@ -56,11 +56,11 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   /// <value>
   /// <see langword="null"/> if the <see cref="Start"/> or <see cref="StartAsync"/> method has not been called.
   /// </value>
-  protected IMuninNodeServer? Server {
+  protected IMuninNodeListener? Listener {
     get {
       ThrowIfDisposed();
 
-      return server;
+      return listener;
     }
   }
 
@@ -81,12 +81,12 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     get {
       ThrowIfDisposed();
 
-      if (server is null)
+      if (listener is null)
         throw new InvalidOperationException("not yet started");
-      if (server.EndPoint is null)
+      if (listener.EndPoint is null)
         throw new NotSupportedException("this instance does not have endpoint");
 
-      return server.EndPoint;
+      return listener.EndPoint;
     }
   }
 
@@ -95,12 +95,12 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   private bool disposed;
 
   protected NodeBase(
-    IMuninNodeServerFactory serverFactory,
+    IMuninNodeListenerFactory listenerFactory,
     IAccessRule? accessRule,
     ILogger? logger
   )
   {
-    this.serverFactory = serverFactory ?? throw new ArgumentNullException(nameof(serverFactory));
+    this.listenerFactory = listenerFactory ?? throw new ArgumentNullException(nameof(listenerFactory));
     this.accessRule = accessRule;
     Logger = logger;
   }
@@ -121,10 +121,10 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
   protected virtual async ValueTask DisposeAsyncCore()
   {
-    if (server is not null)
-      await server.DisposeAsync().ConfigureAwait(false);
+    if (listener is not null)
+      await listener.DisposeAsync().ConfigureAwait(false);
 
-    server = null;
+    listener = null;
 
     disposed = true;
   }
@@ -134,8 +134,8 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     if (!disposing)
       return;
 
-    server?.Dispose();
-    server = null!;
+    listener?.Dispose();
+    listener = null!;
 
     disposed = true;
   }
@@ -191,7 +191,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   {
     ThrowIfDisposed();
 
-    if (server is not null)
+    if (listener is not null)
       throw new InvalidOperationException("already started");
 
     return StartAsyncCore();
@@ -202,18 +202,18 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
       Logger?.LogInformation("starting");
 
-      server = await serverFactory.CreateAsync(
+      listener = await listenerFactory.CreateAsync(
         endPoint: GetLocalEndPointToBind(),
         node: this,
         cancellationToken: cancellationToken
       ).ConfigureAwait(false);
 
-      if (server is null)
-        throw new InvalidOperationException("cannot start server");
+      if (listener is null)
+        throw new InvalidOperationException("cannot start listener");
 
-      await server.StartAsync(cancellationToken).ConfigureAwait(false);
+      await listener.StartAsync(cancellationToken).ConfigureAwait(false);
 
-      Logger?.LogInformation("started (end point: {EndPoint})", server.EndPoint);
+      Logger?.LogInformation("started (end point: {EndPoint})", listener.EndPoint);
     }
   }
 
@@ -270,14 +270,14 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   {
     ThrowIfDisposed();
 
-    if (server is null)
+    if (listener is null)
       throw new InvalidOperationException("not started or already closed");
 
     ThrowIfPluginProviderIsNull();
 
     Logger?.LogInformation("accepting...");
 
-    var client = await server.AcceptAsync(
+    var client = await listener.AcceptAsync(
       cancellationToken: cancellationToken
     ).ConfigureAwait(false);
 
@@ -332,7 +332,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
     // holds a reference to the endpoint before the client being disposed
     var remoteEndPoint = client.EndPoint;
-    var sessionId = GenerateSessionId(server!.EndPoint, remoteEndPoint);
+    var sessionId = GenerateSessionId(listener!.EndPoint, remoteEndPoint);
 
     Logger?.LogDebug("[{RemoteEndPoint}] sending banner", remoteEndPoint);
 

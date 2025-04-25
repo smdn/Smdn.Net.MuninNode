@@ -14,11 +14,11 @@ public class PseudoMuninNodeClientTests {
   [CancelAfter(3000)]
   public async Task DisconnectAsync(CancellationToken cancellationToken)
   {
-    var server = new PseudoMuninNodeServer(endPoint: null, node: null);
+    var listener = new PseudoMuninNodeListener(endPoint: null, node: null);
 
-    await server.StartAsync(cancellationToken);
+    await listener.StartAsync(cancellationToken);
 
-    var client = await server.AcceptAsync(cancellationToken);
+    var client = await listener.AcceptAsync(cancellationToken);
 
     Assert.That(client, Is.Not.Null);
 

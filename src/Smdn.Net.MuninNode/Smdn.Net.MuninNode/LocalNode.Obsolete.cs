@@ -21,7 +21,7 @@ partial class LocalNode {
   /// <param name="logger">
   /// The <see cref="ILogger"/> to report the situation.
   /// </param>
-  [Obsolete($"Use a constructor overload that takes {nameof(IMuninNodeServerFactory)} as an argument.")]
+  [Obsolete($"Use a constructor overload that takes {nameof(IMuninNodeListenerFactory)} as an argument.")]
   protected LocalNode(
     IAccessRule? accessRule,
     ILogger? logger = null
@@ -33,7 +33,7 @@ partial class LocalNode {
   {
   }
 
-  [Obsolete($"Use {nameof(IMuninNodeServerFactory)} and {nameof(StartAsync)} instead.")]
+  [Obsolete($"Use {nameof(IMuninNodeListenerFactory)} and {nameof(StartAsync)} instead.")]
   protected override Socket CreateServerSocket()
-    => MuninNodeServer.CreateServerSocket(endPoint: GetLocalEndPointToBind());
+    => MuninNodeListener.CreateServerSocket(endPoint: GetLocalEndPointToBind());
 }

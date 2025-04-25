@@ -19,9 +19,9 @@ public abstract partial class LocalNode : NodeBase {
   /// <summary>
   /// Initializes a new instance of the <see cref="LocalNode"/> class.
   /// </summary>
-  /// <param name="serverFactory">
-  /// The <see cref="IMuninNodeServerFactory"/> factory to create an <see cref="IMuninNodeServer"/> to be used in this instance.
-  /// If <see langword="null"/>, the default <see cref="IMuninNodeServerFactory"/> implementation is used.
+  /// <param name="listenerFactory">
+  /// The <see cref="IMuninNodeListenerFactory"/> factory to create an <see cref="IMuninNodeListener"/> to be used in this instance.
+  /// If <see langword="null"/>, the default <see cref="IMuninNodeListenerFactory"/> implementation is used.
   /// </param>
   /// <param name="accessRule">
   /// The <see cref="IAccessRule"/> to determine whether to accept or reject a remote host that connects to <see cref="LocalNode"/>.
@@ -30,29 +30,29 @@ public abstract partial class LocalNode : NodeBase {
   /// The <see cref="ILogger"/> to report the situation.
   /// </param>
   protected LocalNode(
-    IMuninNodeServerFactory? serverFactory,
+    IMuninNodeListenerFactory? listenerFactory,
     IAccessRule? accessRule,
     ILogger? logger
   )
     : base(
-      serverFactory: serverFactory ?? ServerFactory.Instance,
+      listenerFactory: listenerFactory ?? ListenerFactory.Instance,
       accessRule: accessRule,
       logger: logger
     )
   {
   }
 
-  private sealed class ServerFactory : IMuninNodeServerFactory {
-    public static readonly ServerFactory Instance = new();
+  private sealed class ListenerFactory : IMuninNodeListenerFactory {
+    public static readonly ListenerFactory Instance = new();
 
-    public ValueTask<IMuninNodeServer> CreateAsync(
+    public ValueTask<IMuninNodeListener> CreateAsync(
       EndPoint endPoint,
       IMuninNode node,
       CancellationToken cancellationToken
     )
 #pragma warning disable CA2000
       => new(
-        new MuninNodeServer(
+        new MuninNodeListener(
           endPoint: endPoint,
           logger: null,
           serviceProvider: null

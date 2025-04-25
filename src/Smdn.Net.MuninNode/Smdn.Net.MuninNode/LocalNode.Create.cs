@@ -42,7 +42,7 @@ partial class LocalNode {
       IServiceProvider? serviceProvider = null
     )
       : base(
-        serverFactory: new ServerFactory(serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<LocalNode>()),
+        listenerFactory: new ListenerFactory(serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<LocalNode>()),
         accessRule: accessRule ?? serviceProvider?.GetService<IAccessRule>(),
         logger: serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<LocalNode>()
       )
@@ -58,15 +58,15 @@ partial class LocalNode {
         port: port
       );
 
-    private new sealed class ServerFactory(ILogger? logger) : IMuninNodeServerFactory {
-      public ValueTask<IMuninNodeServer> CreateAsync(
+    private new sealed class ListenerFactory(ILogger? logger) : IMuninNodeListenerFactory {
+      public ValueTask<IMuninNodeListener> CreateAsync(
         EndPoint endPoint,
         IMuninNode node,
         CancellationToken cancellationToken
       )
 #pragma warning disable CA2000
         => new(
-          new MuninNodeServer(
+          new MuninNodeListener(
             endPoint: endPoint,
             logger: logger,
             serviceProvider: null

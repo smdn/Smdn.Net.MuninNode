@@ -9,31 +9,31 @@ using System.Threading.Tasks;
 namespace Smdn.Net.MuninNode.Transport;
 
 /// <summary>
-/// Provides an interface that abstracts the server implementation of
+/// Provides an interface that abstracts the listener implementation of
 /// the transport layer that accepts the connections to the <c>Munin-Node</c>.
 /// </summary>
 /// <seealso cref="IMuninNodeClient"/>
-/// <seealso cref="IMuninNodeServerFactory"/>
-public interface IMuninNodeServer : IDisposable, IAsyncDisposable {
+/// <seealso cref="IMuninNodeListenerFactory"/>
+public interface IMuninNodeListener : IDisposable, IAsyncDisposable {
   /// <summary>
   /// Gets the <see cref="EndPoint"/> that is bound with this instance.
   /// </summary>
-  /// <exception cref="ObjectDisposedException">The server has been disposed.</exception>
-  /// <exception cref="InvalidOperationException">The server is not started yet.</exception>
+  /// <exception cref="ObjectDisposedException">The instance has been disposed.</exception>
+  /// <exception cref="InvalidOperationException">The instance is not started yet.</exception>
   /// <value>
-  /// <see langword="null"/> if this server does not have <see cref="EndPoint"/>.
+  /// <see langword="null"/> if this instance does not have <see cref="EndPoint"/>.
   /// </value>
   EndPoint? EndPoint { get; }
 
   /// <summary>
-  /// Start the server and enable to accept connections from clients.
+  /// Start the listener and enable to accept connections from clients.
   /// </summary>
   /// <param name="cancellationToken">
   /// The <see cref="CancellationToken"/> to monitor for cancellation requests.
   /// </param>
   /// <returns>
   /// The <see cref="ValueTask"/> that represents the asynchronous operation,
-  /// starting the server.
+  /// starting the listener.
   /// </returns>
   ValueTask StartAsync(CancellationToken cancellationToken);
 

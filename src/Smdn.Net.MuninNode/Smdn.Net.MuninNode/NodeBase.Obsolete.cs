@@ -19,13 +19,13 @@ namespace Smdn.Net.MuninNode;
 #pragma warning disable IDE0040
 partial class NodeBase {
 #pragma warning restore IDE0040
-  [Obsolete($"Use a constructor overload that takes {nameof(IMuninNodeServerFactory)} as an argument.")]
+  [Obsolete($"Use a constructor overload that takes {nameof(IMuninNodeListenerFactory)} as an argument.")]
   protected NodeBase(
     IAccessRule? accessRule,
     ILogger? logger
   )
     : this(
-      serverFactory: new CreateFromStartedSocketServerFactory(),
+      listenerFactory: new CreateFromStartedSocketListenerFactory(),
       accessRule: accessRule,
       logger: logger
     )
@@ -33,16 +33,16 @@ partial class NodeBase {
   }
 
   /// <summary>
-  /// An <see cref="IMuninNodeServerFactory"/> implementation that uses the
+  /// An <see cref="IMuninNodeListenerFactory"/> implementation that uses the
   /// socket created by the <see cref="CreateServerSocket"/> method.
   /// </summary>
   [Obsolete]
-  private sealed class CreateFromStartedSocketServerFactory : IMuninNodeServerFactory {
+  private sealed class CreateFromStartedSocketListenerFactory : IMuninNodeListenerFactory {
     /// <remarks>
     /// <paramref name="endPoint"/> is not referenced because this method uses
     /// a socket already bound to a specific endpoint.
     /// </remarks>
-    public ValueTask<IMuninNodeServer> CreateAsync(
+    public ValueTask<IMuninNodeListener> CreateAsync(
       EndPoint endPoint,
       IMuninNode node,
       CancellationToken cancellationToken
@@ -53,51 +53,51 @@ partial class NodeBase {
 
 #pragma warning disable CA2000
       return new(
-        MuninNodeServer.CreateFromStartedSocket(
+        MuninNodeListener.CreateFromStartedSocket(
           logger: n.Logger,
-          server: n.CreateServerSocket() ?? throw new InvalidOperationException("cannot start server")
+          listener: n.CreateServerSocket() ?? throw new InvalidOperationException("cannot start server")
         )
       );
 #pragma warning restore CA2000
     }
   }
 
-  [Obsolete($"Use {nameof(IMuninNodeServerFactory)} and {nameof(StartAsync)} instead.")]
+  [Obsolete($"Use {nameof(IMuninNodeListenerFactory)} and {nameof(StartAsync)} instead.")]
   protected virtual Socket CreateServerSocket()
     => throw new NotImplementedException(
       "This method will be deprecated in the future and its implementation has been disabled. " +
-      $"Use {nameof(IMuninNodeServerFactory)} and {nameof(StartAsync)} instead."
+      $"Use {nameof(IMuninNodeListenerFactory)} and {nameof(StartAsync)} instead."
     );
 
   [Obsolete(
     "This method will be deprecated in the future." +
-    $"Use {nameof(IMuninNodeServerFactory)} and {nameof(StartAsync)} instead." +
+    $"Use {nameof(IMuninNodeListenerFactory)} and {nameof(StartAsync)} instead." +
     $"Make sure to override {nameof(CreateServerSocket)} if you need to use this method."
   )]
   public void Start()
   {
     ThrowIfDisposed();
 
-    if (server is not null)
+    if (listener is not null)
       throw new InvalidOperationException("already started");
 
     Logger?.LogInformation("starting");
 
-    var createServerValueTask = serverFactory.CreateAsync(
+    var createListenerValueTask = listenerFactory.CreateAsync(
       endPoint: GetLocalEndPointToBind(),
       node: this,
       cancellationToken: default
     );
 
-    server = createServerValueTask.IsCompleted
-      ? createServerValueTask.Result
-      : createServerValueTask.AsTask().GetAwaiter().GetResult();
+    listener = createListenerValueTask.IsCompleted
+      ? createListenerValueTask.Result
+      : createListenerValueTask.AsTask().GetAwaiter().GetResult();
 
-    var startServerValueTask = server.StartAsync(cancellationToken: default);
+    var startListenerValueTask = listener.StartAsync(cancellationToken: default);
 
-    if (!startServerValueTask.IsCompleted)
-      startServerValueTask.AsTask().GetAwaiter().GetResult();
+    if (!startListenerValueTask.IsCompleted)
+      startListenerValueTask.AsTask().GetAwaiter().GetResult();
 
-    Logger?.LogInformation("started (end point: {EndPoint})", server.EndPoint);
+    Logger?.LogInformation("started (end point: {EndPoint})", listener.EndPoint);
   }
 }

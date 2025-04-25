@@ -12,27 +12,27 @@ using Microsoft.Extensions.Logging;
 
 namespace Smdn.Net.MuninNode.Transport;
 
-internal sealed partial class MuninNodeServer : IMuninNodeServer {
+internal sealed partial class MuninNodeListener : IMuninNodeListener {
   private readonly EndPoint endPoint;
   private readonly ILogger? logger;
   private readonly IServiceProvider? serviceProvider;
-  private Socket? server;
+  private Socket? listener;
   private bool isRunning;
 
-  public EndPoint? EndPoint => server?.LocalEndPoint;
+  public EndPoint? EndPoint => listener?.LocalEndPoint;
 
   private const bool EnableDualMode = true; // XXX: this should be configurable(?)
 
-  internal MuninNodeServer(EndPoint endPoint, IServiceProvider? serviceProvider)
+  internal MuninNodeListener(EndPoint endPoint, IServiceProvider? serviceProvider)
     : this(
       endPoint: endPoint,
-      logger: serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<MuninNodeServer>(),
+      logger: serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<MuninNodeListener>(),
       serviceProvider: serviceProvider
     )
   {
   }
 
-  internal MuninNodeServer(EndPoint endPoint, ILogger? logger, IServiceProvider? serviceProvider)
+  internal MuninNodeListener(EndPoint endPoint, ILogger? logger, IServiceProvider? serviceProvider)
   {
     this.endPoint = endPoint ?? throw new ArgumentNullException(nameof(endPoint));
     this.logger = logger;
@@ -61,11 +61,11 @@ internal sealed partial class MuninNodeServer : IMuninNodeServer {
   ValueTask DisposeAsyncCore()
   {
     try {
-      if (server is not null && server.Connected) {
+      if (listener is not null && listener.Connected) {
 #if SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_REUSESOCKET_CANCELLATIONTOKEN
-        await server.DisconnectAsync(reuseSocket: false).ConfigureAwait(false);
+        await listener.DisconnectAsync(reuseSocket: false).ConfigureAwait(false);
 #else
-        server.Disconnect(reuseSocket: false);
+        listener.Disconnect(reuseSocket: false);
 #endif
       }
     }
@@ -73,9 +73,9 @@ internal sealed partial class MuninNodeServer : IMuninNodeServer {
       // swallow
     }
 
-    server?.Close();
-    server?.Dispose();
-    server = null;
+    listener?.Close();
+    listener?.Dispose();
+    listener = null;
 
 #if !SYSTEM_NET_SOCKETS_SOCKET_DISCONNECTASYNC_REUSESOCKET_CANCELLATIONTOKEN
     return default;
@@ -89,16 +89,16 @@ internal sealed partial class MuninNodeServer : IMuninNodeServer {
       return;
 
     try {
-      if (server is not null && server.Connected)
-        server.Disconnect(reuseSocket: false);
+      if (listener is not null && listener.Connected)
+        listener.Disconnect(reuseSocket: false);
     }
     catch (SocketException) {
       // swallow
     }
 
-    server?.Close();
-    server?.Dispose();
-    server = null!;
+    listener?.Close();
+    listener?.Dispose();
+    listener = null!;
   }
 
   public ValueTask StartAsync(CancellationToken cancellationToken)
@@ -107,11 +107,11 @@ internal sealed partial class MuninNodeServer : IMuninNodeServer {
       throw new InvalidOperationException("already started");
 
     try {
-      if (server is null) {
-        server = CreateServerSocket(endPoint);
+      if (listener is null) {
+        listener = CreateServerSocket(endPoint);
       }
       else {
-        // since the `server` has already been assigned to a bound socket, treat as running state
+        // since the `listener` has already been assigned to a bound socket, treat as running state
       }
 
       isRunning = true;
@@ -119,7 +119,7 @@ internal sealed partial class MuninNodeServer : IMuninNodeServer {
       return default;
     }
     catch {
-      server = null;
+      listener = null;
 
       throw;
     }
@@ -165,10 +165,10 @@ internal sealed partial class MuninNodeServer : IMuninNodeServer {
   {
     if (!isRunning)
       throw new InvalidOperationException("not started or already closed");
-    if (server is null)
-      throw new InvalidOperationException("invalid state: server is not initialized");
+    if (listener is null)
+      throw new InvalidOperationException("invalid state: listener is not initialized");
 
-    var client = await server
+    var client = await listener
 #if SYSTEM_NET_SOCKETS_SOCKET_ACCEPTASYNC_CANCELLATIONTOKEN
       .AcceptAsync(cancellationToken: cancellationToken)
 #else

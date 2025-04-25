@@ -7,17 +7,17 @@ using System.Threading.Tasks;
 
 namespace Smdn.Net.MuninNode.Transport;
 
-internal sealed class PseudoMuninNodeServerFactory : IMuninNodeServerFactory {
-  public PseudoMuninNodeServerFactory()
+internal sealed class PseudoMuninNodeListenerFactory : IMuninNodeListenerFactory {
+  public PseudoMuninNodeListenerFactory()
   {
   }
 
-  public ValueTask<IMuninNodeServer> CreateAsync(
+  public ValueTask<IMuninNodeListener> CreateAsync(
     EndPoint endPoint,
     IMuninNode node,
     CancellationToken cancellationToken
   )
     => new(
-      new PseudoMuninNodeServer(endPoint, node)
+      new PseudoMuninNodeListener(endPoint, node)
     );
 }

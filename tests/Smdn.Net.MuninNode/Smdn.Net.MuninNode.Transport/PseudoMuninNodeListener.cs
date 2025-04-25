@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Smdn.Net.MuninNode.Transport;
 
-internal sealed class PseudoMuninNodeServer : IMuninNodeServer {
+internal sealed class PseudoMuninNodeListener : IMuninNodeListener {
   public EndPoint? EndPoint { get; }
 
   private readonly IMuninNode? node;
@@ -22,7 +22,7 @@ internal sealed class PseudoMuninNodeServer : IMuninNodeServer {
   private ManualResetEventSlim acceptingEvent = new(false);
   private PseudoMuninNodeClient? acceptingClient;
 
-  public PseudoMuninNodeServer(EndPoint? endPoint, IMuninNode? node)
+  public PseudoMuninNodeListener(EndPoint? endPoint, IMuninNode? node)
   {
     EndPoint = endPoint;
 

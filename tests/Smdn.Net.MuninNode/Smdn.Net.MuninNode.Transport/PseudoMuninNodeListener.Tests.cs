@@ -12,16 +12,16 @@ using NUnit.Framework;
 namespace Smdn.Net.MuninNode.Transport;
 
 [TestFixture]
-public class PseudoMuninNodeServerTests {
+public class PseudoMuninNodeListenerTests {
   [Test]
   [CancelAfter(3000)]
   public async Task AcceptAsync(CancellationToken cancellationToken)
   {
-    var server = new PseudoMuninNodeServer(endPoint: null, node: null);
+    var listener = new PseudoMuninNodeListener(endPoint: null, node: null);
 
-    await server.StartAsync(cancellationToken);
+    await listener.StartAsync(cancellationToken);
 
-    var client = await server.AcceptAsync(cancellationToken);
+    var client = await listener.AcceptAsync(cancellationToken);
 
     Assert.That(client, Is.Not.Null);
   }
@@ -30,13 +30,13 @@ public class PseudoMuninNodeServerTests {
   [CancelAfter(3000)]
   public async Task GetAcceptingClient(CancellationToken cancellationToken)
   {
-    var server = new PseudoMuninNodeServer(endPoint: null, node: null);
+    var listener = new PseudoMuninNodeListener(endPoint: null, node: null);
 
-    await server.StartAsync(cancellationToken);
+    await listener.StartAsync(cancellationToken);
 
-    _ = await server.AcceptAsync(cancellationToken);
+    _ = await listener.AcceptAsync(cancellationToken);
 
-    var (client, writer, reader) = server.GetAcceptingClient(cancellationToken);
+    var (client, writer, reader) = listener.GetAcceptingClient(cancellationToken);
 
     Assert.That(client, Is.Not.Null);
     Assert.That(client.IsConnected, Is.True);
@@ -53,12 +53,12 @@ public class PseudoMuninNodeServerTests {
   [CancelAfter(3000)]
   public async Task GetAcceptingClient_ResponseReader(CancellationToken cancellationToken)
   {
-    var server = new PseudoMuninNodeServer(endPoint: null, node: null);
+    var listener = new PseudoMuninNodeListener(endPoint: null, node: null);
 
-    await server.StartAsync(cancellationToken);
+    await listener.StartAsync(cancellationToken);
 
-    _ = await server.AcceptAsync(cancellationToken);
-    var (client, _, reader) = server.GetAcceptingClient(cancellationToken);
+    _ = await listener.AcceptAsync(cancellationToken);
+    var (client, _, reader) = listener.GetAcceptingClient(cancellationToken);
 
     Assert.That(client, Is.Not.Null);
 
@@ -80,12 +80,12 @@ public class PseudoMuninNodeServerTests {
   [CancelAfter(3000)]
   public async Task GetAcceptingClient_RequestWriter(CancellationToken cancellationToken)
   {
-    var server = new PseudoMuninNodeServer(endPoint: null, node: null);
+    var listener = new PseudoMuninNodeListener(endPoint: null, node: null);
 
-    await server.StartAsync(cancellationToken);
+    await listener.StartAsync(cancellationToken);
 
-    _ = await server.AcceptAsync(cancellationToken);
-    var (client, writer, _) = server.GetAcceptingClient(cancellationToken);
+    _ = await listener.AcceptAsync(cancellationToken);
+    var (client, writer, _) = listener.GetAcceptingClient(cancellationToken);
 
     Assert.That(client, Is.Not.Null);
 

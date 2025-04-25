@@ -13,7 +13,7 @@ namespace Smdn.Net.MuninNode.Transport;
 /// Provides an interface that abstracts the client implementation of
 /// the transport layer that connects to the <c>Munin-Node</c>.
 /// </summary>
-/// <seealso cref="IMuninNodeServer"/>
+/// <seealso cref="IMuninNodeListener"/>
 public interface IMuninNodeClient : IDisposable, IAsyncDisposable {
   /// <summary>
   /// Gets the <see cref="EndPoint"/> that is bound with this instance.
