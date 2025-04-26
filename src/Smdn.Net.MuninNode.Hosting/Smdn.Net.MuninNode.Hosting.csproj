@@ -1,0 +1,51 @@
+<!--
+SPDX-FileCopyrightText: 2025 smdn <smdn@smdn.jp>
+SPDX-License-Identifier: MIT
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+    <VersionPrefix>3.0.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <!--<PackageValidationBaselineVersion>3.0.0</PackageValidationBaselineVersion>-->
+    <RootNamespace/> <!-- empty the root namespace so that the namespace is determined only by the directory name, for code style rule IDE0030 -->
+    <Nullable>enable</Nullable>
+    <NoWarn>CS1591;$(NoWarn)</NoWarn> <!-- CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member' -->
+  </PropertyGroup>
+
+  <PropertyGroup Label="assembly attributes">
+    <Description>
+<![CDATA[A .NET implementation of [Munin-Node](https://guide.munin-monitoring.org/en/latest/node/index.html) for [.NET Generic Host](https://learn.microsoft.com/dotnet/core/extensions/generic-host).
+
+This library provides APIs to run Munin-Node as a background service running on a .NET Generic Host.
+
+This library mainly provides a `MuninNodeBackgroundService` class derived from `BackgroundService`, and extension methods to register the Munin-Node service to the `ServiceCollection`.
+
+This library uses [Smdn.Net.MuninNode](https://www.nuget.org/packages/Smdn.Net.MuninNode) and the API is provided as an extension to `Smdn.Net.MuninNode`.
+]]>
+    </Description>
+    <CopyrightYear>2025</CopyrightYear>
+  </PropertyGroup>
+
+  <PropertyGroup Label="package properties">
+    <PackageTags>Munin,Munin-Node,Munin-Plugin,hosting,generic-host,dependency-injection</PackageTags>
+    <GenerateNupkgReadmeFileDependsOnTargets>$(GenerateNupkgReadmeFileDependsOnTargets);GenerateReadmeFileContent</GenerateNupkgReadmeFileDependsOnTargets>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
+    <!-- <ProjectOrPackageReference ReferencePackageVersion="[2.2.0,4.0.0)" Include="..\Smdn.Net.MuninNode\Smdn.Net.MuninNode.csproj" /> -->
+    <ProjectReference Include="..\Smdn.Net.MuninNode\Smdn.Net.MuninNode.csproj" />
+  </ItemGroup>
+
+  <Target Name="GenerateReadmeFileContent">
+    <PropertyGroup>
+      <PackageReadmeFileContent><![CDATA[# $(PackageId) $(PackageVersion)
+$(Description)
+
+## Contributing
+This project welcomes contributions, feedbacks and suggestions. You can contribute to this project by submitting [Issues]($(RepositoryUrl)/issues/new/choose) or [Pull Requests]($(RepositoryUrl)/pulls/) on the [GitHub repository]($(RepositoryUrl)).
+]]></PackageReadmeFileContent>
+    </PropertyGroup>
+  </Target>
+</Project>
