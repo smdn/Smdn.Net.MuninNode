@@ -58,7 +58,7 @@ partial class LocalNode {
         port: port
       );
 
-    private new sealed class ListenerFactory(ILogger? logger) : IMuninNodeListenerFactory {
+    private sealed class ListenerFactory(ILogger? logger) : IMuninNodeListenerFactory {
       public ValueTask<IMuninNodeListener> CreateAsync(
         EndPoint endPoint,
         IMuninNode node,

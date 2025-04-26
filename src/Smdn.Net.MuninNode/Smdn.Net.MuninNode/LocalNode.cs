@@ -1,9 +1,5 @@
 // SPDX-FileCopyrightText: 2023 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Microsoft.Extensions.Logging;
 
 using Smdn.Net.MuninNode.Transport;
@@ -35,29 +31,10 @@ public abstract partial class LocalNode : NodeBase {
     ILogger? logger
   )
     : base(
-      listenerFactory: listenerFactory ?? ListenerFactory.Instance,
+      listenerFactory: listenerFactory ?? MuninNodeListenerFactory.Instance,
       accessRule: accessRule,
       logger: logger
     )
   {
-  }
-
-  private sealed class ListenerFactory : IMuninNodeListenerFactory {
-    public static readonly ListenerFactory Instance = new();
-
-    public ValueTask<IMuninNodeListener> CreateAsync(
-      EndPoint endPoint,
-      IMuninNode node,
-      CancellationToken cancellationToken
-    )
-#pragma warning disable CA2000
-      => new(
-        new MuninNodeListener(
-          endPoint: endPoint,
-          logger: null,
-          serviceProvider: null
-        )
-      );
-#pragma warning restore CA2000
   }
 }
