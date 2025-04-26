@@ -3,11 +3,14 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Smdn.Net.MuninNode.AccessRules;
+using Smdn.Net.MuninNode.Transport;
 using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode;
@@ -39,6 +42,7 @@ partial class LocalNode {
       IServiceProvider? serviceProvider = null
     )
       : base(
+        listenerFactory: new ListenerFactory(serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<LocalNode>()),
         accessRule: accessRule ?? serviceProvider?.GetService<IAccessRule>(),
         logger: serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger<LocalNode>()
       )
@@ -53,6 +57,23 @@ partial class LocalNode {
         address: ((IPEndPoint)base.GetLocalEndPointToBind()).Address,
         port: port
       );
+
+    private new sealed class ListenerFactory(ILogger? logger) : IMuninNodeListenerFactory {
+      public ValueTask<IMuninNodeListener> CreateAsync(
+        EndPoint endPoint,
+        IMuninNode node,
+        CancellationToken cancellationToken
+      )
+#pragma warning disable CA2000
+        => new(
+          new MuninNodeListener(
+            endPoint: endPoint,
+            logger: logger,
+            serviceProvider: null
+          )
+        );
+#pragma warning restore CA2000
+    }
   }
 
   /// <summary>

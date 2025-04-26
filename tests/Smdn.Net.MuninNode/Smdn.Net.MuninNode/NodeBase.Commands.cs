@@ -3,12 +3,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
 using System.IO;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+
 using NUnit.Framework;
+
+using Smdn.Net.MuninNode.Transport;
 using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode;
@@ -16,104 +18,213 @@ namespace Smdn.Net.MuninNode;
 #pragma warning disable IDE0040
 partial class NodeBaseTests {
 #pragma warning restore IDE0040
+  private class PseudoMuninNode : NodeBase {
+    public override string HostName => nameof(PseudoMuninNode);
+    public override IPluginProvider PluginProvider { get; }
+
+    public PseudoMuninNode(IAccessRule? accessRule, IReadOnlyCollection<IPlugin>? plugins)
+      : base(
+        listenerFactory: new PseudoMuninNodeListenerFactory(),
+        accessRule: accessRule,
+        logger: null
+      )
+    {
+      PluginProvider = new ReadOnlyCollectionPluginProvider(plugins ?? Array.Empty<IPlugin>());
+    }
+
+    private class ReadOnlyCollectionPluginProvider : IPluginProvider {
+      public IReadOnlyCollection<IPlugin> Plugins { get; }
+      public INodeSessionCallback? SessionCallback => null;
+
+      public ReadOnlyCollectionPluginProvider(IReadOnlyCollection<IPlugin> plugins)
+      {
+        Plugins = plugins;
+      }
+    }
+
+    public (
+      PseudoMuninNodeClient Client,
+      TextWriter ClientRequestWriter,
+      TextReader ServerResponseReader
+    )
+    GetAcceptingClient(CancellationToken cancellationToken)
+    {
+      if (Listener is null)
+        throw new InvalidOperationException("not yet started");
+      if (Listener is not PseudoMuninNodeListener pseudoListener)
+        throw new InvalidOperationException("listener type mismatch");
+
+      return pseudoListener.GetAcceptingClient(cancellationToken);
+    }
+  }
+
+  private static Task RunSessionAsync(
+    Func<PseudoMuninNode, PseudoMuninNodeClient, TextWriter, TextReader, CancellationToken, Task> action,
+    CancellationToken cancellationToken = default
+  )
+    => RunSessionAsync(
+      accessRule: null,
+      plugins: null,
+      action: action,
+      cancellationToken: cancellationToken
+    );
+
+  private static Task RunSessionAsync(
+    IReadOnlyList<IPlugin>? plugins,
+    Func<PseudoMuninNode, PseudoMuninNodeClient, TextWriter, TextReader, CancellationToken, Task> action,
+    CancellationToken cancellationToken = default
+  )
+    => RunSessionAsync(
+      accessRule: null,
+      plugins: plugins,
+      action: action,
+      cancellationToken: cancellationToken
+    );
+
+  private static async Task RunSessionAsync(
+    IAccessRule? accessRule,
+    IReadOnlyList<IPlugin>? plugins,
+    Func<PseudoMuninNode, PseudoMuninNodeClient, TextWriter, TextReader, CancellationToken, Task> action,
+    CancellationToken cancellationToken = default
+  )
+  {
+    await using var node = new PseudoMuninNode(accessRule, plugins);
+
+    await node.StartAsync(cancellationToken);
+
+    var taskAccept = Task.Run(
+      async () => await node.AcceptSingleSessionAsync(cancellationToken),
+      cancellationToken
+    );
+
+    var (c, requestWriter, responseReader) = node.GetAcceptingClient(cancellationToken);
+    using var client = c;
+
+    try {
+      Assert.That(
+        async () => await responseReader.ReadLineAsync(cancellationToken), // receive banner
+        Contains.Substring(node.HostName)
+      );
+
+      try {
+        await action(node, client, requestWriter, responseReader, cancellationToken);
+      }
+      finally {
+        await client.DisconnectAsync(cancellationToken);
+      }
+    }
+    finally {
+      await taskAccept;
+    }
+  }
+
   [TestCase("\r\n")]
   [TestCase("\n")]
-  public async Task ProcessCommandAsync_EndOfLine(string eol)
+  [CancelAfter(3000)]
+  public async Task ProcessCommandAsync_EndOfLine(string eol, CancellationToken cancellationToken)
   {
-    await using var node = CreateNode();
+    PseudoMuninNodeClient? acceptedClient = null;
 
-    node.Start();
+    await RunSessionAsync(
+      accessRule: null,
+      plugins: null,
+      async (node, client, writer, reader, ct) => {
+        Assert.That(client.IsConnected, Is.True);
 
-    var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
+        await writer.WriteAsync(("." + eol).AsMemory(), ct);
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out _);
+        acceptedClient = client;
+      },
+      cancellationToken: cancellationToken
+    );
 
-    writer.Write(".");
-    writer.Write(eol);
-    writer.Close();
-
-    Assert.DoesNotThrowAsync(async () => await taskAccept);
+    Assert.That(acceptedClient, Is.Not.Null);
+    Assert.That(acceptedClient!.IsConnected, Is.False);
   }
 
   [Test]
-  public async Task ProcessCommandAsync_UnknownCommand()
+  [CancelAfter(3000)]
+  public async Task ProcessCommandAsync_UnknownCommand(CancellationToken cancellationToken)
   {
     const string UnknownCommand = "unknown";
 
-    await StartSession(async static (node, client, writer, reader, cancellationToken) => {
-      await writer.WriteLineAsync(UnknownCommand, cancellationToken);
-      await writer.FlushAsync(cancellationToken);
+    await RunSessionAsync(async static (node, client, writer, reader, ct) => {
+      await writer.WriteLineAsync(UnknownCommand, ct);
+      await writer.FlushAsync(ct);
 
       Assert.That(
-        await reader.ReadLineAsync(cancellationToken),
+        await reader.ReadLineAsync(ct),
         Is.EqualTo("# Unknown command. Try cap, list, nodes, config, fetch, version or quit"),
         "line #1"
       );
-    });
+    }, cancellationToken);
   }
 
   [Test]
-  public async Task ProcessCommandAsync_NodesCommand()
+  [CancelAfter(3000)]
+  public async Task ProcessCommandAsync_NodesCommand(CancellationToken cancellationToken)
   {
-    await StartSession(async static (node, client, writer, reader, cancellationToken) => {
-      await writer.WriteLineAsync("nodes", cancellationToken);
-      await writer.FlushAsync(cancellationToken);
+    await RunSessionAsync(async static (node, client, writer, reader, ct) => {
+      await writer.WriteLineAsync("nodes", ct);
+      await writer.FlushAsync(ct);
 
-      Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo(node.HostName), "line #1");
-      Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo("."), "line #2");
-    });
+      Assert.That(await reader.ReadLineAsync(ct), Is.EqualTo(node.HostName), "line #1");
+      Assert.That(await reader.ReadLineAsync(ct), Is.EqualTo("."), "line #2");
+    }, cancellationToken);
   }
 
   [TestCase(".")]
   [TestCase("quit")]
-  public async Task ProcessCommandAsync_QuitCommand(string command)
+  [CancelAfter(3000)]
+  public async Task ProcessCommandAsync_QuitCommand(string command, CancellationToken cancellationToken)
   {
-    await StartSession(async (node, client, writer, reader, cancellationToken) => {
-      await writer.WriteLineAsync(command, cancellationToken);
-      await writer.FlushAsync(cancellationToken);
+    PseudoMuninNodeClient? acceptedClient = null;
 
-      Assert.That(client.Available, Is.EqualTo(0));
+    await RunSessionAsync(async (node, client, writer, reader, ct) => {
+      acceptedClient = client;
 
-      try {
-        Assert.That(await reader.ReadLineAsync(cancellationToken), Is.Null);
+      Assert.That(client.IsConnected, Is.True);
 
-        // Assert.IsFalse(client.Connected, nameof(client.Connected));
-      }
-      catch (IOException ex) {
-        Assert.That(ex!.InnerException, Is.InstanceOf<SocketException>()); // expected case
+      await writer.WriteLineAsync(command, ct);
+      await writer.FlushAsync(ct);
 
-        // Assert.IsFalse(client.Connected, nameof(client.Connected));
-      }
-    });
+      Assert.That(await reader.ReadLineAsync(ct), Is.Null);
+    }, cancellationToken);
+
+    Assert.That(acceptedClient, Is.Not.Null);
+    Assert.That(acceptedClient!.IsConnected, Is.False);
   }
 
   [Test]
-  public async Task ProcessCommandAsync_CapCommand()
+  [CancelAfter(3000)]
+  public async Task ProcessCommandAsync_CapCommand(CancellationToken cancellationToken)
   {
-    await StartSession(async static (node, client, writer, reader, cancellationToken) => {
-      await writer.WriteLineAsync("cap", cancellationToken);
-      await writer.FlushAsync(cancellationToken);
+    await RunSessionAsync(async static (node, client, writer, reader, ct) => {
+      await writer.WriteLineAsync("cap", ct);
+      await writer.FlushAsync(ct);
 
-      Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo("cap"), "line #1");
-    });
+      Assert.That(await reader.ReadLineAsync(ct), Is.EqualTo("cap"), "line #1");
+    }, cancellationToken);
   }
 
   [Test]
-  public async Task ProcessCommandAsync_VersionCommand()
+  [CancelAfter(3000)]
+  public async Task ProcessCommandAsync_VersionCommand(CancellationToken cancellationToken)
   {
-    await StartSession(async static (node, client, writer, reader, cancellationToken) => {
-      await writer.WriteLineAsync("version", cancellationToken);
-      await writer.FlushAsync(cancellationToken);
+    await RunSessionAsync(async static (node, client, writer, reader, ct) => {
+      await writer.WriteLineAsync("version", ct);
+      await writer.FlushAsync(ct);
 
-      var line = await reader.ReadLineAsync(cancellationToken);
+      var line = await reader.ReadLineAsync(ct);
 
       Assert.That(line, Does.Contain(node.HostName), "line #1 must contain hostname");
       Assert.That(line, Does.Contain(node.NodeVersion.ToString()), "line #1 must contain node version");
-    });
+    }, cancellationToken);
   }
 
   [Test]
-  public async Task ProcessCommandAsync_ListCommand()
+  [CancelAfter(3000)]
+  public async Task ProcessCommandAsync_ListCommand(CancellationToken cancellationToken)
   {
     var graphAttrs = new PluginGraphAttributes(
       title: "title",
@@ -136,49 +247,47 @@ partial class NodeBaseTests {
       ),
     };
 
-    await StartSession(
+    await RunSessionAsync(
       plugins: plugins,
-      action: async static (node, client, writer, reader, cancellationToken) => {
-        await writer.WriteLineAsync("list", cancellationToken);
-        await writer.FlushAsync(cancellationToken);
+      action: async static (node, client, writer, reader, ct) => {
+        await writer.WriteLineAsync("list", ct);
+        await writer.FlushAsync(ct);
 
-        Assert.That(await reader.ReadLineAsync(cancellationToken), Is.EqualTo("plugin1 plugin2"), "line #1");
-      }
+        Assert.That(await reader.ReadLineAsync(ct), Is.EqualTo("plugin1 plugin2"), "line #1");
+      },
+      cancellationToken
     );
   }
 
   private static Task GetCommandResponseAsync(
     IReadOnlyList<IPlugin> plugins,
     Func<string> getCommand,
-    Action<IReadOnlyList<string>> assertResponseLines
+    Action<IReadOnlyList<string>> assertResponseLines,
+    CancellationToken cancellationToken
   )
-    => StartSession(
+    => RunSessionAsync(
       plugins: plugins,
-      action: async (node, client, writer, reader, cancellationToken) => {
-        await writer.WriteLineAsync(getCommand(), cancellationToken);
-        await writer.FlushAsync(cancellationToken);
+      action: async (node, client, writer, reader, ct) => {
+        await writer.WriteLineAsync(getCommand(), ct);
+        await writer.FlushAsync(ct);
 
         var lines = new List<string>();
 
-        try {
-          for (; ; ) {
-            var line = await reader.ReadLineAsync(cancellationToken);
+        for (; ; ) {
+          var line = await reader.ReadLineAsync(ct);
 
-            if (line is null)
-              break;
+          if (line is null)
+            break;
 
-            lines.Add(line);
+          lines.Add(line);
 
-            if (line == ".")
-              break;
-          }
-        }
-        catch (IOException ex) when (ex.InnerException is SocketException) {
-          // ignore
+          if (line == ".")
+            break;
         }
 
         assertResponseLines(lines);
-      }
+      },
+      cancellationToken
     );
 
   private static System.Collections.IEnumerable YieldTestCases_ProcessCommandAsync_FetchCommand()
@@ -239,6 +348,7 @@ partial class NodeBaseTests {
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_FetchCommand))]
   [SetCulture("")]
+  [CancelAfter(3000)]
   public Task ProcessCommandAsync_FetchCommand_InvariantCulture(
     IReadOnlyList<IPlugin> plugins,
     string command,
@@ -248,6 +358,7 @@ partial class NodeBaseTests {
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_FetchCommand))]
   [SetCulture("ja_JP")]
+  [CancelAfter(3000)]
   public Task ProcessCommandAsync_FetchCommand_JA_JP(
     IReadOnlyList<IPlugin> plugins,
     string command,
@@ -257,6 +368,7 @@ partial class NodeBaseTests {
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_FetchCommand))]
   [SetCulture("fr_CH")]
+  [CancelAfter(3000)]
   public Task ProcessCommandAsync_FetchCommand_FR_CH(
     IReadOnlyList<IPlugin> plugins,
     string command,
@@ -266,6 +378,7 @@ partial class NodeBaseTests {
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_FetchCommand))]
   [SetCulture("ar_AE")]
+  [CancelAfter(3000)]
   public Task ProcessCommandAsync_FetchCommand_AR_AE(
     IReadOnlyList<IPlugin> plugins,
     string command,
@@ -287,11 +400,13 @@ partial class NodeBaseTests {
         foreach (var (expectedResponseLine, lineNumber) in expectedResponseLines.Select(static (line, index) => (line, index))) {
           Assert.That(lines[lineNumber], Is.EqualTo(expectedResponseLine), $"line #{lineNumber}");
         }
-      }
+      },
+      cancellationToken: TestContext.CurrentContext.CancellationToken
     );
 
   [Test]
-  public async Task ProcessCommandAsync_ConfigCommand_UnknownService()
+  [CancelAfter(3000)]
+  public async Task ProcessCommandAsync_ConfigCommand_UnknownService(CancellationToken cancellationToken)
   {
     var graphAttrs = new PluginGraphAttributes(
       title: "title",
@@ -316,7 +431,8 @@ partial class NodeBaseTests {
         Assert.That(lines.Count, Is.EqualTo(2), "# of lines");
         Assert.That(lines[0], Is.EqualTo("# Unknown service"), "line #1");
         Assert.That(lines[1], Is.EqualTo("."), "line #2");
-      }
+      },
+      cancellationToken: cancellationToken
     );
   }
 
@@ -396,6 +512,7 @@ partial class NodeBaseTests {
   }
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand))]
+  [CancelAfter(3000)]
   public Task ProcessCommandAsync_ConfigCommand(
     IReadOnlyList<IPlugin> plugins,
     string command,
@@ -404,7 +521,8 @@ partial class NodeBaseTests {
     => GetCommandResponseAsync(
       plugins: plugins,
       getCommand: () => command,
-      assertResponseLines: assertResponseLines
+      assertResponseLines: assertResponseLines,
+      cancellationToken: TestContext.CurrentContext.CancellationToken
     );
 
   private static System.Collections.IEnumerable YieldTestCases_ProcessCommandAsync_ConfigCommand_OptionalAttributes()
@@ -495,6 +613,7 @@ partial class NodeBaseTests {
   }
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand_OptionalAttributes))]
+  [CancelAfter(3000)]
   public Task ProcessCommandAsync_ConfigCommand_OptionalAttributes(
     IPlugin plugin,
     Action<IReadOnlyList<string>> assertResponseLines
@@ -502,7 +621,8 @@ partial class NodeBaseTests {
     => GetCommandResponseAsync(
       plugins: new[] { plugin },
       getCommand: () => $"config {plugin.Name}",
-      assertResponseLines: assertResponseLines
+      assertResponseLines: assertResponseLines,
+      cancellationToken: TestContext.CurrentContext.CancellationToken
     );
 
   private static System.Collections.IEnumerable YieldTestCases_ProcessCommandAsync_ConfigCommand_GraphOrder()
@@ -550,6 +670,7 @@ partial class NodeBaseTests {
   }
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand_GraphOrder))]
+  [CancelAfter(3000)]
   public Task ProcessCommandAsync_ConfigCommand_GraphOrder(
     IPlugin plugin,
     Action<IReadOnlyList<string>> assertResponseLines
@@ -557,7 +678,8 @@ partial class NodeBaseTests {
     => GetCommandResponseAsync(
       plugins: new[] { plugin },
       getCommand: () => $"config {plugin.Name}",
-      assertResponseLines: assertResponseLines
+      assertResponseLines: assertResponseLines,
+      cancellationToken: TestContext.CurrentContext.CancellationToken
     );
 
   private static System.Collections.IEnumerable YieldTestCases_ProcessCommandAsync_ConfigCommand_GraphTotal()
@@ -604,6 +726,7 @@ partial class NodeBaseTests {
   }
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand_GraphTotal))]
+  [CancelAfter(3000)]
   public Task ProcessCommandAsync_ConfigCommand_GraphTotal(
     IPlugin plugin,
     Action<IReadOnlyList<string>> assertResponseLines
@@ -611,7 +734,8 @@ partial class NodeBaseTests {
     => GetCommandResponseAsync(
       plugins: new[] { plugin },
       getCommand: () => $"config {plugin.Name}",
-      assertResponseLines: assertResponseLines
+      assertResponseLines: assertResponseLines,
+      cancellationToken: TestContext.CurrentContext.CancellationToken
     );
 
   [TestCase(PluginFieldGraphStyle.Default, null, null)]
@@ -628,10 +752,12 @@ partial class NodeBaseTests {
   [TestCase(PluginFieldGraphStyle.LineStackWidth3, "LINE3STACK", null)]
   [TestCase((PluginFieldGraphStyle)(-1), null, typeof(InvalidOperationException))]
   [TestCase((PluginFieldGraphStyle)999999, null, typeof(InvalidOperationException))]
+  [CancelAfter(3000)]
   public async Task ProcessCommandAsync_ConfigCommand_TranslateGraphStyle(
     PluginFieldGraphStyle style,
     string? expectedFieldDrawAttribute,
-    Type? expectedExceptionType
+    Type? expectedExceptionType,
+    CancellationToken cancellationToken
   )
   {
     var graphAttrs = new PluginGraphAttributes(
@@ -661,7 +787,8 @@ partial class NodeBaseTests {
             Assert.That(lines, Has.No.Member("field.draw"));
           else
             Assert.That(lines, Has.Member($"field.draw {expectedFieldDrawAttribute}"));
-        }
+        },
+        cancellationToken: cancellationToken
       );
     }
     catch (Exception ex) {
@@ -709,6 +836,7 @@ partial class NodeBaseTests {
   }
 
   [TestCaseSource(nameof(YieldTestCases_ProcessCommandAsync_ConfigCommand_WarningAndCriticalField))]
+  [CancelAfter(3000)]
   public async Task ProcessCommandAsync_ConfigCommand_WarningAndCriticalField(
     IPluginField field,
     string? expectedFieldWarningAttributeLine,
@@ -744,12 +872,14 @@ partial class NodeBaseTests {
           Assert.That(lines, Has.No.Member(expectedFieldCriticalAttributeLine));
         else
           Assert.That(lines, Has.Member(expectedFieldCriticalAttributeLine));
-      }
+      },
+      cancellationToken: TestContext.CurrentContext.CancellationToken
     );
   }
 
   [TestCase]
-  public async Task ProcessCommandAsync_ConfigCommand_NegativeField()
+  [CancelAfter(3000)]
+  public async Task ProcessCommandAsync_ConfigCommand_NegativeField(CancellationToken cancellationToken)
   {
     var graphAttrs = new PluginGraphAttributes(
       title: "title",
@@ -805,7 +935,8 @@ partial class NodeBaseTests {
           Is.LessThan(ls.IndexOf(expectedAttrNegativeLine)),
           "negative field's attributes must be listed first"
         );
-      }
+      },
+      cancellationToken: cancellationToken
     );
   }
 }

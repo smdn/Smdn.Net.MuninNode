@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: 2023 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
-using System;
 using System.Net;
-using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
+
+using Smdn.Net.MuninNode.Transport;
 
 namespace Smdn.Net.MuninNode;
 
@@ -17,6 +19,10 @@ public abstract partial class LocalNode : NodeBase {
   /// <summary>
   /// Initializes a new instance of the <see cref="LocalNode"/> class.
   /// </summary>
+  /// <param name="listenerFactory">
+  /// The <see cref="IMuninNodeListenerFactory"/> factory to create an <see cref="IMuninNodeListener"/> to be used in this instance.
+  /// If <see langword="null"/>, the default <see cref="IMuninNodeListenerFactory"/> implementation is used.
+  /// </param>
   /// <param name="accessRule">
   /// The <see cref="IAccessRule"/> to determine whether to accept or reject a remote host that connects to <see cref="LocalNode"/>.
   /// </param>
@@ -24,62 +30,34 @@ public abstract partial class LocalNode : NodeBase {
   /// The <see cref="ILogger"/> to report the situation.
   /// </param>
   protected LocalNode(
+    IMuninNodeListenerFactory? listenerFactory,
     IAccessRule? accessRule,
-    ILogger? logger = null
+    ILogger? logger
   )
     : base(
+      listenerFactory: listenerFactory ?? ListenerFactory.Instance,
       accessRule: accessRule,
       logger: logger
     )
   {
   }
 
-  /// <summary>
-  /// Gets the <see cref="EndPoint"/> to be bound as the <c>Munin-Node</c>'s endpoint.
-  /// </summary>
-  /// <returns>
-  /// An <see cref="EndPoint"/>.
-  /// The default implementation returns an <see cref="IPEndPoint"/> with the port number <c>0</c>
-  /// and <see cref="IPAddress.IPv6Loopback"/>/<see cref="IPAddress.Loopback"/>.
-  /// </returns>
-  protected virtual EndPoint GetLocalEndPointToBind()
-    => new IPEndPoint(
-      address:
-        Socket.OSSupportsIPv6
-          ? IPAddress.IPv6Loopback
-          : Socket.OSSupportsIPv4
-            ? IPAddress.Loopback
-            : throw new NotSupportedException(),
-      port: 0
-    );
+  private sealed class ListenerFactory : IMuninNodeListenerFactory {
+    public static readonly ListenerFactory Instance = new();
 
-  protected override Socket CreateServerSocket()
-  {
-    const int MaxClients = 1;
-
-    Socket? server = null;
-
-    try {
-      var endPoint = GetLocalEndPointToBind();
-
-      server = new Socket(
-        endPoint.AddressFamily,
-        SocketType.Stream,
-        ProtocolType.Tcp
+    public ValueTask<IMuninNodeListener> CreateAsync(
+      EndPoint endPoint,
+      IMuninNode node,
+      CancellationToken cancellationToken
+    )
+#pragma warning disable CA2000
+      => new(
+        new MuninNodeListener(
+          endPoint: endPoint,
+          logger: null,
+          serviceProvider: null
+        )
       );
-
-      if (endPoint.AddressFamily == AddressFamily.InterNetworkV6 && Socket.OSSupportsIPv4)
-        server.DualMode = true;
-
-      server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-      server.Bind(endPoint);
-      server.Listen(MaxClients);
-
-      return server;
-    }
-    catch {
-      server?.Dispose();
-      throw;
-    }
+#pragma warning restore CA2000
   }
 }

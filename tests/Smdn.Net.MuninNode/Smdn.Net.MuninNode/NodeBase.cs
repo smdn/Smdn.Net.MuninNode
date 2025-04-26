@@ -3,12 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+
 using NUnit.Framework;
+
 using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode;
@@ -33,10 +35,12 @@ public partial class NodeBaseTests {
       IAccessRule? accessRule,
       IReadOnlyList<IPlugin> plugins
     )
+#pragma warning disable CS0618
       : base(
         accessRule: accessRule,
         logger: null
       )
+#pragma warning restore CS0618
     {
       PluginProvider = new ReadOnlyCollectionPluginProvider(plugins);
     }
@@ -88,7 +92,11 @@ public partial class NodeBaseTests {
     Assert.That(node.Dispose, Throws.Nothing, "Dispose() #1");
 
     Assert.That(() => _ = node.LocalEndPoint, Throws.TypeOf<ObjectDisposedException>());
+#pragma warning disable CS0618
     Assert.That(node.Start, Throws.TypeOf<ObjectDisposedException>());
+#pragma warning restore CS0618
+    Assert.That(() => node.StartAsync(default), Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(async () => await node.StartAsync(default), Throws.TypeOf<ObjectDisposedException>());
     Assert.That(async () => await node.AcceptAsync(false, default), Throws.TypeOf<ObjectDisposedException>());
     Assert.That(async () => await node.AcceptSingleSessionAsync(default), Throws.TypeOf<ObjectDisposedException>());
 
@@ -104,7 +112,11 @@ public partial class NodeBaseTests {
     Assert.That(node.DisposeAsync, Throws.Nothing, "DisposeAsync() #1");
 
     Assert.That(() => _ = node.LocalEndPoint, Throws.TypeOf<ObjectDisposedException>());
+#pragma warning disable CS0618
     Assert.That(node.Start, Throws.TypeOf<ObjectDisposedException>());
+#pragma warning restore CS0618
+    Assert.That(() => node.StartAsync(default), Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(async () => await node.StartAsync(default), Throws.TypeOf<ObjectDisposedException>());
     Assert.That(async () => await node.AcceptAsync(false, default), Throws.TypeOf<ObjectDisposedException>());
     Assert.That(async () => await node.AcceptSingleSessionAsync(default), Throws.TypeOf<ObjectDisposedException>());
 
@@ -119,8 +131,23 @@ public partial class NodeBaseTests {
 
     Assert.That(() => _ = node.LocalEndPoint, Throws.InvalidOperationException, $"{nameof(node.LocalEndPoint)} before start");
 
+#pragma warning disable CS0618
     Assert.DoesNotThrow(node.Start);
     Assert.Throws<InvalidOperationException>(node.Start, "already started");
+#pragma warning restore CS0618
+
+    Assert.That(() => _ = node.LocalEndPoint, Throws.Nothing, $"{nameof(node.LocalEndPoint)} after start");
+  }
+
+  [Test]
+  public async Task StartAsync()
+  {
+    await using var node = CreateNode();
+
+    Assert.That(() => _ = node.LocalEndPoint, Throws.InvalidOperationException, $"{nameof(node.LocalEndPoint)} before start");
+
+    Assert.That(async () => await node.StartAsync(default), Throws.Nothing);
+    Assert.That(async () => await node.StartAsync(default), Throws.InvalidOperationException, "already started");
 
     Assert.That(() => _ = node.LocalEndPoint, Throws.Nothing, $"{nameof(node.LocalEndPoint)} after start");
   }

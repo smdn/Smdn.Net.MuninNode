@@ -3,47 +3,29 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+
 using NUnit.Framework;
+
 using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode;
 
 [TestFixture]
 public partial class NodeBaseTests {
-  private static Task StartSession(
-    Func<NodeBase, TcpClient, StreamWriter, StreamReader, CancellationToken, Task> action
-  )
-    => StartSession(
-      accessRule: null,
-      plugins: Array.Empty<IPlugin>(),
-      action: action
-    );
-
-  private static Task StartSession(
-    IReadOnlyList<IPlugin> plugins,
-    Func<NodeBase, TcpClient, StreamWriter, StreamReader, CancellationToken, Task> action
-  )
-    => StartSession(
-      accessRule: null,
-      plugins: plugins,
-      action: action
-    );
-
   private static async Task StartSession(
     IAccessRule? accessRule,
-    IReadOnlyList<IPlugin> plugins,
     Func<NodeBase, TcpClient, StreamWriter, StreamReader, CancellationToken, Task> action
   )
   {
-    await using var node = CreateNode(accessRule, plugins);
+    await using var node = CreateNode(accessRule, plugins: Array.Empty<IPlugin>());
 
-    node.Start();
+    await node.StartAsync();
 
     using var cts = new CancellationTokenSource(
       delay: TimeSpan.FromSeconds(5) // timeout for hung up
@@ -76,7 +58,7 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-    node.Start();
+    await node.StartAsync();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
@@ -107,7 +89,7 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-    node.Start();
+    await node.StartAsync();
 
     using var cts = new CancellationTokenSource(millisecondsDelay: delayMilliseconds);
 
@@ -121,7 +103,7 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-    node.Start();
+    await node.StartAsync();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
@@ -137,7 +119,7 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-    node.Start();
+    await node.StartAsync();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
@@ -159,7 +141,6 @@ public partial class NodeBaseTests {
   {
     await StartSession(
       accessRule: new AcceptAllAccessRule(),
-      plugins: Array.Empty<IPlugin>(),
       async static (node, client, writer, reader, cancellationToken
     ) => {
       await writer.WriteLineAsync("command", cancellationToken);
@@ -189,7 +170,6 @@ public partial class NodeBaseTests {
   {
     await StartSession(
       accessRule: new RefuseAllAccessRule(),
-      plugins: Array.Empty<IPlugin>(),
       async static (node, client, writer, reader, cancellationToken
     ) => {
       await writer.WriteLineAsync(".", cancellationToken);
@@ -259,7 +239,7 @@ public partial class NodeBaseTests {
 
     await using var node = CreateNode(plugins: new IPlugin[] { plugin });
 
-    node.Start();
+    await node.StartAsync();
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
@@ -308,7 +288,7 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-    node.Start();
+    await node.StartAsync();
 
     using var cts = new CancellationTokenSource();
 
