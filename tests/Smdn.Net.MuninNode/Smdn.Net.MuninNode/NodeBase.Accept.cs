@@ -36,7 +36,7 @@ public partial class NodeBaseTests {
       cts.Token
     );
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out var reader);
+    using var client = CreateClient((IPEndPoint)node.EndPoint, out var writer, out var reader);
 
     try {
       reader.ReadLine(); // banner
@@ -62,7 +62,7 @@ public partial class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out var reader);
+    using var client = CreateClient((IPEndPoint)node.EndPoint, out var writer, out var reader);
 
     var banner = reader.ReadLine();
 
@@ -107,7 +107,7 @@ public partial class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out _, out _);
+    using var client = CreateClient((IPEndPoint)node.EndPoint, out _, out _);
 
     client.Close();
 
@@ -123,7 +123,7 @@ public partial class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out _, out var reader);
+    using var client = CreateClient((IPEndPoint)node.EndPoint, out _, out var reader);
 
     reader.ReadLine(); // read banner
 
@@ -246,7 +246,7 @@ public partial class NodeBaseTests {
     Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(0), nameof(plugin.StartedSessionIds));
     Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
 
-    using var client = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer, out var reader);
+    using var client = CreateClient((IPEndPoint)node.EndPoint, out var writer, out var reader);
 
     var banner = reader.ReadLine();
 
@@ -294,7 +294,7 @@ public partial class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptAsync(throwIfCancellationRequested, cts.Token));
 
-    using var client0 = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer0, out var reader0);
+    using var client0 = CreateClient((IPEndPoint)node.EndPoint, out var writer0, out var reader0);
 
     reader0.ReadLine();
     writer0.WriteLine(".");
@@ -302,7 +302,7 @@ public partial class NodeBaseTests {
 
     Assert.That(taskAccept.Wait(TimeSpan.FromSeconds(1.0)), Is.False, "task must not be completed");
 
-    using var client1 = CreateClient((IPEndPoint)node.LocalEndPoint, out var writer1, out var reader1);
+    using var client1 = CreateClient((IPEndPoint)node.EndPoint, out var writer1, out var reader1);
 
     reader1.ReadLine();
     writer1.WriteLine(".");

@@ -64,20 +64,11 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     }
   }
 
-  /// <summary>
-  /// Gets the <see cref="EndPoint"/> actually bound with the current instance.
-  /// </summary>
-  /// <exception cref="InvalidOperationException">
-  /// The <see cref="Start"/> or <see cref="StartAsync"/> method has not been called.
-  /// </exception>
-  /// <exception cref="NotSupportedException">
-  /// Getting endpoint from this instance is not supported.
-  /// </exception>
-  /// <exception cref="ObjectDisposedException">
-  /// Attempted to read a property value after the instance was disposed.
-  /// </exception>
+  /// <inheritdoc cref="IMuninNode.EndPoint"/>
   /// <seealso cref="GetLocalEndPointToBind"/>
-  public EndPoint LocalEndPoint {
+  /// <seealso cref="Start"/>
+  /// <seealso cref="StartAsync"/>
+  public EndPoint EndPoint {
     get {
       ThrowIfDisposed();
 

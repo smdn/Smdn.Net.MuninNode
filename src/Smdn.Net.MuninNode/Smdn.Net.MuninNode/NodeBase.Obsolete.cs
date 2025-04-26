@@ -62,6 +62,9 @@ partial class NodeBase {
     }
   }
 
+  [Obsolete($"Use {nameof(EndPoint)} instead.")]
+  public EndPoint LocalEndPoint => EndPoint;
+
   [Obsolete($"Use {nameof(IMuninNodeListenerFactory)} and {nameof(StartAsync)} instead.")]
   protected virtual Socket CreateServerSocket()
     => throw new NotImplementedException(

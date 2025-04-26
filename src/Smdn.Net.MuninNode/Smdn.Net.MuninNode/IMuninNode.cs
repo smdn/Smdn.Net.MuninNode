@@ -1,5 +1,8 @@
 // SPDX-FileCopyrightText: 2025 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
+using System;
+using System.Net;
+
 namespace Smdn.Net.MuninNode;
 
 /// <summary>
@@ -21,4 +24,19 @@ public interface IMuninNode {
   /// </para>
   /// </remarks>
   string HostName { get; }
+
+  /// <summary>
+  /// Gets the <see cref="EndPoint"/> object representing the endpoint of the <c>Munin-Node</c>.
+  /// </summary>
+  /// <exception cref="InvalidOperationException">
+  /// This instance is not running, or the state of the this instance is such that
+  /// the endpoint cannot be get.
+  /// </exception>
+  /// <exception cref="NotSupportedException">
+  /// Getting endpoint from this instance is not supported.
+  /// </exception>
+  /// <exception cref="ObjectDisposedException">
+  /// Attempted to read a property value after the instance was disposed.
+  /// </exception>
+  EndPoint EndPoint { get; }
 }
