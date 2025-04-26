@@ -208,6 +208,27 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     }
   }
 
+  /// <inheritdoc cref="IMuninNode.RunAsync(CancellationToken)"/>
+  /// <seealso cref="IMuninNode.RunAsync(CancellationToken)"/>
+  /// <seealso cref="StartAsync(CancellationToken)"/>
+  /// <seealso cref="AcceptAsync(bool,CancellationToken)"/>
+  public Task RunAsync(CancellationToken cancellationToken)
+  {
+    ThrowIfDisposed();
+
+    return RunAsyncCore(cancellationToken);
+
+    async Task RunAsyncCore(CancellationToken ct)
+    {
+      await StartAsync(ct).ConfigureAwait(false);
+
+      await AcceptAsync(
+        throwIfCancellationRequested: true,
+        cancellationToken: ct
+      ).ConfigureAwait(false);
+    }
+  }
+
   /// <summary>
   /// Starts accepting multiple sessions.
   /// The <see cref="ValueTask" /> this method returns will never complete unless the cancellation requested by the <paramref name="cancellationToken" />.

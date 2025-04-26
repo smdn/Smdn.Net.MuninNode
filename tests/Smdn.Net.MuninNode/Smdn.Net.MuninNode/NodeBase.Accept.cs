@@ -317,4 +317,46 @@ public partial class NodeBaseTests {
     else
       Assert.DoesNotThrowAsync(async () => await taskAccept);
   }
+
+  [Test]
+  public async Task RunAsync()
+  {
+    await using var node = CreateNode();
+
+    using var cts = new CancellationTokenSource();
+
+    var taskRun = node.RunAsync(cts.Token);
+
+    for (var i = 0; i < 3; i++) {
+      using var client = CreateClient((IPEndPoint)node.EndPoint, out var writer, out var reader);
+
+      Assert.That(reader.ReadLine(), Contains.Substring(node.HostName), "banner");
+
+      writer.WriteLine(".");
+      writer.Close();
+
+      Assert.That(
+        taskRun.Wait(TimeSpan.FromSeconds(0.5)),
+        Is.False,
+        "task must not be completed"
+      );
+    }
+
+    Assert.That(
+      async () => await node.RunAsync(cts.Token),
+      Throws.InvalidOperationException,
+      "already running"
+    );
+
+    cts.Cancel();
+
+    Assert.That(
+      async () => await taskRun,
+      Throws
+        .InstanceOf<OperationCanceledException>()
+        .With
+        .Property(nameof(OperationCanceledException.CancellationToken))
+        .EqualTo(cts.Token)
+    );
+  }
 }
