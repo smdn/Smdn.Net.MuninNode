@@ -28,6 +28,42 @@ public class IMuninServiceBuilderExtensionsTests {
     });
   }
 
+  [TestCase("_")]
+  [TestCase("munin-node.localhost")]
+  public void AddNode_IMuninNodeBuilderServiceKey(string hostname)
+  {
+    var services = new ServiceCollection();
+
+    services.AddMunin(configure: builder => {
+      var nodeBuilder = builder.AddNode(configure: options => options.HostName = hostname);
+
+      Assert.That(nodeBuilder.ServiceKey, Is.EqualTo(hostname));
+    });
+  }
+
+  [Test]
+  public void AddNode_PostConfigure_MuninNodeOptions()
+  {
+    const string HostNameForServiceKeyAndOptionName = "munin-node.localhost";
+    const string HostNameForPostConfigure = "postconfigure.munin-node.localhost";
+
+    var services = new ServiceCollection();
+
+    services.AddMunin(configure: builder => {
+      builder.AddNode(configure: options => options.HostName = HostNameForServiceKeyAndOptionName);
+    });
+
+    services.PostConfigure<MuninNodeOptions>(
+      name: HostNameForServiceKeyAndOptionName,
+      configureOptions: options => options.HostName = HostNameForPostConfigure
+    );
+
+    var serviceProvider = services.BuildServiceProvider();
+    var node = serviceProvider.GetRequiredService<IMuninNode>();
+
+    Assert.That(node.HostName, Is.EqualTo(HostNameForPostConfigure));
+  }
+
   [Test]
   public void AddNode_GetService()
   {
