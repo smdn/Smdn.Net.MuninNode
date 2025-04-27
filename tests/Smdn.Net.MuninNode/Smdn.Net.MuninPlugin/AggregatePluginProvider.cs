@@ -11,7 +11,7 @@ using NUnit.Framework;
 namespace Smdn.Net.MuninPlugin;
 
 [TestFixture]
-public class ReadOnlyPluginProviderCollectionTests {
+public class AggregatePluginProviderTests {
   private class PseudoPlugin(string name) : IPlugin {
     public string Name { get; } = name;
     public IPluginGraphAttributes GraphAttributes => throw new NotImplementedException();
@@ -44,7 +44,7 @@ public class ReadOnlyPluginProviderCollectionTests {
   [Test]
   public void Plugins_ZeroPluginProviders()
   {
-    var pluginProviderCollections = new ReadOnlyPluginProviderCollection([]);
+    var pluginProviderCollections = new AggregatePluginProvider([]);
 
     Assert.That(pluginProviderCollections.Count, Is.Zero);
     Assert.That(pluginProviderCollections.Plugins.Count, Is.Zero);
@@ -53,7 +53,7 @@ public class ReadOnlyPluginProviderCollectionTests {
   [Test]
   public void Plugins_SinglePluginProvider_ZeroPlugins()
   {
-    var pluginProviderCollections = new ReadOnlyPluginProviderCollection([
+    var pluginProviderCollections = new AggregatePluginProvider([
       new PseudoPluginProvider([])
     ]);
 
@@ -64,7 +64,7 @@ public class ReadOnlyPluginProviderCollectionTests {
   [Test]
   public void Plugins_SinglePluginProvider_SinglePlugin()
   {
-    var pluginProviderCollections = new ReadOnlyPluginProviderCollection([
+    var pluginProviderCollections = new AggregatePluginProvider([
       new PseudoPluginProvider([
         new PseudoPlugin("#1")
       ])
@@ -78,7 +78,7 @@ public class ReadOnlyPluginProviderCollectionTests {
   [Test]
   public void Plugins_SinglePluginProvider_MultiplePlugins()
   {
-    var pluginProviderCollections = new ReadOnlyPluginProviderCollection([
+    var pluginProviderCollections = new AggregatePluginProvider([
       new PseudoPluginProvider([
         new PseudoPlugin("#1"),
         new PseudoPlugin("#2"),
@@ -93,7 +93,7 @@ public class ReadOnlyPluginProviderCollectionTests {
   [Test]
   public void Plugins_MultiplePluginProviders_ZeroPlugins()
   {
-    var pluginProviderCollections = new ReadOnlyPluginProviderCollection([
+    var pluginProviderCollections = new AggregatePluginProvider([
       new PseudoPluginProvider([]),
       new PseudoPluginProvider([])
     ]);
@@ -105,7 +105,7 @@ public class ReadOnlyPluginProviderCollectionTests {
   [Test]
   public void Plugins_MultiplePluginProviders_SinglePlugin()
   {
-    var pluginProviderCollections = new ReadOnlyPluginProviderCollection([
+    var pluginProviderCollections = new AggregatePluginProvider([
       new PseudoPluginProvider([
         new PseudoPlugin("#1")
       ]),
@@ -120,7 +120,7 @@ public class ReadOnlyPluginProviderCollectionTests {
   [Test]
   public void Plugins_MultiplePluginProviders_MultiplePlugins()
   {
-    var pluginProviderCollections = new ReadOnlyPluginProviderCollection([
+    var pluginProviderCollections = new AggregatePluginProvider([
       new PseudoPluginProvider([
         new PseudoPlugin("#1"),
       ]),
@@ -140,7 +140,7 @@ public class ReadOnlyPluginProviderCollectionTests {
   {
     var provider1 = new PseudoPluginProvider([]);
     var provider2 = new PseudoPluginProvider([]);
-    var pluginProviderCollections = new ReadOnlyPluginProviderCollection([
+    var pluginProviderCollections = new AggregatePluginProvider([
       provider1,
       provider2,
     ]);
@@ -164,7 +164,7 @@ public class ReadOnlyPluginProviderCollectionTests {
   {
     var provider1 = new PseudoPluginProvider([]);
     var provider2 = new PseudoPluginProvider([]);
-    var pluginProviderCollections = new ReadOnlyPluginProviderCollection([
+    var pluginProviderCollections = new AggregatePluginProvider([
       provider1,
       provider2,
     ]);
@@ -188,7 +188,7 @@ public class ReadOnlyPluginProviderCollectionTests {
   {
     var provider1 = new PseudoPluginProvider([]);
     var provider2 = new PseudoPluginProvider([]);
-    var pluginProviderCollections = new ReadOnlyPluginProviderCollection([
+    var pluginProviderCollections = new AggregatePluginProvider([
       provider1,
       provider2,
     ]);
@@ -214,7 +214,7 @@ public class ReadOnlyPluginProviderCollectionTests {
   {
     var provider1 = new PseudoPluginProvider([]);
     var provider2 = new PseudoPluginProvider([]);
-    var pluginProviderCollections = new ReadOnlyPluginProviderCollection([
+    var pluginProviderCollections = new AggregatePluginProvider([
       provider1,
       provider2,
     ]);

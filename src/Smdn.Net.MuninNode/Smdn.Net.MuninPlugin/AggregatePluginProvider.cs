@@ -15,7 +15,7 @@ namespace Smdn.Net.MuninPlugin;
 /// wrap them as a single <see cref="IPluginProvider"/>.
 /// </summary>
 #pragma warning disable IDE0055
-public sealed class ReadOnlyPluginProviderCollection :
+public sealed class AggregatePluginProvider :
   ReadOnlyCollection<IPluginProvider>,
   INodeSessionCallback,
   IPluginProvider
@@ -29,9 +29,9 @@ public sealed class ReadOnlyPluginProviderCollection :
   INodeSessionCallback? IPluginProvider.SessionCallback => this;
 
   /*
-   * ReadOnlyPluginProviderCollection members
+   * AggregatePluginProvider members
    */
-  public ReadOnlyPluginProviderCollection(IList<IPluginProvider> pluginProviders)
+  public AggregatePluginProvider(IList<IPluginProvider> pluginProviders)
     : base(pluginProviders ?? throw new ArgumentNullException(nameof(pluginProviders)))
   {
     Plugins = Items.SelectMany(static provider => provider.Plugins).ToList();
