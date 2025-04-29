@@ -77,8 +77,8 @@ internal sealed class MuninNodeClient : IMuninNodeClient {
     if (client is null)
       throw new ObjectDisposedException(GetType().FullName);
 
-    // holds a reference to the endpoint before the client being disposed
-    var remoteEndPoint = client.RemoteEndPoint;
+    // begin logger scope with this client's endpoint
+    using var scope = logger?.BeginScope(client.RemoteEndPoint);
 
     const int ReceiveChunkSize = 256;
     var totalByteCount = 0;
@@ -111,8 +111,7 @@ internal sealed class MuninNodeClient : IMuninNodeClient {
           SocketError.ConnectionReset // ECONNRESET (104)
       ) {
         logger?.LogDebug(
-          "[{RemoteEndPoint}] expected socket exception ({NumericSocketErrorCode} {SocketErrorCode})",
-          remoteEndPoint,
+          "expected socket exception ({NumericSocketErrorCode} {SocketErrorCode})",
           (int)ex.SocketErrorCode,
           ex.SocketErrorCode
         );
@@ -120,10 +119,7 @@ internal sealed class MuninNodeClient : IMuninNodeClient {
         break; // expected exception
       }
       catch (ObjectDisposedException) {
-        logger?.LogDebug(
-          "[{RemoteEndPoint}] socket has been disposed",
-          remoteEndPoint
-        );
+        logger?.LogDebug("socket has been disposed");
 
         break; // expected exception
       }

@@ -293,8 +293,8 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       cancellationToken: cancellationToken
     ).ConfigureAwait(false);
 
-    // holds a reference to the endpoint before the client being disposed
-    var remoteEndPoint = client.EndPoint;
+    // begin logger scope with this client's endpoint
+    using var scope = Logger?.BeginScope(client.EndPoint);
 
     try {
       cancellationToken.ThrowIfCancellationRequested();
@@ -310,7 +310,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     finally {
       await client.DisposeAsync().ConfigureAwait(false);
 
-      Logger?.LogInformation("[{RemoteEndPoint}] connection closed", remoteEndPoint);
+      Logger?.LogInformation("connection closed");
     }
 
     bool CanAccept(IMuninNodeClient client)
@@ -326,7 +326,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       }
 
       if (accessRule is not null && !accessRule.IsAcceptable(remoteIPEndPoint)) {
-        Logger?.LogWarning("access refused: {RemoteEndPoint}", remoteIPEndPoint);
+        Logger?.LogWarning("access refused");
 
         return false;
       }
@@ -342,11 +342,9 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   {
     cancellationToken.ThrowIfCancellationRequested();
 
-    // holds a reference to the endpoint before the client being disposed
-    var remoteEndPoint = client.EndPoint;
-    var sessionId = GenerateSessionId(listener!.EndPoint, remoteEndPoint);
+    var sessionId = GenerateSessionId(listener!.EndPoint, client.EndPoint);
 
-    Logger?.LogDebug("[{RemoteEndPoint}] sending banner", remoteEndPoint);
+    Logger?.LogDebug("sending banner");
 
     try {
       await SendResponseAsync(
@@ -356,10 +354,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       ).ConfigureAwait(false);
     }
     catch (MuninNodeClientDisconnectedException) {
-      Logger?.LogWarning(
-        "[{RemoteEndPoint}] client closed session while sending banner",
-        remoteEndPoint
-      );
+      Logger?.LogWarning("client closed session while sending banner");
 
       return;
     }
@@ -367,8 +362,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     catch (Exception ex) {
       Logger?.LogCritical(
         ex,
-        "[{RemoteEndPoint}] unexpected exception occured while sending banner",
-        remoteEndPoint
+        "unexpected exception occured while sending banner"
       );
 
       return;
@@ -377,7 +371,10 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
     cancellationToken.ThrowIfCancellationRequested();
 
-    Logger?.LogInformation("[{RemoteEndPoint}] session started; ID={SessionId}", remoteEndPoint, sessionId);
+    // begin logger scope with this session id
+    using var scope = Logger?.BeginScope(sessionId);
+
+    Logger?.LogInformation("session started");
 
     try {
       if (PluginProvider.SessionCallback is not null)
@@ -392,11 +389,11 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       var pipe = new Pipe();
 
       await Task.WhenAll(
-        ReceiveCommandAsync(client, remoteEndPoint, pipe.Writer, cancellationToken),
-        ProcessCommandAsync(client, remoteEndPoint, pipe.Reader, cancellationToken)
+        ReceiveCommandAsync(client, pipe.Writer, cancellationToken),
+        ProcessCommandAsync(client, pipe.Reader, cancellationToken)
       ).ConfigureAwait(false);
 
-      Logger?.LogInformation("[{RemoteEndPoint}] session closed; ID={SessionId}", remoteEndPoint, sessionId);
+      Logger?.LogInformation("session closed");
     }
     finally {
       foreach (var plugin in PluginProvider.Plugins) {
@@ -436,7 +433,6 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
   private async Task ReceiveCommandAsync(
     IMuninNodeClient client,
-    EndPoint? remoteEndPoint,
     PipeWriter writer,
     CancellationToken cancellationToken
   )
@@ -451,18 +447,14 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
           break;
       }
       catch (OperationCanceledException) {
-        Logger?.LogInformation(
-          "[{RemoteEndPoint}] operation canceled",
-          remoteEndPoint
-        );
+        Logger?.LogInformation("operation canceled");
         throw;
       }
 #pragma warning disable CA1031
       catch (Exception ex) {
         Logger?.LogError(
           ex,
-          "[{RemoteEndPoint}] unexpected exception while receiving",
-          remoteEndPoint
+          "unexpected exception while receiving"
         );
         break; // swallow
       }
@@ -481,7 +473,6 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
   private async Task ProcessCommandAsync(
     IMuninNodeClient client,
-    EndPoint? remoteEndPoint,
     PipeReader reader,
     CancellationToken cancellationToken
   )
@@ -504,25 +495,18 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
         }
       }
       catch (MuninNodeClientDisconnectedException) {
-        Logger?.LogInformation(
-          "[{RemoteEndPoint}] client disconnected",
-          remoteEndPoint
-        );
+        Logger?.LogInformation("client disconnected");
         break; // expected exception
       }
       catch (OperationCanceledException) {
-        Logger?.LogInformation(
-          "[{RemoteEndPoint}] operation canceled",
-          remoteEndPoint
-        );
+        Logger?.LogInformation("operation canceled");
         throw;
       }
 #pragma warning disable CA1031
       catch (Exception ex) {
         Logger?.LogCritical(
           ex,
-          "[{RemoteEndPoint}] unexpected exception while processing command",
-          remoteEndPoint
+          "unexpected exception while processing command"
         );
 
         await client.DisconnectAsync(cancellationToken).ConfigureAwait(false);
