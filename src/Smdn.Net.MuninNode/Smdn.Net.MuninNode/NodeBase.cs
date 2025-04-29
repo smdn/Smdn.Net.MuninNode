@@ -1,9 +1,5 @@
 // SPDX-FileCopyrightText: 2021 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
-
-// TODO: use LoggerMessage.Define
-#pragma warning disable CA1848 // For improved performance, use the LoggerMessage delegates instead of calling 'LoggerExtensions.LogInformation(ILogger, string?, params object?[])'
-
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -191,7 +187,8 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     {
       cancellationToken.ThrowIfCancellationRequested();
 
-      Logger?.LogInformation("starting");
+      if (Logger is not null)
+        LogStartingNode(Logger, null);
 
       listener = await listenerFactory.CreateAsync(
         endPoint: GetLocalEndPointToBind(),
@@ -204,7 +201,8 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
       await listener.StartAsync(cancellationToken).ConfigureAwait(false);
 
-      Logger?.LogInformation("started (end point: {EndPoint})", listener.EndPoint);
+      if (Logger is not null)
+        LogStartedNode(Logger, HostName, listener.EndPoint, null);
     }
   }
 
@@ -247,7 +245,8 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   {
     ThrowIfDisposed();
 
-    Logger?.LogInformation("starting to accept");
+    if (Logger is not null)
+      LogStartedAcceptingConnections(Logger, null);
 
     try {
       for (; ; ) {
@@ -266,7 +265,8 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
         throw;
     }
 
-    Logger?.LogInformation("stopped to accept");
+    if (Logger is not null)
+      LogStoppedAcceptingConnections(Logger, null);
   }
 
   /// <summary>
@@ -287,7 +287,8 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
     ThrowIfPluginProviderIsNull();
 
-    Logger?.LogInformation("accepting...");
+    if (Logger is not null)
+      LogAcceptingConnection(Logger, null);
 
     var client = await listener.AcceptAsync(
       cancellationToken: cancellationToken
@@ -310,24 +311,21 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     finally {
       await client.DisposeAsync().ConfigureAwait(false);
 
-      Logger?.LogInformation("connection closed");
+      if (Logger is not null)
+        LogAcceptedConnectionClosed(Logger, null);
     }
 
     bool CanAccept(IMuninNodeClient client)
     {
       if (client.EndPoint is not IPEndPoint remoteIPEndPoint) {
-        Logger?.LogWarning(
-          "cannot accept {RemoteEndPoint} ({RemoteEndPointAddressFamily})",
-          client.EndPoint?.ToString() ?? "(null)",
-          client.EndPoint?.AddressFamily
-        );
-
+        if (Logger is not null)
+          LogConnectionCanNotAccept(Logger, client.EndPoint, client.EndPoint?.AddressFamily, null);
         return false;
       }
 
       if (accessRule is not null && !accessRule.IsAcceptable(remoteIPEndPoint)) {
-        Logger?.LogWarning("access refused");
-
+        if (Logger is not null)
+          LogAccessRefused(Logger, null);
         return false;
       }
 
@@ -342,9 +340,8 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
   {
     cancellationToken.ThrowIfCancellationRequested();
 
-    var sessionId = GenerateSessionId(listener!.EndPoint, client.EndPoint);
-
-    Logger?.LogDebug("sending banner");
+    if (Logger is not null)
+      LogSessionSendingBanner(Logger, null);
 
     try {
       await SendResponseAsync(
@@ -354,16 +351,15 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       ).ConfigureAwait(false);
     }
     catch (MuninNodeClientDisconnectedException) {
-      Logger?.LogWarning("client closed session while sending banner");
+      if (Logger is not null)
+        LogSessionClosedWhileSendingBanner(Logger, null);
 
       return;
     }
 #pragma warning disable CA1031
     catch (Exception ex) {
-      Logger?.LogCritical(
-        ex,
-        "unexpected exception occured while sending banner"
-      );
+      if (Logger is not null)
+        LogSessionUnexpectedEceptionWhileSendingBanner(Logger, ex);
 
       return;
     }
@@ -371,10 +367,15 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
     cancellationToken.ThrowIfCancellationRequested();
 
-    // begin logger scope with this session id
-    using var scope = Logger?.BeginScope(sessionId);
+    var sessionId = GenerateSessionId(listener!.EndPoint, client.EndPoint);
 
-    Logger?.LogInformation("session started");
+    // begin logger scope with this session id
+    using var scope = Logger is null
+      ? null
+      : LoggerScopeForSession(Logger, sessionId);
+
+    if (Logger is not null)
+      LogSessionStarted(Logger, null);
 
     try {
       if (PluginProvider.SessionCallback is not null)
@@ -393,7 +394,8 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
         ProcessCommandAsync(client, pipe.Reader, cancellationToken)
       ).ConfigureAwait(false);
 
-      Logger?.LogInformation("session closed");
+      if (Logger is not null)
+        LogSessionClosed(Logger, null);
     }
     finally {
       foreach (var plugin in PluginProvider.Plugins) {
@@ -447,15 +449,14 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
           break;
       }
       catch (OperationCanceledException) {
-        Logger?.LogInformation("operation canceled");
+        if (Logger is not null)
+          LogSessionOperationCanceledWhileReceiving(Logger, null);
         throw;
       }
 #pragma warning disable CA1031
       catch (Exception ex) {
-        Logger?.LogError(
-          ex,
-          "unexpected exception while receiving"
-        );
+        if (Logger is not null)
+          LogSessionUnexpectedEceptionWhileReceiving(Logger, ex);
         break; // swallow
       }
 #pragma warning restore CA1031
@@ -495,19 +496,19 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
         }
       }
       catch (MuninNodeClientDisconnectedException) {
-        Logger?.LogInformation("client disconnected");
+        if (Logger is not null)
+          LogSessionClientDisconnectedWhileSeinding(Logger, null);
         break; // expected exception
       }
       catch (OperationCanceledException) {
-        Logger?.LogInformation("operation canceled");
+        if (Logger is not null)
+          LogSessionOperationCanceledWhileProcessingCommand(Logger, null);
         throw;
       }
 #pragma warning disable CA1031
       catch (Exception ex) {
-        Logger?.LogCritical(
-          ex,
-          "unexpected exception while processing command"
-        );
+        if (Logger is not null)
+          LogSessionUnexpectedEceptionWhileProcessingCommand(Logger, ex);
 
         await client.DisconnectAsync(cancellationToken).ConfigureAwait(false);
 
