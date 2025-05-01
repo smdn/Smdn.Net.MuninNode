@@ -5,36 +5,50 @@
 [![NuGet Smdn.Net.MuninNode](https://img.shields.io/nuget/v/Smdn.Net.MuninNode.svg)](https://www.nuget.org/packages/Smdn.Net.MuninNode/)
 
 # Smdn.Net.MuninNode
+[![NuGet Smdn.Net.MuninNode](https://img.shields.io/nuget/v/Smdn.Net.MuninNode.svg)](https://www.nuget.org/packages/Smdn.Net.MuninNode/)
+
 Smdn.Net.MuninNode is a .NET implementation of [Munin-Node](https://guide.munin-monitoring.org/en/latest/node/index.html) and [Munin-Plugin](https://guide.munin-monitoring.org/en/latest/plugin/index.html).
 
 This library provides Munin-Node implementation for .NET, which enables to you to create custom Munin-Node using the .NET languages and libraries.
 
 This library also provides abstraction APIs for implementing Munin-Plugin. By using Munin-Plugin APIs in combination with the Munin-Node implementation, you can implement the function of collecting various kind of telemetry data using Munin, with .NET.
 
-This library has two major namespaces. In the [Smdn.Net.MuninNode](./src/Smdn.Net.MuninNode/Smdn.Net.MuninNode/) namespace, there is a `NodeBase` class, which provides abstract Munin-Node implementation. For most purposes, the `LocalNode` class can be used, such as creating a Munin-Node that runs on the same host as the Munin server.
+### `Smdn.Net.MuninNode` namespace
+This library has two major namespaces. In the [Smdn.Net.MuninNode](./src/Smdn.Net.MuninNode/Smdn.Net.MuninNode/) namespace, there is a `NodeBase` class, which provides abstract Munin-Node implementation.
 
+You can use the extension methods from [Smdn.Net.MuninNode.DependencyInjection](./src/Smdn.Net.MuninNode/Smdn.Net.MuninNode.DependencyInjection/) namespace to configure and register the Munin-Node to the `ServiceCollection`. This would support most purposes and use cases. See [this example](./examples/Smdn.Net.MuninNode/getting-started/) for detail.
+
+### `Smdn.Net.MuninPlugin` namespace
 In the [Smdn.Net.MuninPlugin](./src/Smdn.Net.MuninNode/Smdn.Net.MuninPlugin/) namespace, there is a `IPlugin` interfaces, which represents the functionality that should be implemented as Munin-Plugin. By properly implementing `IPlugin` and its relevant interfaces, you can compose the Munin-Plugin which aggregates telemetry data using .NET.
 
+# Smdn.Net.MuninNode.Hosting
+[![NuGet Smdn.Net.MuninNode.Hosting](https://img.shields.io/nuget/v/Smdn.Net.MuninNode.Hosting.svg)](https://www.nuget.org/packages/Smdn.Net.MuninNode.Hosting/)
 
-## Usage
+This library provides APIs to run Munin-Node as a background service integrated with .NET Generic Host.
+
+If you want to integrate with .NET Generic Host, especially if you want to implement Munin-Node running as a **Windows Services** or **systemd unit**, you can use this extension library. See [this example](./examples/Smdn.Net.MuninNode.Hosting/getting-started/) for detail.
+
+# Usage
 To use the released packge, add `<PackageReference>` to the project file.
 
 ```xml
   <ItemGroup>
-    <PackageReference Include="Smdn.Net.MuninNode" Version="1.*" />
+    <PackageReference Include="Smdn.Net.MuninNode" Version="2.*" />
+    <!-- Or -->
+    <PackageReference Include="Smdn.Net.MuninNode.Hosting" Version="3.*" />
   </ItemGroup>
 ```
 
 Then write the your code. See [examples](examples/) to use APIs.
 
-### Munin configurations (`munin.conf`)
-If you want `munin-update` to gather the telemetry data from the Munin-Node you have created and started, you have to add entry defines your node to configuration file `/etc/munin/munin.conf`. The following is an example:
+### Configure Munin master (`munin.conf`)
+If you want `munin-update` process to gather the telemetry data from the Munin-Node you have created and started, you have to add entry defines your node to configuration file `/etc/munin/munin.conf`. The following is an example:
 
 ```conf
 [your-node.localdomain]
     address 127.0.0.1 # address of your node
-    port 44693 # port number that your node uses
-    use_node_name yes # let Munin to use the node name advertised by your node (optional)
+    port 4949 # port number that your node uses
+    use_node_name yes # (optional) let Munin to use the node name advertised by your node
 ```
 
 Multiple instances can also be started by defining multiple nodes with different port numbers if you want.
@@ -42,23 +56,23 @@ Multiple instances can also be started by defining multiple nodes with different
 For more information about node definitions, please refer to the [Munin documentation for munin.conf](https://guide.munin-monitoring.org/en/latest/reference/munin.conf.html).
 
 
-### Testing node
+### Test the node
 To test the node you have created, run the node first, and connect to the node.
 
 The following is an example of testing a node using the `telnet` command. Here, the port number should be the one your node is using.
 
 ```
-$ telnet 127.0.0.1 9876
+$ telnet 127.0.0.1 4949
 Trying 127.0.0.1...
 Connected to localhost.
 Escape character is '^]'.
 # munin node at your-node.localhost
-list                                  <-- type 'list' to list field names
+list                                  <-- type `list` to list plugin names
 uptime sensor1 sensor2
-fetch uptime                          <-- type 'fetch <field-name>' to fetch
-                                          the value of the specified field
+fetch uptime                          <-- type `fetch <plugin-name>` to fetch
+                                          the values of the specified plugin
 uptime.value 123.4567
-quit                                  <-- type 'quit' to close connection
+quit                                  <-- type `quit` to close connection
 Connection closed by foreign host.
 ```
 
