@@ -64,20 +64,11 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     }
   }
 
-  /// <summary>
-  /// Gets the <see cref="EndPoint"/> actually bound with the current instance.
-  /// </summary>
-  /// <exception cref="InvalidOperationException">
-  /// The <see cref="Start"/> or <see cref="StartAsync"/> method has not been called.
-  /// </exception>
-  /// <exception cref="NotSupportedException">
-  /// Getting endpoint from this instance is not supported.
-  /// </exception>
-  /// <exception cref="ObjectDisposedException">
-  /// Attempted to read a property value after the instance was disposed.
-  /// </exception>
+  /// <inheritdoc cref="IMuninNode.EndPoint"/>
   /// <seealso cref="GetLocalEndPointToBind"/>
-  public EndPoint LocalEndPoint {
+  /// <seealso cref="Start"/>
+  /// <seealso cref="StartAsync"/>
+  public EndPoint EndPoint {
     get {
       ThrowIfDisposed();
 
@@ -214,6 +205,27 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       await listener.StartAsync(cancellationToken).ConfigureAwait(false);
 
       Logger?.LogInformation("started (end point: {EndPoint})", listener.EndPoint);
+    }
+  }
+
+  /// <inheritdoc cref="IMuninNode.RunAsync(CancellationToken)"/>
+  /// <seealso cref="IMuninNode.RunAsync(CancellationToken)"/>
+  /// <seealso cref="StartAsync(CancellationToken)"/>
+  /// <seealso cref="AcceptAsync(bool,CancellationToken)"/>
+  public Task RunAsync(CancellationToken cancellationToken)
+  {
+    ThrowIfDisposed();
+
+    return RunAsyncCore(cancellationToken);
+
+    async Task RunAsyncCore(CancellationToken ct)
+    {
+      await StartAsync(ct).ConfigureAwait(false);
+
+      await AcceptAsync(
+        throwIfCancellationRequested: true,
+        cancellationToken: ct
+      ).ConfigureAwait(false);
     }
   }
 

@@ -91,8 +91,9 @@ public partial class NodeBaseTests {
 
     Assert.That(node.Dispose, Throws.Nothing, "Dispose() #1");
 
-    Assert.That(() => _ = node.LocalEndPoint, Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(() => _ = node.EndPoint, Throws.TypeOf<ObjectDisposedException>());
 #pragma warning disable CS0618
+    Assert.That(() => _ = node.LocalEndPoint, Throws.TypeOf<ObjectDisposedException>());
     Assert.That(node.Start, Throws.TypeOf<ObjectDisposedException>());
 #pragma warning restore CS0618
     Assert.That(() => node.StartAsync(default), Throws.TypeOf<ObjectDisposedException>());
@@ -111,8 +112,9 @@ public partial class NodeBaseTests {
 
     Assert.That(node.DisposeAsync, Throws.Nothing, "DisposeAsync() #1");
 
-    Assert.That(() => _ = node.LocalEndPoint, Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(() => _ = node.EndPoint, Throws.TypeOf<ObjectDisposedException>());
 #pragma warning disable CS0618
+    Assert.That(() => _ = node.LocalEndPoint, Throws.TypeOf<ObjectDisposedException>());
     Assert.That(node.Start, Throws.TypeOf<ObjectDisposedException>());
 #pragma warning restore CS0618
     Assert.That(() => node.StartAsync(default), Throws.TypeOf<ObjectDisposedException>());
@@ -129,14 +131,20 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
+    Assert.That(() => _ = node.EndPoint, Throws.InvalidOperationException, $"{nameof(node.EndPoint)} before start");
+#pragma warning disable CS0618
     Assert.That(() => _ = node.LocalEndPoint, Throws.InvalidOperationException, $"{nameof(node.LocalEndPoint)} before start");
+#pragma warning restore CS0618
 
 #pragma warning disable CS0618
     Assert.DoesNotThrow(node.Start);
     Assert.Throws<InvalidOperationException>(node.Start, "already started");
 #pragma warning restore CS0618
 
+    Assert.That(() => _ = node.EndPoint, Throws.Nothing, $"{nameof(node.EndPoint)} after start");
+#pragma warning disable CS0618
     Assert.That(() => _ = node.LocalEndPoint, Throws.Nothing, $"{nameof(node.LocalEndPoint)} after start");
+#pragma warning restore CS0618
   }
 
   [Test]
@@ -144,11 +152,17 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
+    Assert.That(() => _ = node.EndPoint, Throws.InvalidOperationException, $"{nameof(node.EndPoint)} before start");
+#pragma warning disable CS0618
     Assert.That(() => _ = node.LocalEndPoint, Throws.InvalidOperationException, $"{nameof(node.LocalEndPoint)} before start");
+#pragma warning restore CS0618
 
     Assert.That(async () => await node.StartAsync(default), Throws.Nothing);
     Assert.That(async () => await node.StartAsync(default), Throws.InvalidOperationException, "already started");
 
+    Assert.That(() => _ = node.EndPoint, Throws.Nothing, $"{nameof(node.EndPoint)} after start");
+#pragma warning disable CS0618
     Assert.That(() => _ = node.LocalEndPoint, Throws.Nothing, $"{nameof(node.LocalEndPoint)} after start");
+#pragma warning restore CS0618
   }
 }
