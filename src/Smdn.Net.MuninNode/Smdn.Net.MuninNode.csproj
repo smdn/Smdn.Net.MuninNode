@@ -44,6 +44,23 @@ This library also provides abstraction APIs for implementing Munin-Plugin. By us
       <PackageReadmeFileContent><![CDATA[# $(PackageId) $(PackageVersion)
 $(Description)
 
+## Getting started
+First, add the [$(PackageId)](https://www.nuget.org/packages/$(PackageId)) package and any other packages you need to the project file.
+
+```
+dotnet add package $(PackageId)
+dotnet add package Microsoft.Extensions.DependencyInjection
+dotnet add package Microsoft.Extensions.Logging.Console
+```
+
+Using the API of the `Smdn.Net.MuninNode.DependencyInjection` namespace and the `ServiceCollection`, you can configure and run a Munin-Node the following way.
+
+```cs
+$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\..\examples\$(PackageId)\getting-started\Program.cs').TrimEnd())
+```
+
+More examples can be found on the [GitHub repository]($(RepositoryUrl)/tree/main/examples/$(PackageId)/), including examples of using library features.
+
 ## Contributing
 This project welcomes contributions, feedbacks and suggestions. You can contribute to this project by submitting [Issues]($(RepositoryUrl)/issues/new/choose) or [Pull Requests]($(RepositoryUrl)/pulls/) on the [GitHub repository]($(RepositoryUrl)).
 ]]></PackageReadmeFileContent>
