@@ -59,8 +59,9 @@ Console.CancelKeyPress += (_, args) => {
   args.Cancel = true;
 };
 
-node.Start();
-
-await node.AcceptAsync(throwIfCancellationRequested: false, cts.Token);
-
-Console.WriteLine("stopped");
+try {
+  await node.RunAsync(cts.Token);
+}
+catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token) {
+  Console.WriteLine("stopped");
+}

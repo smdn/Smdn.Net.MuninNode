@@ -71,18 +71,23 @@ Console.CancelKeyPress += (_, args) => {
   args.Cancel = true;
 };
 
-// Start node and accept connections.
-node.Start();
-
-await node.AcceptAsync(throwIfCancellationRequested: false, cts.Token);
-
-// When the AcceptAsync method finishes processing one connection,
+// Start the node and accept connections.
+//
+// When the RunAsync method finishes processing one connection,
 // it immediately waits for the next connection.
 // Therefore, the method will not return until the cancellation is
 // requested by CancellationToken.
-//
-// By specifying false to the throwIfCancellationRequested, you can
-// let the AcceptAsync method to return without throwing
-// OperationCanceledException when a cancellation is requested.
+try {
+  await node.RunAsync(cts.Token);
+}
+catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token) {
+  // CancellationToken is triggered
+  Console.WriteLine("stopped");
+}
 
-Console.WriteLine("stopped");
+// Instead of RunAsync(), StartAsync() and AcceptAsync() can be called
+// separately to start the node.
+//
+// await node.StartAsync(cts.Token);
+// await node.AcceptAsync(throwIfCancellationRequested: false, cts.Token);
+// Console.WriteLine("stopped");
