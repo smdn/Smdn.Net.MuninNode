@@ -34,8 +34,7 @@ This library uses [Smdn.Net.MuninNode](https://www.nuget.org/packages/Smdn.Net.M
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
-    <!-- <ProjectOrPackageReference ReferencePackageVersion="[2.2.0,4.0.0)" Include="..\Smdn.Net.MuninNode\Smdn.Net.MuninNode.csproj" /> -->
-    <ProjectReference Include="..\Smdn.Net.MuninNode\Smdn.Net.MuninNode.csproj" />
+    <ProjectOrPackageReference ReferencePackageVersion="[2.2.0,4.0.0)" Include="..\Smdn.Net.MuninNode\Smdn.Net.MuninNode.csproj" />
   </ItemGroup>
 
   <Target Name="GenerateReadmeFileContent">
