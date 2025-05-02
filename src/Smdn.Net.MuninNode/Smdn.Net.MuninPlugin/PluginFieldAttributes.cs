@@ -79,10 +79,7 @@ public readonly struct PluginFieldAttributes {
     string? negativeFieldName
   )
   {
-    if (label is null)
-      throw new ArgumentNullException(nameof(label));
-    if (label.Length == 0)
-      throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(label));
+    ArgumentExceptionShim.ThrowIfNullOrEmpty(label, nameof(label));
 
     Label = label;
     GraphStyle = graphStyle;

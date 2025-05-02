@@ -76,10 +76,7 @@ public sealed class MuninNodeOptions {
   public string HostName {
     get => hostName;
     set {
-      if (value is null)
-        throw new ArgumentNullException(nameof(HostName));
-      if (value.Length == 0)
-        throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(HostName));
+      ArgumentExceptionShim.ThrowIfNullOrEmpty(value, nameof(HostName));
 
       hostName = value;
     }

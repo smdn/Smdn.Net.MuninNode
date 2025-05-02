@@ -54,17 +54,15 @@ public abstract class PluginFieldBase : IPluginField {
     string? negativeFieldName
   )
   {
-    if (label is null)
-      throw new ArgumentNullException(nameof(label));
-    if (label.Length == 0)
-      throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(label));
+    ArgumentExceptionShim.ThrowIfNullOrEmpty(label, nameof(label));
+
     if (!RegexValidFieldLabel.IsMatch(label))
       throw new ArgumentException($"'{label}' is invalid for field name. The value of {nameof(label)} must match the following regular expression: '{RegexValidFieldLabel}'", nameof(label));
 
     name ??= GetDefaultNameFromLabel(label);
 
-    if (name.Length == 0)
-      throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(name));
+    ArgumentExceptionShim.ThrowIfNullOrEmpty(name, nameof(name));
+
     if (!RegexValidFieldName.IsMatch(name))
       throw new ArgumentException($"'{name}' is invalid for field name. The value of {nameof(name)} must match the following regular expression: '{RegexValidFieldName}'", nameof(name));
 
@@ -121,10 +119,7 @@ public abstract class PluginFieldBase : IPluginField {
 
   private static string GetDefaultNameFromLabel(string label)
   {
-    if (label is null)
-      throw new ArgumentNullException(nameof(label));
-    if (label.Length == 0)
-      throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(label));
+    ArgumentExceptionShim.ThrowIfNullOrEmpty(label, nameof(label));
 
     return RegexInvalidFieldNameChars.Replace(
       RegexInvalidFieldNamePrefix.Replace(label, string.Empty),

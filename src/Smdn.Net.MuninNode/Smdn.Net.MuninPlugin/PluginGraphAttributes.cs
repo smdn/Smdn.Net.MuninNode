@@ -91,26 +91,15 @@ public sealed class PluginGraphAttributes : IPluginGraphAttributes {
     string? totalValueLabel
   )
   {
-    if (title is null)
-      throw new ArgumentNullException(nameof(title));
-    if (title.Length == 0)
-      throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(title));
-    if (category is null)
-      throw new ArgumentNullException(nameof(category));
-    if (category.Length == 0)
-      throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(category));
-    if (arguments is null)
-      throw new ArgumentNullException(nameof(arguments));
-    if (arguments.Length == 0)
-      throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(arguments));
-    if (verticalLabel is null)
-      throw new ArgumentNullException(nameof(verticalLabel));
-    if (verticalLabel.Length == 0)
-      throw ExceptionUtils.CreateArgumentMustBeNonEmptyString(nameof(verticalLabel));
-    if (width.HasValue && width.Value <= 0)
-      throw ExceptionUtils.CreateArgumentMustBeGreaterThan(0, nameof(width), width);
-    if (height.HasValue && height.Value <= 0)
-      throw ExceptionUtils.CreateArgumentMustBeGreaterThan(0, nameof(height), height);
+    ArgumentExceptionShim.ThrowIfNullOrEmpty(title, nameof(title));
+    ArgumentExceptionShim.ThrowIfNullOrEmpty(category, nameof(category));
+    ArgumentExceptionShim.ThrowIfNullOrEmpty(verticalLabel, nameof(verticalLabel));
+    ArgumentExceptionShim.ThrowIfNullOrEmpty(arguments, nameof(arguments));
+
+    if (width.HasValue)
+      ArgumentOutOfRangeExceptionShim.ThrowIfLessThanOrEqual(width.Value, 0, nameof(width));
+    if (height.HasValue)
+      ArgumentOutOfRangeExceptionShim.ThrowIfLessThanOrEqual(height.Value, 0, nameof(height));
 
     Title = title;
     Category = category;

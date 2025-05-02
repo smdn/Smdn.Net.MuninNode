@@ -36,7 +36,12 @@ This library also provides abstraction APIs for implementing Munin-Plugin. By us
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
     <PackageReference Include="Smdn.Fundamental.Encoding.Buffer" Version="[3.0.0,4.0.0)" Condition="$(TargetFramework.StartsWith('net4')) or $(TargetFramework.StartsWith('netstandard'))" />
-    <PackageReference Include="Smdn.Fundamental.Exception" Version="[3.0.0,4.0.0)" />
+    <PackageReference Include="Smdn.Fundamental.Exception" Version="[3.0.0,4.0.0)" Condition="$(TargetFramework.StartsWith('netstandard'))" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\Shim\System\ArgumentExceptionShim.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\Shim\System\ArgumentOutOfRangeExceptionShim.cs"/>
   </ItemGroup>
 
   <Target Name="GenerateReadmeFileContent">
