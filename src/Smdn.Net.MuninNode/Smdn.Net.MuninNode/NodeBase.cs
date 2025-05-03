@@ -538,14 +538,25 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
     {
       var reader = new SequenceReader<byte>(buffer);
+      const byte CR = (byte)'\r';
       const byte LF = (byte)'\n';
 
-      if (
-        !reader.TryReadTo(out line, delimiter: "\r\n"u8, advancePastDelimiter: true) &&
-        !reader.TryReadTo(out line, delimiter: LF, advancePastDelimiter: true)
-      ) {
+      // read sequence until LF
+      if (!reader.TryReadTo(out line, delimiter: LF, advancePastDelimiter: true)) {
         line = default;
         return false;
+      }
+
+      // trim the CR just before the LF, in case the line ends with CRLF
+      var lineLength = line.Length;
+
+      if (0 < lineLength) {
+        var lineReader = new SequenceReader<byte>(line);
+
+        lineReader.Advance(lineLength - 1);
+
+        if (lineReader.UnreadSpan[0] == CR)
+          line = line.Slice(0, lineLength - 1);
       }
 
 #if SYSTEM_BUFFERS_SEQUENCEREADER_UNREADSEQUENCE

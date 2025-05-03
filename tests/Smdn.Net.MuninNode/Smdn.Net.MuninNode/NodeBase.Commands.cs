@@ -118,10 +118,14 @@ partial class NodeBaseTests {
     }
   }
 
-  [TestCase("\r\n")]
-  [TestCase("\n")]
+  [TestCase("\r\n", "# Unknown command.")]
+  [TestCase("\n", "# Unknown command.")]
+  [TestCase("foo\r\n", "# Unknown command.")]
+  [TestCase("foo\n", "# Unknown command.")]
+  [TestCase(".\r\n", null)]
+  [TestCase(".\n", null)]
   [CancelAfter(3000)]
-  public async Task ProcessCommandAsync_EndOfLine(string eol, CancellationToken cancellationToken)
+  public async Task ProcessCommandAsync_EndOfLine(string commandLine, string? expectedResponseLinePrefix, CancellationToken cancellationToken)
   {
     PseudoMuninNodeClient? acceptedClient = null;
 
@@ -131,9 +135,17 @@ partial class NodeBaseTests {
       async (node, client, writer, reader, ct) => {
         Assert.That(client.IsConnected, Is.True);
 
-        await writer.WriteAsync(("." + eol).AsMemory(), ct);
-
         acceptedClient = client;
+
+        await writer.WriteAsync(commandLine.AsMemory(), ct);
+        await writer.FlushAsync(ct);
+
+        Assert.That(
+          await reader.ReadLineAsync(ct),
+          expectedResponseLinePrefix is null
+            ? Is.Null
+            : Does.StartWith(expectedResponseLinePrefix)
+        );
       },
       cancellationToken: cancellationToken
     );
