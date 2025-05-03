@@ -198,6 +198,35 @@ public partial class NodeBaseTests {
     });
   }
 
+  private class PseudoPluginProviderWithSessionCallback : IPluginProvider, INodeSessionCallback {
+    public IReadOnlyCollection<IPlugin> Plugins { get; }
+
+    private readonly bool setSessionCallbackNull;
+    public INodeSessionCallback? SessionCallback => setSessionCallbackNull ? null : this;
+    public List<string> StartedSessionIds { get; } = new();
+    public List<string> ClosedSessionIds { get; } = new();
+
+    public PseudoPluginProviderWithSessionCallback(IReadOnlyCollection<IPlugin> plugins, bool setSessionCallbackNull)
+    {
+      Plugins = plugins;
+      this.setSessionCallbackNull = setSessionCallbackNull;
+    }
+
+    public ValueTask ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken)
+    {
+      StartedSessionIds.Add(sessionId);
+
+      return default;
+    }
+
+    public ValueTask ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken)
+    {
+      ClosedSessionIds.Add(sessionId);
+
+      return default;
+    }
+  }
+
   private class PseudoPluginWithSessionCallback : IPlugin, INodeSessionCallback {
     public string Name => throw new NotImplementedException();
     public IPluginGraphAttributes GraphAttributes => throw new NotImplementedException();
@@ -228,16 +257,27 @@ public partial class NodeBaseTests {
     }
   }
 
-  [TestCase(true)]
-  [TestCase(false)]
-  public async Task AcceptSingleSessionAsync_INodeSessionCallback(bool setSessionCallbackNull)
+  [Test]
+  public async Task AcceptSingleSessionAsync_INodeSessionCallback(
+    [Values] bool setPluginProviderSessionCallbackNull,
+    [Values] bool setPluginSessionCallbackNull
+  )
   {
-    var plugin = new PseudoPluginWithSessionCallback(setSessionCallbackNull);
-    var isSessionCallbackNull = plugin.SessionCallback is null;
+    var plugin = new PseudoPluginWithSessionCallback(setPluginSessionCallbackNull);
+    var isPluginSessionCallbackNull = plugin.SessionCallback is null;
+    var pluginProvider = new PseudoPluginProviderWithSessionCallback(
+      plugins: [plugin],
+      setSessionCallbackNull: setPluginProviderSessionCallbackNull
+    );
+    var isPluginProviderSessionCallbackNull = pluginProvider.SessionCallback is null;
 
-    Assert.That(isSessionCallbackNull, Is.EqualTo(setSessionCallbackNull));
+    Assert.That(isPluginProviderSessionCallbackNull, Is.EqualTo(setPluginProviderSessionCallbackNull));
+    Assert.That(isPluginSessionCallbackNull, Is.EqualTo(setPluginSessionCallbackNull));
 
-    await using var node = CreateNode(plugins: new IPlugin[] { plugin });
+    await using var node = CreateNode(
+      accessRule: null,
+      pluginProvider: pluginProvider
+    );
 
     await node.StartAsync();
 
@@ -254,7 +294,18 @@ public partial class NodeBaseTests {
 
     await Task.Delay(500); // wait for node process completed
 
-    if (isSessionCallbackNull) {
+    if (isPluginProviderSessionCallbackNull) {
+      Assert.That(pluginProvider.StartedSessionIds.Count, Is.EqualTo(0), nameof(pluginProvider.StartedSessionIds));
+      Assert.That(pluginProvider.ClosedSessionIds.Count, Is.EqualTo(0), nameof(pluginProvider.ClosedSessionIds));
+    }
+    else {
+      Assert.That(pluginProvider.StartedSessionIds.Count, Is.EqualTo(1), nameof(pluginProvider.StartedSessionIds));
+      Assert.That(pluginProvider.StartedSessionIds[0], Is.Not.Empty, nameof(pluginProvider.StartedSessionIds));
+
+      Assert.That(pluginProvider.ClosedSessionIds.Count, Is.EqualTo(0), nameof(pluginProvider.ClosedSessionIds));
+    }
+
+    if (isPluginSessionCallbackNull) {
       Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(0), nameof(plugin.StartedSessionIds));
       Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
     }
@@ -270,7 +321,18 @@ public partial class NodeBaseTests {
 
     Assert.DoesNotThrowAsync(async () => await taskAccept);
 
-    if (isSessionCallbackNull) {
+    if (isPluginProviderSessionCallbackNull) {
+      Assert.That(pluginProvider.StartedSessionIds.Count, Is.EqualTo(0), nameof(pluginProvider.StartedSessionIds));
+      Assert.That(pluginProvider.ClosedSessionIds.Count, Is.EqualTo(0), nameof(pluginProvider.ClosedSessionIds));
+    }
+    else {
+      Assert.That(pluginProvider.StartedSessionIds.Count, Is.EqualTo(1), nameof(pluginProvider.StartedSessionIds));
+
+      Assert.That(pluginProvider.ClosedSessionIds.Count, Is.EqualTo(1), nameof(pluginProvider.ClosedSessionIds));
+      Assert.That(pluginProvider.ClosedSessionIds[0], Is.Not.Empty, nameof(pluginProvider.ClosedSessionIds));
+    }
+
+    if (isPluginSessionCallbackNull) {
       Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(0), nameof(plugin.StartedSessionIds));
       Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
     }

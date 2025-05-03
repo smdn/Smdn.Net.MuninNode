@@ -35,6 +35,17 @@ public partial class NodeBaseTests {
       IAccessRule? accessRule,
       IReadOnlyList<IPlugin> plugins
     )
+      : this(
+        accessRule: accessRule,
+        pluginProvider: new ReadOnlyCollectionPluginProvider(plugins)
+      )
+    {
+    }
+
+    public TestLocalNode(
+      IAccessRule? accessRule,
+      IPluginProvider pluginProvider
+    )
 #pragma warning disable CS0618
       : base(
         accessRule: accessRule,
@@ -42,7 +53,7 @@ public partial class NodeBaseTests {
       )
 #pragma warning restore CS0618
     {
-      PluginProvider = new ReadOnlyCollectionPluginProvider(plugins);
+      PluginProvider = pluginProvider;
     }
 
     protected override EndPoint GetLocalEndPointToBind()
@@ -65,6 +76,9 @@ public partial class NodeBaseTests {
 
   private static NodeBase CreateNode(IAccessRule? accessRule, IReadOnlyList<IPlugin> plugins)
     => new TestLocalNode(accessRule, plugins);
+
+  private static NodeBase CreateNode(IAccessRule? accessRule, IPluginProvider pluginProvider)
+    => new TestLocalNode(accessRule, pluginProvider);
 
   private static TcpClient CreateClient(
     IPEndPoint endPoint,
