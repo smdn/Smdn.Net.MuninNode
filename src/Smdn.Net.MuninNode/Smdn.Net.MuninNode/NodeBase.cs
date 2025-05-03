@@ -378,12 +378,12 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       LogSessionStarted(Logger, null);
 
     try {
-      if (PluginProvider.SessionCallback is not null)
-        await PluginProvider.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+      if (PluginProvider.SessionCallback is INodeSessionCallback pluginProviderSessionCallback)
+        await pluginProviderSessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
 
       foreach (var plugin in PluginProvider.Plugins) {
-        if (plugin.SessionCallback is not null)
-          await plugin.SessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        if (plugin.SessionCallback is INodeSessionCallback pluginSessionCallback)
+          await pluginSessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
       }
 
       // https://docs.microsoft.com/ja-jp/dotnet/standard/io/pipelines
@@ -399,12 +399,12 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     }
     finally {
       foreach (var plugin in PluginProvider.Plugins) {
-        if (plugin.SessionCallback is not null)
-          await plugin.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        if (plugin.SessionCallback is INodeSessionCallback pluginSessionCallback)
+          await pluginSessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
       }
 
-      if (PluginProvider.SessionCallback is not null)
-        await PluginProvider.SessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+      if (PluginProvider.SessionCallback is INodeSessionCallback pluginProviderSessionCallback)
+        await pluginProviderSessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
     }
   }
 
