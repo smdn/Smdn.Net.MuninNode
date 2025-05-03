@@ -488,6 +488,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
       try {
         while (TryReadLine(ref buffer, out var line)) {
+          // process each line read from the client as a single request command line
           await RespondToCommandAsync(
             client: client,
             commandLine: line,
@@ -522,6 +523,18 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
         break;
     }
 
+#pragma warning disable CS1587
+    /// <summary>
+    /// Output from the beginning of a given <paramref name="buffer"/> to a newline as <paramref name="line"/>,
+    /// and reassign the rest of the <paramref name="buffer"/> after the newline as <paramref name="buffer"/>.
+    /// </summary>
+    /// <remarks>
+    /// Treats <c>CR LF</c> sequences and <c>LF</c> as line breaks.
+    /// </remarks>
+    /// <returns>
+    /// <see langword="true"/> a single line can be read from <paramref name="buffer"/>, false otherwise.
+    /// </returns>
+#pragma warning disable CS1587
     static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
     {
       var reader = new SequenceReader<byte>(buffer);
