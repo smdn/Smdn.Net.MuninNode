@@ -250,8 +250,9 @@ partial class NodeBase {
   {
     ThrowIfPluginProviderIsNull();
 
+    var queryItem = Encoding.GetString(arguments);
     var plugin = PluginProvider.Plugins.FirstOrDefault(
-      plugin => string.Equals(Encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal)
+      plugin => string.Equals(queryItem, plugin.Name, StringComparison.Ordinal)
     );
 
     if (plugin is null) {
@@ -308,8 +309,9 @@ partial class NodeBase {
   {
     ThrowIfPluginProviderIsNull();
 
+    var queryItem = Encoding.GetString(arguments);
     var plugin = PluginProvider.Plugins.FirstOrDefault(
-      plugin => string.Equals(Encoding.GetString(arguments), plugin.Name, StringComparison.Ordinal)
+      plugin => string.Equals(queryItem, plugin.Name, StringComparison.Ordinal)
     );
 
     if (plugin is null) {
