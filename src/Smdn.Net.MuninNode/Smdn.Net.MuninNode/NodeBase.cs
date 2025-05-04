@@ -548,15 +548,13 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       }
 
       // trim the CR just before the LF, in case the line ends with CRLF
-      var lineLength = line.Length;
-
-      if (0 < lineLength) {
+      if (1 < reader.Consumed) {
         var lineReader = new SequenceReader<byte>(line);
 
-        lineReader.Advance(lineLength - 1);
+        lineReader.Advance(reader.Consumed - 2 /* <CR?>+<LF> */);
 
-        if (lineReader.UnreadSpan[0] == CR)
-          line = line.Slice(0, lineLength - 1);
+        if (lineReader.IsNext(CR))
+          line = line.Slice(0, lineReader.Position); // trim CR
       }
 
 #if SYSTEM_BUFFERS_SEQUENCEREADER_UNREADSEQUENCE
