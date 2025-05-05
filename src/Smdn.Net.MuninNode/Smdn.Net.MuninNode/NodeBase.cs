@@ -386,7 +386,11 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
       if (Logger is not null)
         LogStartingTransaction(Logger, null);
 
+#if !DEBUG
+#pragma warning disable CS8602
+#endif
       await protocolHandler.HandleTransactionStartAsync(client, cancellationToken).ConfigureAwait(false);
+#pragma warning restore CS8602
     }
     catch (Exception ex) when (ex is not OperationCanceledException) {
       if (Logger is not null)
@@ -526,11 +530,15 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
       try {
         while (TryReadLine(ref buffer, out var line)) {
           // process each line read from the client as a single request command line
+#if !DEBUG
+#pragma warning disable CS8602
+#endif
           await protocolHandler.HandleCommandAsync(
             client: client,
             commandLine: line,
             cancellationToken: cancellationToken
           ).ConfigureAwait(false);
+#pragma warning restore CS8602
         }
       }
       catch (MuninNodeClientDisconnectedException) {
