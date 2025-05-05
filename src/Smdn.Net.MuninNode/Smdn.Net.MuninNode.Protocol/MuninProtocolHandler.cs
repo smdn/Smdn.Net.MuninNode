@@ -39,6 +39,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     versionInformation = $"munins node on {profile.HostName} version: {profile.Version}";
   }
 
+  /// <inheritdoc cref="IMuninProtocolHandler.HandleTransactionStartAsync"/>
   public ValueTask HandleTransactionStartAsync(
     IMuninNodeClient client,
     CancellationToken cancellationToken = default
@@ -54,13 +55,23 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     cancellationToken.ThrowIfCancellationRequested();
 #endif
 
-    return SendResponseAsync(
+    return HandleTransactionStartAsyncCore(client, cancellationToken);
+  }
+
+  /// <remarks>
+  /// In the default implementation, a banner response is sent back to the client.
+  /// </remarks>
+  protected virtual ValueTask HandleTransactionStartAsyncCore(
+    IMuninNodeClient client,
+    CancellationToken cancellationToken
+  )
+    => SendResponseAsync(
       client,
       banner,
       cancellationToken
     );
-  }
 
+  /// <inheritdoc cref="IMuninProtocolHandler.HandleTransactionEndAsync"/>
   public ValueTask HandleTransactionEndAsync(
     IMuninNodeClient client,
     CancellationToken cancellationToken = default
@@ -76,8 +87,14 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     cancellationToken.ThrowIfCancellationRequested();
 #endif
 
-    return default; // nothing to do in this class
+    return HandleTransactionEndAsyncCore(client, cancellationToken);
   }
+
+  protected virtual ValueTask HandleTransactionEndAsyncCore(
+    IMuninNodeClient client,
+    CancellationToken cancellationToken
+  )
+    => default; // do nothing in this class
 
   private static bool ExpectCommand(
     ReadOnlySequence<byte> commandLine,
@@ -112,8 +129,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     return false;
   }
 
-  private static readonly byte CommandQuitShort = (byte)'.';
-
+  /// <inheritdoc cref="IMuninProtocolHandler.HandleCommandAsync"/>
   public ValueTask HandleCommandAsync(
     IMuninNodeClient client,
     ReadOnlySequence<byte> commandLine,
@@ -130,29 +146,47 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     cancellationToken.ThrowIfCancellationRequested();
 #endif
 
+    return HandleCommandAsyncCore(
+      client: client,
+      commandLine: commandLine,
+      cancellationToken: cancellationToken
+    );
+  }
+
+  private static readonly byte CommandQuitShort = (byte)'.';
+
+  protected virtual ValueTask HandleCommandAsyncCore(
+    IMuninNodeClient client,
+    ReadOnlySequence<byte> commandLine,
+    CancellationToken cancellationToken
+  )
+  {
+    if (client is null)
+      throw new ArgumentNullException(nameof(client));
+
     if (ExpectCommand(commandLine, "fetch"u8, out var fetchArguments)) {
-      return ProcessCommandFetchAsync(client, fetchArguments, cancellationToken);
+      return HandleFetchCommandAsync(client, fetchArguments, cancellationToken);
     }
     else if (ExpectCommand(commandLine, "nodes"u8, out _)) {
-      return ProcessCommandNodesAsync(client, cancellationToken);
+      return HandleNodesCommandAsync(client, cancellationToken);
     }
     else if (ExpectCommand(commandLine, "list"u8, out var listArguments)) {
-      return ProcessCommandListAsync(client, listArguments, cancellationToken);
+      return HandleListCommandAsync(client, listArguments, cancellationToken);
     }
     else if (ExpectCommand(commandLine, "config"u8, out var configArguments)) {
-      return ProcessCommandConfigAsync(client, configArguments, cancellationToken);
+      return HandleConfigCommandAsync(client, configArguments, cancellationToken);
     }
     else if (
       ExpectCommand(commandLine, "quit"u8, out _) ||
       (commandLine.Length == 1 && commandLine.FirstSpan[0] == CommandQuitShort)
     ) {
-      return client.DisconnectAsync(cancellationToken);
+      return HandleQuitCommandAsync(client, cancellationToken);
     }
     else if (ExpectCommand(commandLine, "cap"u8, out var capArguments)) {
-      return ProcessCommandCapAsync(client, capArguments, cancellationToken);
+      return HandleCapCommandAsync(client, capArguments, cancellationToken);
     }
     else if (ExpectCommand(commandLine, "version"u8, out _)) {
-      return ProcessCommandVersionAsync(client, cancellationToken);
+      return HandleVersionCommandAsync(client, cancellationToken);
     }
     else {
       return SendResponseAsync(
@@ -183,12 +217,14 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       cancellationToken: cancellationToken
     );
 
-  private async ValueTask SendResponseAsync(
+  protected async ValueTask SendResponseAsync(
     IMuninNodeClient client,
     IEnumerable<string> responseLines,
     CancellationToken cancellationToken
   )
   {
+    if (client is null)
+      throw new ArgumentNullException(nameof(client));
     if (responseLines is null)
       throw new ArgumentNullException(nameof(responseLines));
 
@@ -227,7 +263,28 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     }
   }
 
-  private ValueTask ProcessCommandNodesAsync(
+  /// <summary>
+  /// Handles the <c>quit</c> command.
+  /// </summary>
+  /// <remarks>
+  /// This implementation calls <see cref="IMuninNodeClient.DisconnectAsync"/> to disconnect the connection for the current transaction.
+  /// </remarks>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
+  /// Data exchange between master and node - `quit` command
+  /// </seealso>
+  protected virtual ValueTask HandleQuitCommandAsync(
+    IMuninNodeClient client,
+    CancellationToken cancellationToken
+  )
+    => (client ?? throw new ArgumentNullException(nameof(client))).DisconnectAsync(cancellationToken);
+
+  /// <summary>
+  /// Handles the <c>nodes</c> command and sends back a response.
+  /// </summary>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
+  /// Data exchange between master and node - `nodes` command
+  /// </seealso>
+  protected virtual ValueTask HandleNodesCommandAsync(
     IMuninNodeClient client,
     CancellationToken cancellationToken
   )
@@ -242,7 +299,13 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     );
   }
 
-  private ValueTask ProcessCommandVersionAsync(
+  /// <summary>
+  /// Handles the <c>version</c> command and sends back a response.
+  /// </summary>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
+  /// Data exchange between master and node - `version` command
+  /// </seealso>
+  protected virtual ValueTask HandleVersionCommandAsync(
     IMuninNodeClient client,
     CancellationToken cancellationToken
   )
@@ -254,11 +317,15 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     );
   }
 
-  private ValueTask ProcessCommandCapAsync(
+  /// <summary>
+  /// Handles the <c>cap</c> command and sends back a response.
+  /// </summary>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
+  /// Data exchange between master and node - `cap` command
+  /// </seealso>
+  protected virtual ValueTask HandleCapCommandAsync(
     IMuninNodeClient client,
-#pragma warning disable IDE0060
     ReadOnlySequence<byte> arguments,
-#pragma warning restore IDE0060
     CancellationToken cancellationToken
   )
   {
@@ -272,11 +339,15 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     );
   }
 
-  private ValueTask ProcessCommandListAsync(
+  /// <summary>
+  /// Handles the <c>list</c> command and sends back a response.
+  /// </summary>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
+  /// Data exchange between master and node - `list` command
+  /// </seealso>
+  protected virtual ValueTask HandleListCommandAsync(
     IMuninNodeClient client,
-#pragma warning disable IDE0060
     ReadOnlySequence<byte> arguments,
-#pragma warning restore IDE0060
     CancellationToken cancellationToken
   )
   {
@@ -288,7 +359,13 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     );
   }
 
-  private async ValueTask ProcessCommandFetchAsync(
+  /// <summary>
+  /// Handles the <c>fetch</c> command and sends back a response.
+  /// </summary>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
+  /// Data exchange between master and node - `fetch` command
+  /// </seealso>
+  protected virtual async ValueTask HandleFetchCommandAsync(
     IMuninNodeClient client,
     ReadOnlySequence<byte> arguments,
     CancellationToken cancellationToken
@@ -348,7 +425,13 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       _ => throw new InvalidOperationException($"undefined draw attribute value: ({(int)style} {style})"),
     };
 
-  private ValueTask ProcessCommandConfigAsync(
+  /// <summary>
+  /// Handles the <c>config</c> command and sends back a response.
+  /// </summary>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
+  /// Data exchange between master and node - `config` command
+  /// </seealso>
+  protected virtual ValueTask HandleConfigCommandAsync(
     IMuninNodeClient client,
     ReadOnlySequence<byte> arguments,
     CancellationToken cancellationToken
