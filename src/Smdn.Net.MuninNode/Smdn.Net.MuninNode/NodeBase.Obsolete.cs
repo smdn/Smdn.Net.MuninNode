@@ -101,6 +101,17 @@ partial class NodeBase {
     if (!startListenerValueTask.IsCompleted)
       startListenerValueTask.AsTask().GetAwaiter().GetResult();
 
+    ThrowIfPluginProviderIsNull();
+
+    var createHandlerValueTask = protocolHandlerFactory.CreateAsync(
+      profile: GetNodeProfile(),
+      cancellationToken: default
+    );
+
+    protocolHandler = createHandlerValueTask.IsCompleted
+      ? createHandlerValueTask.Result
+      : createHandlerValueTask.AsTask().GetAwaiter().GetResult();
+
     Logger?.LogInformation("started (end point: {EndPoint})", listener.EndPoint);
   }
 }

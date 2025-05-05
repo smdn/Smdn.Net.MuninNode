@@ -4,29 +4,49 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
+#if SYSTEM_TEXT_ENCODINGEXTENSIONS
 using System.Text;
+#endif
 using System.Threading;
 using System.Threading.Tasks;
 
+using Smdn.Net.MuninNode.Transport;
 using Smdn.Net.MuninPlugin;
+
 #if !SYSTEM_TEXT_ENCODINGEXTENSIONS
 using Smdn.Text.Encodings;
 #endif
 
-using Smdn.Net.MuninNode.Transport;
+namespace Smdn.Net.MuninNode.Protocol;
 
-namespace Smdn.Net.MuninNode;
-
-#pragma warning disable IDE0040
-partial class NodeBase {
-#pragma warning restore IDE0040
+/// <summary>
+/// Provides the default implementation of <see cref="IMuninProtocolHandler"/>.
+/// </summary>
+public class MuninProtocolHandler : IMuninProtocolHandler {
   private readonly ArrayBufferWriter<byte> responseBuffer = new(initialCapacity: 1024); // TODO: define best initial capacity
 
-  private ValueTask SendBannerResponseAsync(
-    IMuninNodeClient client,
-    CancellationToken cancellationToken
+  private readonly IMuninNodeProfile profile;
+  private readonly string banner;
+  private readonly string versionInformation;
+
+  public MuninProtocolHandler(
+    IMuninNodeProfile profile
   )
   {
+    this.profile = profile ?? throw new ArgumentNullException(nameof(profile));
+
+    banner = $"# munin node at {profile.HostName}";
+    versionInformation = $"munins node on {profile.HostName} version: {profile.Version}";
+  }
+
+  public ValueTask HandleTransactionStartAsync(
+    IMuninNodeClient client,
+    CancellationToken cancellationToken = default
+  )
+  {
+    if (client is null)
+      throw new ArgumentNullException(nameof(client));
+
 #if SYSTEM_THREADING_TASKS_VALUETASK_FROMCANCELED
     if (cancellationToken.IsCancellationRequested)
       return ValueTask.FromCanceled(cancellationToken);
@@ -36,9 +56,27 @@ partial class NodeBase {
 
     return SendResponseAsync(
       client,
-      $"# munin node at {HostName}",
+      banner,
       cancellationToken
     );
+  }
+
+  public ValueTask HandleTransactionEndAsync(
+    IMuninNodeClient client,
+    CancellationToken cancellationToken = default
+  )
+  {
+    if (client is null)
+      throw new ArgumentNullException(nameof(client));
+
+#if SYSTEM_THREADING_TASKS_VALUETASK_FROMCANCELED
+    if (cancellationToken.IsCancellationRequested)
+      return ValueTask.FromCanceled(cancellationToken);
+#else
+    cancellationToken.ThrowIfCancellationRequested();
+#endif
+
+    return default; // nothing to do in this class
   }
 
   private static bool ExpectCommand(
@@ -76,12 +114,22 @@ partial class NodeBase {
 
   private static readonly byte CommandQuitShort = (byte)'.';
 
-  private ValueTask RespondToCommandAsync(
+  public ValueTask HandleCommandAsync(
     IMuninNodeClient client,
     ReadOnlySequence<byte> commandLine,
-    CancellationToken cancellationToken
+    CancellationToken cancellationToken = default
   )
   {
+    if (client is null)
+      throw new ArgumentNullException(nameof(client));
+
+#if SYSTEM_THREADING_TASKS_VALUETASK_FROMCANCELED
+    if (cancellationToken.IsCancellationRequested)
+      return ValueTask.FromCanceled(cancellationToken);
+#else
+    cancellationToken.ThrowIfCancellationRequested();
+#endif
+
     if (ExpectCommand(commandLine, "fetch"u8, out var fetchArguments)) {
       return ProcessCommandFetchAsync(client, fetchArguments, cancellationToken);
     }
@@ -149,13 +197,13 @@ partial class NodeBase {
     try {
       foreach (var responseLine in responseLines) {
 #if SYSTEM_TEXT_ENCODINGEXTENSIONS
-        _ = Encoding.GetBytes(responseLine, responseBuffer);
+        _ = profile.Encoding.GetBytes(responseLine, responseBuffer);
 
         responseBuffer.Write(EndOfLine.Span);
 #else
-        var totalByteCount = Encoding.GetByteCount(responseLine) + EndOfLine.Length;
+        var totalByteCount = profile.Encoding.GetByteCount(responseLine) + EndOfLine.Length;
         var buffer = responseBuffer.GetMemory(totalByteCount);
-        var bytesWritten = Encoding.GetBytes(responseLine, buffer.Span);
+        var bytesWritten = profile.Encoding.GetBytes(responseLine, buffer.Span);
 
         EndOfLine.CopyTo(buffer[bytesWritten..]);
 
@@ -185,9 +233,9 @@ partial class NodeBase {
   )
   {
     return SendResponseAsync(
-      client: client,
+      client: client ?? throw new ArgumentNullException(nameof(client)),
       responseLines: [
-        HostName,
+        profile.HostName,
         ".",
       ],
       cancellationToken: cancellationToken
@@ -200,8 +248,8 @@ partial class NodeBase {
   )
   {
     return SendResponseAsync(
-      client: client,
-      responseLine: $"munins node on {HostName} version: {NodeVersion}",
+      client: client ?? throw new ArgumentNullException(nameof(client)),
+      responseLine: versionInformation,
       cancellationToken: cancellationToken
     );
   }
@@ -218,7 +266,7 @@ partial class NodeBase {
     // TODO: dirtyconfig (https://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html)
     // XXX: ignores capability arguments
     return SendResponseAsync(
-      client: client,
+      client: client ?? throw new ArgumentNullException(nameof(client)),
       responseLine: "cap",
       cancellationToken: cancellationToken
     );
@@ -232,12 +280,10 @@ partial class NodeBase {
     CancellationToken cancellationToken
   )
   {
-    ThrowIfPluginProviderIsNull();
-
     // XXX: ignore [node] arguments
     return SendResponseAsync(
-      client: client,
-      responseLine: string.Join(" ", PluginProvider.Plugins.Select(static plugin => plugin.Name)),
+      client: client ?? throw new ArgumentNullException(nameof(client)),
+      responseLine: string.Join(" ", profile.PluginProvider.Plugins.Select(static plugin => plugin.Name)),
       cancellationToken: cancellationToken
     );
   }
@@ -248,10 +294,11 @@ partial class NodeBase {
     CancellationToken cancellationToken
   )
   {
-    ThrowIfPluginProviderIsNull();
+    if (client is null)
+      throw new ArgumentNullException(nameof(client));
 
-    var queryItem = Encoding.GetString(arguments);
-    var plugin = PluginProvider.Plugins.FirstOrDefault(
+    var queryItem = profile.Encoding.GetString(arguments);
+    var plugin = profile.PluginProvider.Plugins.FirstOrDefault(
       plugin => string.Equals(queryItem, plugin.Name, StringComparison.Ordinal)
     );
 
@@ -307,10 +354,11 @@ partial class NodeBase {
     CancellationToken cancellationToken
   )
   {
-    ThrowIfPluginProviderIsNull();
+    if (client is null)
+      throw new ArgumentNullException(nameof(client));
 
-    var queryItem = Encoding.GetString(arguments);
-    var plugin = PluginProvider.Plugins.FirstOrDefault(
+    var queryItem = profile.Encoding.GetString(arguments);
+    var plugin = profile.PluginProvider.Plugins.FirstOrDefault(
       plugin => string.Equals(queryItem, plugin.Name, StringComparison.Ordinal)
     );
 
