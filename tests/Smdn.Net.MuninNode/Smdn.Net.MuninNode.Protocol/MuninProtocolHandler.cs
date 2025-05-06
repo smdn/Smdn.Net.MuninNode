@@ -4,6 +4,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -49,6 +50,11 @@ public partial class MuninProtocolHandlerTests {
     {
       // nothing to do
       return default;
+    }
+
+    public void ClearResponses()
+    {
+      responses.Clear();
     }
 
     public ValueTask DisconnectAsync(CancellationToken cancellationToken)
@@ -235,5 +241,47 @@ public partial class MuninProtocolHandlerTests {
     );
 
     Assert.That(client.Responses.Count, Is.EqualTo(0));
+  }
+
+  [Test]
+  [CancelAfter(10_000)]
+  public async Task HandleCommandAsync_RaceConditionDuringResponse(CancellationToken cancellationToken)
+  {
+    var numberOfParallelism = Environment.ProcessorCount * 3;
+    const int NumberOfRepeat = 100;
+
+    var handler = new MuninProtocolHandler(
+      profile: new MuninNodeProfile()
+    );
+    var clients = Enumerable
+      .Range(0, numberOfParallelism)
+      .Select(static _ => new PseudoMuninNodeClient())
+      .ToList();
+
+    await Parallel.ForEachAsync(
+      source: clients,
+      parallelOptions: new() {
+        MaxDegreeOfParallelism = -1,
+        CancellationToken = cancellationToken,
+      },
+      body: (client, ct) => {
+        for (var n = 0; n < NumberOfRepeat; n++) {
+          Assert.That(
+            async () => await handler.HandleCommandAsync(client, CreateCommandLineSequence("unknown"), ct),
+            Throws.Nothing
+          );
+
+          Assert.That(client.Responses.Count, Is.EqualTo(1));
+          Assert.That(
+            client.Responses[0],
+            Is.EqualTo("# Unknown command. Try cap, list, nodes, config, fetch, version or quit\n")
+          );
+
+          client.ClearResponses();
+        }
+
+        return default;
+      }
+    );
   }
 }
