@@ -12,7 +12,7 @@ public static class MuninProtocolHandlerFactory {
   /// </summary>
   public static IMuninProtocolHandlerFactory Default { get; } = new DefaultFactory();
 
-  private class DefaultFactory : IMuninProtocolHandlerFactory {
+  private sealed class DefaultFactory : IMuninProtocolHandlerFactory {
     public ValueTask<IMuninProtocolHandler> CreateAsync(
       IMuninNodeProfile profile,
       CancellationToken cancellationToken
