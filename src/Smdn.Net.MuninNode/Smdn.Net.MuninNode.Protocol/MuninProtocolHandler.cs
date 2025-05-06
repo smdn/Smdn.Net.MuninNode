@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 #if SYSTEM_TEXT_ENCODINGEXTENSIONS
@@ -23,11 +24,35 @@ namespace Smdn.Net.MuninNode.Protocol;
 /// Provides the default implementation of <see cref="IMuninProtocolHandler"/>.
 /// </summary>
 public class MuninProtocolHandler : IMuninProtocolHandler {
-  private readonly ArrayBufferWriter<byte> responseBuffer = new(initialCapacity: 1024); // TODO: define best initial capacity
+  /// <summary>
+  /// A simple object pool for <see cref="ArrayBufferWriter{T}"/>.
+  /// </summary>
+  /// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/collections/thread-safe/how-to-create-an-object-pool"/>
+  private sealed class ArrayBufferWriterPool(int initialCapacity) {
+    private readonly ConcurrentBag<ArrayBufferWriter<byte>> pool = new();
+
+    public ArrayBufferWriter<byte> Take()
+      => pool.TryTake(out var item) ? item : new(initialCapacity: initialCapacity);
+
+    public void Return(ArrayBufferWriter<byte> item)
+    {
+      if (item is null)
+        throw new ArgumentNullException(nameof(item));
+
+#if SYSTEM_BUFFERS_ARRAYBUFFERWRITER_RESETWRITTENCOUNT
+      item.ResetWrittenCount();
+#else
+      item.Clear();
+#endif
+
+      pool.Add(item);
+    }
+  }
 
   private readonly IMuninNodeProfile profile;
   private readonly string banner;
   private readonly string versionInformation;
+  private readonly ArrayBufferWriterPool bufferWriterPool = new(initialCapacity: 256);
 
   public MuninProtocolHandler(
     IMuninNodeProfile profile
@@ -230,36 +255,34 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
 
     cancellationToken.ThrowIfCancellationRequested();
 
+    var writer = bufferWriterPool.Take();
+
     try {
       foreach (var responseLine in responseLines) {
 #if SYSTEM_TEXT_ENCODINGEXTENSIONS
-        _ = profile.Encoding.GetBytes(responseLine, responseBuffer);
+        _ = profile.Encoding.GetBytes(responseLine, writer);
 
-        responseBuffer.Write(EndOfLine.Span);
+        writer.Write(EndOfLine.Span);
 #else
         var totalByteCount = profile.Encoding.GetByteCount(responseLine) + EndOfLine.Length;
-        var buffer = responseBuffer.GetMemory(totalByteCount);
+        var buffer = writer.GetMemory(totalByteCount);
         var bytesWritten = profile.Encoding.GetBytes(responseLine, buffer.Span);
 
         EndOfLine.CopyTo(buffer[bytesWritten..]);
 
         bytesWritten += EndOfLine.Length;
 
-        responseBuffer.Advance(bytesWritten);
+        writer.Advance(bytesWritten);
 #endif
       }
 
       await client.SendAsync(
-        buffer: responseBuffer.WrittenMemory,
+        buffer: writer.WrittenMemory,
         cancellationToken: cancellationToken
       ).ConfigureAwait(false);
     }
     finally {
-#if SYSTEM_BUFFERS_ARRAYBUFFERWRITER_RESETWRITTENCOUNT
-      responseBuffer.ResetWrittenCount();
-#else
-      responseBuffer.Clear();
-#endif
+      bufferWriterPool.Return(writer);
     }
   }
 
