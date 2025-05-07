@@ -414,15 +414,11 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
 
     var responseLines = new List<string>(capacity: plugin.DataSource.Fields.Count + 1);
 
-    foreach (var field in plugin.DataSource.Fields) {
-      var valueString = await field.GetFormattedValueStringAsync(
-        cancellationToken: cancellationToken
-      ).ConfigureAwait(false);
-
-      responseLines.Add($"{field.Name}.value {valueString}");
-    }
-
-    responseLines.Add(".");
+    await WriteFetchResponseAsync(
+      plugin.DataSource,
+      responseLines,
+      cancellationToken
+    ).ConfigureAwait(false);
 
     await SendResponseAsync(
       client: client,
@@ -431,22 +427,22 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     ).ConfigureAwait(false);
   }
 
-  private static string? TranslateFieldDrawAttribute(PluginFieldGraphStyle style)
-    => style switch {
-      PluginFieldGraphStyle.Default => null,
-      PluginFieldGraphStyle.Area => "AREA",
-      PluginFieldGraphStyle.Stack => "STACK",
-      PluginFieldGraphStyle.AreaStack => "AREASTACK",
-      PluginFieldGraphStyle.Line => "LINE",
-      PluginFieldGraphStyle.LineWidth1 => "LINE1",
-      PluginFieldGraphStyle.LineWidth2 => "LINE2",
-      PluginFieldGraphStyle.LineWidth3 => "LINE3",
-      PluginFieldGraphStyle.LineStack => "LINESTACK",
-      PluginFieldGraphStyle.LineStackWidth1 => "LINE1STACK",
-      PluginFieldGraphStyle.LineStackWidth2 => "LINE2STACK",
-      PluginFieldGraphStyle.LineStackWidth3 => "LINE3STACK",
-      _ => throw new InvalidOperationException($"undefined draw attribute value: ({(int)style} {style})"),
-    };
+  private static async ValueTask WriteFetchResponseAsync(
+    IPluginDataSource dataSource,
+    List<string> responseLines,
+    CancellationToken cancellationToken
+  )
+  {
+    foreach (var field in dataSource.Fields) {
+      var valueString = await field.GetFormattedValueStringAsync(
+        cancellationToken: cancellationToken
+      ).ConfigureAwait(false);
+
+      responseLines.Add($"{field.Name}.value {valueString}");
+    }
+
+    responseLines.Add(".");
+  }
 
   /// <summary>
   /// Handles the <c>config</c> command and sends back a response.
@@ -478,15 +474,51 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
 
     var responseLines = new List<string>(capacity: 20);
 
+    WriteConfigResponse(
+      plugin,
+      responseLines
+    );
+
+    return SendResponseAsync(
+      client: client,
+      responseLines: responseLines,
+      cancellationToken: cancellationToken
+    );
+  }
+
+  private static void WriteConfigResponse(
+    IPlugin plugin,
+    List<string> responseLines
+  )
+  {
+    /*
+     * global attributes
+     */
     responseLines.AddRange(
       plugin.GraphAttributes.EnumerateAttributes()
     );
 
+    /*
+     * data source attributes
+     */
+    WriteConfigDataSourceAttributes(
+      plugin.DataSource,
+      responseLines
+    );
+
+    responseLines.Add(".");
+  }
+
+  private static void WriteConfigDataSourceAttributes(
+    IPluginDataSource dataSource,
+    List<string> responseLines
+  )
+  {
     // The fields referenced by {fieldname}.negative must be defined ahread of others,
     // and thus lists the negative field settings first.
     // Otherwise, the following error occurs when generating the graph.
     // "[RRD ERROR] Unable to graph /var/cache/munin/www/XXX.png : undefined v name XXXXXXXXXXXXXX"
-    var orderedFields = plugin.DataSource.Fields.OrderBy(f => IsNegativeField(f, plugin.DataSource.Fields) ? 0 : 1);
+    var orderedFields = dataSource.Fields.OrderBy(f => IsNegativeField(f, dataSource.Fields) ? 0 : 1);
 
     foreach (var field in orderedFields) {
       var fieldAttrs = field.Attributes;
@@ -494,19 +526,17 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
 
       responseLines.Add($"{field.Name}.label {fieldAttrs.Label}");
 
-      var draw = TranslateFieldDrawAttribute(fieldAttrs.GraphStyle);
+      if (TranslateFieldDrawAttribute(fieldAttrs.GraphStyle) is string attrDraw)
+        responseLines.Add($"{field.Name}.draw {attrDraw}");
 
-      if (draw is not null)
-        responseLines.Add($"{field.Name}.draw {draw}");
+      if (FormatNormalValueRange(fieldAttrs.NormalRangeForWarning) is string attrWarning)
+        responseLines.Add($"{field.Name}.warning {attrWarning}");
 
-      if (fieldAttrs.NormalRangeForWarning.HasValue)
-        AddFieldValueRange("warning", fieldAttrs.NormalRangeForWarning);
-
-      if (fieldAttrs.NormalRangeForCritical.HasValue)
-        AddFieldValueRange("critical", fieldAttrs.NormalRangeForCritical);
+      if (FormatNormalValueRange(fieldAttrs.NormalRangeForCritical) is string attrCritical)
+        responseLines.Add($"{field.Name}.critical {attrCritical}");
 
       if (!string.IsNullOrEmpty(fieldAttrs.NegativeFieldName)) {
-        var negativeField = plugin.DataSource.Fields.FirstOrDefault(
+        var negativeField = dataSource.Fields.FirstOrDefault(
           f => string.Equals(fieldAttrs.NegativeFieldName, f.Name, StringComparison.Ordinal)
         );
 
@@ -515,34 +545,45 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       }
 
       // this field is defined as the negative field of other field, so should not be graphed
-      if (IsNegativeField(field, plugin.DataSource.Fields))
+      if (IsNegativeField(field, dataSource.Fields))
         graph = false;
 
       if (graph is bool drawGraph)
         responseLines.Add($"{field.Name}.graph {(drawGraph ? "yes" : "no")}");
-
-      void AddFieldValueRange(string attr, PluginFieldNormalValueRange range)
-      {
-        if (range.Min.HasValue && range.Max.HasValue)
-          responseLines.Add($"{field.Name}.{attr} {range.Min.Value}:{range.Max.Value}");
-        else if (range.Min.HasValue)
-          responseLines.Add($"{field.Name}.{attr} {range.Min.Value}:");
-        else if (range.Max.HasValue)
-          responseLines.Add($"{field.Name}.{attr} :{range.Max.Value}");
-      }
     }
-
-    responseLines.Add(".");
-
-    return SendResponseAsync(
-      client: client,
-      responseLines: responseLines,
-      cancellationToken: cancellationToken
-    );
 
     static bool IsNegativeField(IPluginField field, IReadOnlyCollection<IPluginField> fields)
       => fields.Any(
         f => string.Equals(field.Name, f.Attributes.NegativeFieldName, StringComparison.Ordinal)
       );
+
+    static string? FormatNormalValueRange(PluginFieldNormalValueRange range)
+    {
+      if (range.Min.HasValue && range.Max.HasValue)
+        return $"{range.Min.Value}:{range.Max.Value}";
+      else if (range.Min.HasValue)
+        return $"{range.Min.Value}:";
+      else if (range.Max.HasValue)
+        return $":{range.Max.Value}";
+      else
+        return null;
+    }
+
+    static string? TranslateFieldDrawAttribute(PluginFieldGraphStyle style)
+      => style switch {
+        PluginFieldGraphStyle.Default => null,
+        PluginFieldGraphStyle.Area => "AREA",
+        PluginFieldGraphStyle.Stack => "STACK",
+        PluginFieldGraphStyle.AreaStack => "AREASTACK",
+        PluginFieldGraphStyle.Line => "LINE",
+        PluginFieldGraphStyle.LineWidth1 => "LINE1",
+        PluginFieldGraphStyle.LineWidth2 => "LINE2",
+        PluginFieldGraphStyle.LineWidth3 => "LINE3",
+        PluginFieldGraphStyle.LineStack => "LINESTACK",
+        PluginFieldGraphStyle.LineStackWidth1 => "LINE1STACK",
+        PluginFieldGraphStyle.LineStackWidth2 => "LINE2STACK",
+        PluginFieldGraphStyle.LineStackWidth3 => "LINE3STACK",
+        _ => throw new InvalidOperationException($"undefined draw attribute value: ({(int)style} {style})"),
+      };
   }
 }
