@@ -25,34 +25,50 @@ namespace Smdn.Net.MuninNode.Protocol;
 /// </summary>
 public class MuninProtocolHandler : IMuninProtocolHandler {
   /// <summary>
-  /// A simple object pool for <see cref="ArrayBufferWriter{T}"/>.
+  /// A simple object pool.
   /// </summary>
   /// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/collections/thread-safe/how-to-create-an-object-pool"/>
-  private sealed class ArrayBufferWriterPool(int initialCapacity) {
-    private readonly ConcurrentBag<ArrayBufferWriter<byte>> pool = new();
+  private class ObjectPool<T>(Func<T> create, Action<T> clear) {
+    private readonly ConcurrentBag<T> pool = new();
 
-    public ArrayBufferWriter<byte> Take()
-      => pool.TryTake(out var item) ? item : new(initialCapacity: initialCapacity);
+    public T Take()
+      => pool.TryTake(out var item) ? item : create();
 
-    public void Return(ArrayBufferWriter<byte> item)
+    public void Return(T item)
     {
       if (item is null)
         throw new ArgumentNullException(nameof(item));
 
-#if SYSTEM_BUFFERS_ARRAYBUFFERWRITER_RESETWRITTENCOUNT
-      item.ResetWrittenCount();
-#else
-      item.Clear();
-#endif
-
       pool.Add(item);
+
+      clear(item);
     }
+  }
+
+  private sealed class ArrayBufferWriterPool(int initialCapacity)
+    : ObjectPool<ArrayBufferWriter<byte>>(
+      create: () => new ArrayBufferWriter<byte>(initialCapacity: initialCapacity),
+      clear: item
+#if SYSTEM_BUFFERS_ARRAYBUFFERWRITER_RESETWRITTENCOUNT
+        => item.ResetWrittenCount()
+#else
+        => item.Clear()
+#endif
+    ) {
+  }
+
+  private sealed class StringListPool(int initialCapacity)
+    : ObjectPool<List<string>>(
+      create: () => new List<string>(capacity: initialCapacity),
+      clear: item => item.Clear()
+    ) {
   }
 
   private readonly IMuninNodeProfile profile;
   private readonly string banner;
   private readonly string versionInformation;
   private readonly ArrayBufferWriterPool bufferWriterPool = new(initialCapacity: 256);
+  private readonly StringListPool responseLineListPool = new(initialCapacity: 32);
 
   public MuninProtocolHandler(
     IMuninNodeProfile profile
@@ -412,19 +428,24 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       return;
     }
 
-    var responseLines = new List<string>(capacity: plugin.DataSource.Fields.Count + 1);
+    var responseLines = responseLineListPool.Take();
 
-    await WriteFetchResponseAsync(
-      plugin.DataSource,
-      responseLines,
-      cancellationToken
-    ).ConfigureAwait(false);
+    try {
+      await WriteFetchResponseAsync(
+        plugin.DataSource,
+        responseLines,
+        cancellationToken
+      ).ConfigureAwait(false);
 
-    await SendResponseAsync(
-      client: client,
-      responseLines: responseLines,
-      cancellationToken: cancellationToken
-    ).ConfigureAwait(false);
+      await SendResponseAsync(
+        client: client,
+        responseLines: responseLines,
+        cancellationToken: cancellationToken
+      ).ConfigureAwait(false);
+    }
+    finally {
+      responseLineListPool.Return(responseLines);
+    }
   }
 
   private static async ValueTask WriteFetchResponseAsync(
@@ -472,18 +493,23 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       );
     }
 
-    var responseLines = new List<string>(capacity: 20);
+    var responseLines = responseLineListPool.Take();
 
-    WriteConfigResponse(
-      plugin,
-      responseLines
-    );
+    try {
+      WriteConfigResponse(
+        plugin,
+        responseLines
+      );
 
-    return SendResponseAsync(
-      client: client,
-      responseLines: responseLines,
-      cancellationToken: cancellationToken
-    );
+      return SendResponseAsync(
+        client: client,
+        responseLines: responseLines,
+        cancellationToken: cancellationToken
+      );
+    }
+    finally {
+      responseLineListPool.Return(responseLines);
+    }
   }
 
   private static void WriteConfigResponse(
