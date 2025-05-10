@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
 
+using Smdn.Net.MuninNode.Protocol;
 using Smdn.Net.MuninNode.Transport;
 using Smdn.Net.MuninPlugin;
 
@@ -21,7 +22,7 @@ namespace Smdn.Net.MuninNode;
 /// Provides an extensible base class with basic Munin-Node functionality.
 /// </summary>
 /// <seealso href="https://guide.munin-monitoring.org/en/latest/node/index.html">The Munin node</seealso>
-public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposable {
+public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposable, IAsyncDisposable {
   private static readonly Version DefaultNodeVersion = new(1, 0, 0, 0);
 
   public abstract IPluginProvider PluginProvider { get; }
@@ -32,10 +33,16 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
   protected ILogger? Logger { get; }
 
+  private readonly IMuninProtocolHandlerFactory protocolHandlerFactory;
   private readonly IMuninNodeListenerFactory listenerFactory;
   private readonly IAccessRule? accessRule;
 
+  private IMuninProtocolHandler? protocolHandler;
   private IMuninNodeListener? listener;
+
+#pragma warning disable CA1033 // override GetNodeProfile() instead if necessary
+  string IMuninNodeProfile.Version => NodeVersion.ToString();
+#pragma warning restore CA1033
 
   /// <summary>
   /// Gets the <see cref="IMuninNodeListener"/> used by the current instance.
@@ -78,7 +85,23 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     IAccessRule? accessRule,
     ILogger? logger
   )
+    : this(
+      protocolHandlerFactory: MuninProtocolHandlerFactory.Default,
+      listenerFactory: listenerFactory ?? throw new ArgumentNullException(nameof(listenerFactory)),
+      accessRule: accessRule,
+      logger: logger
+    )
   {
+  }
+
+  protected NodeBase(
+    IMuninProtocolHandlerFactory protocolHandlerFactory,
+    IMuninNodeListenerFactory listenerFactory,
+    IAccessRule? accessRule,
+    ILogger? logger
+  )
+  {
+    this.protocolHandlerFactory = protocolHandlerFactory ?? throw new ArgumentNullException(nameof(protocolHandlerFactory));
     this.listenerFactory = listenerFactory ?? throw new ArgumentNullException(nameof(listenerFactory));
     this.accessRule = accessRule;
     Logger = logger;
@@ -105,6 +128,13 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
     listener = null;
 
+    if (protocolHandler is IAsyncDisposable asyncDisposableProtocolHandler)
+      await asyncDisposableProtocolHandler.DisposeAsync().ConfigureAwait(false);
+    else if (protocolHandler is IDisposable disposableProtocolHandler)
+      disposableProtocolHandler.Dispose();
+
+    protocolHandler = null;
+
     disposed = true;
   }
 
@@ -115,6 +145,11 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
     listener?.Dispose();
     listener = null!;
+
+    if (protocolHandler is IDisposable disposableProtocolHandler)
+      disposableProtocolHandler.Dispose();
+
+    protocolHandler = null;
 
     disposed = true;
   }
@@ -151,6 +186,9 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
             : throw new NotSupportedException(),
       port: 0
     );
+
+  protected virtual IMuninNodeProfile GetNodeProfile()
+    => this;
 
   /// <summary>
   /// Starts the <c>Munin-Node</c> and prepares to accept connections from clients.
@@ -192,6 +230,13 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
         throw new InvalidOperationException("cannot start listener");
 
       await listener.StartAsync(cancellationToken).ConfigureAwait(false);
+
+      ThrowIfPluginProviderIsNull();
+
+      protocolHandler = await protocolHandlerFactory.CreateAsync(
+        profile: GetNodeProfile(),
+        cancellationToken: cancellationToken
+      ).ConfigureAwait(false);
 
       if (Logger is not null)
         LogStartedNode(Logger, HostName, listener.EndPoint, null);
@@ -330,31 +375,28 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     CancellationToken cancellationToken
   )
   {
+#if DEBUG
+    if (protocolHandler is null)
+      throw new InvalidOperationException($"{nameof(protocolHandler)} is not set");
+#endif
+
     cancellationToken.ThrowIfCancellationRequested();
 
-    if (Logger is not null)
-      LogSessionSendingBanner(Logger, null);
-
     try {
-      await SendBannerResponseAsync(
-        client,
-        cancellationToken
-      ).ConfigureAwait(false);
-    }
-    catch (MuninNodeClientDisconnectedException) {
       if (Logger is not null)
-        LogSessionClosedWhileSendingBanner(Logger, null);
+        LogStartingTransaction(Logger, null);
 
+#if !DEBUG
+#pragma warning disable CS8602
+#endif
+      await protocolHandler.HandleTransactionStartAsync(client, cancellationToken).ConfigureAwait(false);
+#pragma warning restore CS8602
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException) {
+      if (Logger is not null)
+        LogUnexpectedExceptionWhileStartingTransaction(Logger, ex);
       return;
     }
-#pragma warning disable CA1031
-    catch (Exception ex) {
-      if (Logger is not null)
-        LogSessionUnexpectedEceptionWhileSendingBanner(Logger, ex);
-
-      return;
-    }
-#pragma warning restore CA1031
 
     cancellationToken.ThrowIfCancellationRequested();
 
@@ -369,6 +411,7 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       LogSessionStarted(Logger, null);
 
     try {
+      // TODO: rename INodeSessionCallback to ITransactionCallback
       if (PluginProvider.SessionCallback is INodeSessionCallback pluginProviderSessionCallback)
         await pluginProviderSessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
 
@@ -396,6 +439,8 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
 
       if (PluginProvider.SessionCallback is INodeSessionCallback pluginProviderSessionCallback)
         await pluginProviderSessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+
+      await protocolHandler.HandleTransactionEndAsync(client, cancellationToken).ConfigureAwait(false);
     }
   }
 
@@ -469,6 +514,11 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
     CancellationToken cancellationToken
   )
   {
+#if DEBUG
+    if (protocolHandler is null)
+      throw new InvalidOperationException($"{nameof(protocolHandler)} is not set");
+#endif
+
     for (; ; ) {
       cancellationToken.ThrowIfCancellationRequested();
 
@@ -480,11 +530,15 @@ public abstract partial class NodeBase : IMuninNode, IDisposable, IAsyncDisposab
       try {
         while (TryReadLine(ref buffer, out var line)) {
           // process each line read from the client as a single request command line
-          await RespondToCommandAsync(
+#if !DEBUG
+#pragma warning disable CS8602
+#endif
+          await protocolHandler.HandleCommandAsync(
             client: client,
             commandLine: line,
             cancellationToken: cancellationToken
           ).ConfigureAwait(false);
+#pragma warning restore CS8602
         }
       }
       catch (MuninNodeClientDisconnectedException) {

@@ -51,20 +51,15 @@ partial class NodeBase {
     eventId: default, // TODO
     formatString: "Access refused."
   );
-  private static readonly Action<ILogger, Exception?> LogSessionSendingBanner = LoggerMessage.Define(
+  private static readonly Action<ILogger, Exception?> LogStartingTransaction = LoggerMessage.Define(
     LogLevel.Debug,
     eventId: default, // TODO
-    formatString: "Sending banner."
+    formatString: "Starting transaction."
   );
-  private static readonly Action<ILogger, Exception?> LogSessionClosedWhileSendingBanner = LoggerMessage.Define(
-    LogLevel.Warning,
-    eventId: default, // TODO
-    formatString: "Client closed session while sending banner."
-  );
-  private static readonly Action<ILogger, Exception?> LogSessionUnexpectedEceptionWhileSendingBanner = LoggerMessage.Define(
+  private static readonly Action<ILogger, Exception?> LogUnexpectedExceptionWhileStartingTransaction = LoggerMessage.Define(
     LogLevel.Error,
     eventId: default, // TODO
-    formatString: "Unexpected exception occured while sending banner."
+    formatString: "Unexpected exception occured while starting transaction."
   );
   private static readonly Action<ILogger, Exception?> LogSessionStarted = LoggerMessage.Define(
     LogLevel.Information,
