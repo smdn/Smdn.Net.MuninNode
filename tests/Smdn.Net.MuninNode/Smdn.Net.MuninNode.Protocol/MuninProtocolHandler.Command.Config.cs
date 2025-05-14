@@ -550,4 +550,75 @@ partial class MuninProtocolHandlerTests {
       cancellationToken: cancellationToken
     );
   }
+
+  [Test]
+  public void HandleCommandAsync_ConfigCommand_DirtyConfig(
+    [Values] bool enableDirtyConfig
+  )
+  {
+    const string PluginName = "plugin";
+    const string GraphTitle = "title";
+    const string FieldLabel = "field";
+    const string ExpectedFieldValue = "0";
+
+    var handler = new MuninProtocolHandler(
+      profile: new MuninNodeProfile() {
+        PluginProvider = new PluginProvider([
+          PluginFactory.CreatePlugin(
+            name: PluginName,
+            fieldLabel: "field",
+            fetchFieldValue: static () => 0.0,
+            graphAttributes: new PluginGraphAttributes(
+              title: GraphTitle,
+              category: "test",
+              verticalLabel: "test",
+              scale: false,
+              arguments: "--args"
+            )
+          )
+        ])
+      }
+    );
+
+    var client = new PseudoMuninNodeClient();
+
+    // cap command
+    Assert.That(
+      async () => await handler.HandleCommandAsync(
+        client,
+        commandLine: CreateCommandLineSequence(enableDirtyConfig ? "cap dirtyconfig" : "cap")
+      ),
+      Throws.Nothing
+    );
+
+    Assert.That(client.Responses.Count, Is.EqualTo(1));
+    Assert.That(
+      client.Responses[0],
+      Is.EqualTo(enableDirtyConfig ? "cap dirtyconfig\n" : "cap\n")
+    );
+
+    client.ClearResponses();
+
+    // config command
+    Assert.That(
+      async () => await handler.HandleCommandAsync(
+        client,
+        commandLine: CreateCommandLineSequence($"config {PluginName}")
+      ),
+      Throws.Nothing
+    );
+
+    Assert.That(client.Responses.Count, Is.EqualTo(1));
+
+    Assert.That(client.Responses[0], Does.Contain($"graph_title {GraphTitle}\n"));
+    Assert.That(client.Responses[0], Does.Contain($"{FieldLabel}.label {FieldLabel}\n"));
+
+    if (enableDirtyConfig)
+      Assert.That(client.Responses[0], Does.Contain($"{FieldLabel}.value {ExpectedFieldValue}\n"));
+    else
+      Assert.That(client.Responses[0], Does.Not.Contain($"{FieldLabel}.value "));
+
+    Assert.That(client.Responses[0], Does.EndWith("\n.\n"));
+    Assert.That(client.Responses[0].TrimEnd(), Does.Not.Contain("\n.\n"));
+  }
 }

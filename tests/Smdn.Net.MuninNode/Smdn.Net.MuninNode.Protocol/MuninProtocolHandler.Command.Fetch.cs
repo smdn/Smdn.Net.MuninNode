@@ -127,4 +127,71 @@ partial class MuninProtocolHandlerTests {
       },
       cancellationToken: TestContext.CurrentContext.CancellationToken
     );
+
+  [Test]
+  public void HandleCommandAsync_FetchCommand_DirtyConfig(
+    [Values] bool enableDirtyConfig
+  )
+  {
+    const string PluginName = "plugin";
+    const string FieldLabel = "field";
+    const string ExpectedFieldValue = "0";
+
+    var handler = new MuninProtocolHandler(
+      profile: new MuninNodeProfile() {
+        PluginProvider = new PluginProvider([
+          PluginFactory.CreatePlugin(
+            name: PluginName,
+            fieldLabel: "field",
+            fetchFieldValue: static () => 0.0,
+            graphAttributes: new PluginGraphAttributes(
+              title: "title",
+              category: "test",
+              verticalLabel: "test",
+              scale: false,
+              arguments: "--args"
+            )
+          )
+        ])
+      }
+    );
+
+    var client = new PseudoMuninNodeClient();
+
+    // cap command
+    Assert.That(
+      async () => await handler.HandleCommandAsync(
+        client,
+        commandLine: CreateCommandLineSequence(enableDirtyConfig ? "cap dirtyconfig" : "cap")
+      ),
+      Throws.Nothing
+    );
+
+    Assert.That(client.Responses.Count, Is.EqualTo(1));
+    Assert.That(
+      client.Responses[0],
+      Is.EqualTo(enableDirtyConfig ? "cap dirtyconfig\n" : "cap\n")
+    );
+
+    client.ClearResponses();
+
+    // fetch command
+    Assert.That(
+      async () => await handler.HandleCommandAsync(
+        client,
+        commandLine: CreateCommandLineSequence($"fetch {PluginName}")
+      ),
+      Throws.Nothing
+    );
+
+    Assert.That(client.Responses.Count, Is.EqualTo(1));
+    Assert.That(
+      client.Responses[0],
+      Does.Contain($"{FieldLabel}.value {ExpectedFieldValue}\n"),
+      "independent of dirtyconfig status"
+    );
+
+    Assert.That(client.Responses[0], Does.EndWith("\n.\n"));
+    Assert.That(client.Responses[0].TrimEnd(), Does.Not.Contain("\n.\n"));
+  }
 }

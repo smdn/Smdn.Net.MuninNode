@@ -70,6 +70,16 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
   private readonly ArrayBufferWriterPool bufferWriterPool = new(initialCapacity: 256);
   private readonly StringListPool responseLineListPool = new(initialCapacity: 32);
 
+  /// <summary>
+  /// Gets a value indicating whether the <c>munin master</c> supports
+  /// <c>dirtyconfig</c> protocol extension and enables it.
+  /// </summary>
+  /// <seealso cref="HandleCapCommandAsync"/>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html">
+  /// Protocol extension: dirtyconfig
+  /// </seealso>
+  protected bool IsDirtyConfigEnabled { get; private set; }
+
   public MuninProtocolHandler(
     IMuninNodeProfile profile
   )
@@ -168,6 +178,29 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     }
 
     return false;
+  }
+
+  private static bool SequenceContains(
+    ReadOnlySequence<byte> sequence,
+    ReadOnlySpan<byte> value
+  )
+  {
+    var reader = new SequenceReader<byte>(sequence);
+
+    const byte SP = (byte)' ';
+
+    // read the given sequence by dividing the SP as a delimiter
+    for (; ; ) {
+      if (!reader.TryReadTo(out ReadOnlySequence<byte> segment, delimiter: SP, advancePastDelimiter: false))
+        return reader.IsNext(value, advancePast: true);
+
+      var segmentReader = new SequenceReader<byte>(segment);
+
+      if (segmentReader.IsNext(value, advancePast: false))
+        return true;
+
+      reader.Advance(1); // SP
+    }
   }
 
   /// <inheritdoc cref="IMuninProtocolHandler.HandleCommandAsync"/>
@@ -359,8 +392,16 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
   /// <summary>
   /// Handles the <c>cap</c> command and sends back a response.
   /// </summary>
+  /// <remarks>
+  /// This implementation does not set the value of the <c>MUNIN_CAP_DIRTYCONFIG</c> environment variable,
+  /// even when <c>dirtyconfig</c> is enabled.
+  /// </remarks>
+  /// <seealso cref="IsDirtyConfigEnabled"/>
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
   /// Data exchange between master and node - `cap` command
+  /// </seealso>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html">
+  /// Protocol extension: dirtyconfig
   /// </seealso>
   protected virtual ValueTask HandleCapCommandAsync(
     IMuninNodeClient client,
@@ -368,12 +409,15 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     CancellationToken cancellationToken
   )
   {
+    // 'Protocol extension: dirtyconfig' (https://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html)
+    IsDirtyConfigEnabled = SequenceContains(arguments, "dirtyconfig"u8);
+
     // TODO: multigraph (https://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
-    // TODO: dirtyconfig (https://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html)
-    // XXX: ignores capability arguments
+    var responseLine = IsDirtyConfigEnabled ? "cap dirtyconfig" : "cap";
+
     return SendResponseAsync(
       client: client ?? throw new ArgumentNullException(nameof(client)),
-      responseLine: "cap",
+      responseLine: responseLine,
       cancellationToken: cancellationToken
     );
   }
@@ -437,6 +481,8 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
         cancellationToken
       ).ConfigureAwait(false);
 
+      responseLines.Add(".");
+
       await SendResponseAsync(
         client: client,
         responseLines: responseLines,
@@ -461,8 +507,6 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
 
       responseLines.Add($"{field.Name}.value {valueString}");
     }
-
-    responseLines.Add(".");
   }
 
   /// <summary>
@@ -493,22 +537,37 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       );
     }
 
-    var responseLines = responseLineListPool.Take();
+    return HandleConfigCommandAsyncCore();
 
-    try {
-      WriteConfigResponse(
-        plugin,
-        responseLines
-      );
+    async ValueTask HandleConfigCommandAsyncCore()
+    {
+      var responseLines = responseLineListPool.Take();
 
-      return SendResponseAsync(
-        client: client,
-        responseLines: responseLines,
-        cancellationToken: cancellationToken
-      );
-    }
-    finally {
-      responseLineListPool.Return(responseLines);
+      try {
+        WriteConfigResponse(
+          plugin,
+          responseLines
+        );
+
+        if (IsDirtyConfigEnabled) {
+          await WriteFetchResponseAsync(
+            dataSource: plugin.DataSource,
+            responseLines: responseLines,
+            cancellationToken: cancellationToken
+          ).ConfigureAwait(false);
+        }
+
+        responseLines.Add(".");
+
+        await SendResponseAsync(
+          client: client,
+          responseLines: responseLines,
+          cancellationToken: cancellationToken
+        ).ConfigureAwait(false);
+      }
+      finally {
+        responseLineListPool.Return(responseLines);
+      }
     }
   }
 
@@ -531,8 +590,6 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       plugin.DataSource,
       responseLines
     );
-
-    responseLines.Add(".");
   }
 
   private static void WriteConfigDataSourceAttributes(
