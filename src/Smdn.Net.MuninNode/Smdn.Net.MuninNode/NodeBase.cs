@@ -492,7 +492,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
 #pragma warning disable CA1031
       catch (Exception ex) {
         if (Logger is not null)
-          LogSessionUnexpectedEceptionWhileReceiving(Logger, ex);
+          LogSessionUnexpectedExceptionWhileReceiving(Logger, ex);
         break; // swallow
       }
 #pragma warning restore CA1031
@@ -554,7 +554,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
 #pragma warning disable CA1031
       catch (Exception ex) {
         if (Logger is not null)
-          LogSessionUnexpectedEceptionWhileProcessingCommand(Logger, ex);
+          LogSessionUnexpectedExceptionWhileProcessingCommand(Logger, ex);
 
         await client.DisconnectAsync(cancellationToken).ConfigureAwait(false);
 

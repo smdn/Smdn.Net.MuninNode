@@ -76,7 +76,7 @@ partial class NodeBase {
     eventId: default, // TODO
     formatString: "Operation canceled while receiving."
   );
-  private static readonly Action<ILogger, Exception?> LogSessionUnexpectedEceptionWhileReceiving = LoggerMessage.Define(
+  private static readonly Action<ILogger, Exception?> LogSessionUnexpectedExceptionWhileReceiving = LoggerMessage.Define(
     LogLevel.Error,
     eventId: default, // TODO
     formatString: "Unexpected exception occured while receiving."
@@ -91,7 +91,7 @@ partial class NodeBase {
     eventId: default, // TODO
     formatString: "Operation canceled while processing command."
   );
-  private static readonly Action<ILogger, Exception?> LogSessionUnexpectedEceptionWhileProcessingCommand = LoggerMessage.Define(
+  private static readonly Action<ILogger, Exception?> LogSessionUnexpectedExceptionWhileProcessingCommand = LoggerMessage.Define(
     LogLevel.Error,
     eventId: default, // TODO
     formatString: "Unexpected exception occured while processing command."
