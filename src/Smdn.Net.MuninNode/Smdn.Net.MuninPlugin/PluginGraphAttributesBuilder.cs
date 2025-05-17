@@ -287,9 +287,63 @@ public partial class PluginGraphAttributesBuilder {
    */
 
   /// <summary>Sets a value for the <c>graph_category</c> to <c>other</c>.</summary>
-  /// <seealso cref="WithCategory"/>
+  /// <seealso cref="WithCategory(string)"/>
+  /// <seealso cref="WithCategory(WellKnownCategory)"/>
   public PluginGraphAttributesBuilder WithCategoryOther()
-    => WithCategory("other");
+    => WithCategory(WellKnownCategory.Other);
+
+  /// <summary>Sets a value for the <c>graph_category</c>.</summary>
+  /// <seealso cref="WithCategory(string)"/>
+  public PluginGraphAttributesBuilder WithCategory(WellKnownCategory category)
+    => WithCategory(TranslateWellKnownCategory(category));
+
+  private static string TranslateWellKnownCategory(WellKnownCategory category)
+    => category switch {
+      WellKnownCategory.OneSec => "1sec",
+      WellKnownCategory.AntiVirus => "antivirus",
+      WellKnownCategory.ApplicationServer => "appserver",
+      WellKnownCategory.AuthenticationServer => "auth",
+      WellKnownCategory.Backup => "backup",
+      WellKnownCategory.MessagingServer => "chat",
+      WellKnownCategory.Cloud => "cloud",
+      WellKnownCategory.ContentManagementSystem => "cms",
+      WellKnownCategory.Cpu => "cpu",
+      WellKnownCategory.DatabaseServer => "db",
+      WellKnownCategory.DevelopmentTool => "devel",
+      WellKnownCategory.Disk => "disk",
+      WellKnownCategory.Dns => "dns",
+      WellKnownCategory.FileTransfer => "filetransfer",
+      WellKnownCategory.Forum => "forum",
+      WellKnownCategory.FileSystem => "fs",
+      WellKnownCategory.NetworkFiltering => "fw",
+      WellKnownCategory.GameServer => "games",
+      WellKnownCategory.HighThroughputComputing => "htc",
+      WellKnownCategory.LoadBalancer => "loadbalancer",
+      WellKnownCategory.Mail => "mail",
+      WellKnownCategory.MailingList => "mailinglist",
+      WellKnownCategory.Memory => "memory",
+      WellKnownCategory.Munin => "munin",
+      WellKnownCategory.Network => "network",
+      WellKnownCategory.Other => "other",
+      WellKnownCategory.Printing => "printing",
+      WellKnownCategory.Process => "processes",
+      WellKnownCategory.Radio => "radio",
+      WellKnownCategory.StorageAreaNetwork => "san",
+      WellKnownCategory.Search => "search",
+      WellKnownCategory.Security => "security",
+      WellKnownCategory.Sensor => "sensors",
+      WellKnownCategory.SpamFilter => "spamfilter",
+      WellKnownCategory.Streaming => "streaming",
+      WellKnownCategory.System => "system",
+      WellKnownCategory.TimeSynchronization => "time",
+      WellKnownCategory.Video => "tv",
+      WellKnownCategory.Virtualization => "virtualization",
+      WellKnownCategory.VoIP => "voip",
+      WellKnownCategory.WebServer => "webserver",
+      WellKnownCategory.Wiki => "wiki",
+      WellKnownCategory.Wireless => "wireless",
+      _ => throw new ArgumentException("not a well known category", paramName: nameof(category)),
+    };
 
   /// <summary>Sets a value for the <c>graph_width</c> and <c>graph_height</c>.</summary>
   /// <seealso cref="WithWidth"/>

@@ -9,6 +9,7 @@ namespace Smdn.Net.MuninPlugin;
 /// Categories are used by Munin master to classify plugin graphs.
 /// </summary>
 /// <seealso cref="PluginGraphAttributes.Category"/>
+/// <seealso cref="PluginGraphAttributesBuilder.WithCategory(WellKnownCategory)"/>
 /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/graph-category.html">Plugin graph categories</seealso>
 /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/graph-category.html#well-known-categories">Well known categories</seealso>
 public enum WellKnownCategory {

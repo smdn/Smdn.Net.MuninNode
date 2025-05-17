@@ -383,6 +383,67 @@ public partial class PluginGraphAttributesBuilderTests {
       ["graph_title title", $"graph_category other"]
     );
 
+  private static System.Collections.IEnumerable YieldTestCases_WithCategory_WellKnownCategory()
+  {
+    foreach (var testCase in new[] {
+      new { Category = WellKnownCategory.OneSec, StringRepresentation = "1sec" },
+      new { Category = WellKnownCategory.AntiVirus, StringRepresentation = "antivirus" },
+      new { Category = WellKnownCategory.ApplicationServer, StringRepresentation = "appserver" },
+      new { Category = WellKnownCategory.AuthenticationServer, StringRepresentation = "auth" },
+      new { Category = WellKnownCategory.Backup, StringRepresentation = "backup" },
+      new { Category = WellKnownCategory.MessagingServer, StringRepresentation = "chat" },
+      new { Category = WellKnownCategory.Cloud, StringRepresentation = "cloud" },
+      new { Category = WellKnownCategory.ContentManagementSystem, StringRepresentation = "cms" },
+      new { Category = WellKnownCategory.Cpu, StringRepresentation = "cpu" },
+      new { Category = WellKnownCategory.DatabaseServer, StringRepresentation = "db" },
+      new { Category = WellKnownCategory.DevelopmentTool, StringRepresentation = "devel" },
+      new { Category = WellKnownCategory.Disk, StringRepresentation = "disk" },
+      new { Category = WellKnownCategory.Dns, StringRepresentation = "dns" },
+      new { Category = WellKnownCategory.FileTransfer, StringRepresentation = "filetransfer" },
+      new { Category = WellKnownCategory.Forum, StringRepresentation = "forum" },
+      new { Category = WellKnownCategory.FileSystem, StringRepresentation = "fs" },
+      new { Category = WellKnownCategory.NetworkFiltering, StringRepresentation = "fw" },
+      new { Category = WellKnownCategory.GameServer, StringRepresentation = "games" },
+      new { Category = WellKnownCategory.HighThroughputComputing, StringRepresentation = "htc" },
+      new { Category = WellKnownCategory.LoadBalancer, StringRepresentation = "loadbalancer" },
+      new { Category = WellKnownCategory.Mail, StringRepresentation = "mail" },
+      new { Category = WellKnownCategory.MailingList, StringRepresentation = "mailinglist" },
+      new { Category = WellKnownCategory.Memory, StringRepresentation = "memory" },
+      new { Category = WellKnownCategory.Munin, StringRepresentation = "munin" },
+      new { Category = WellKnownCategory.Network, StringRepresentation = "network" },
+      new { Category = WellKnownCategory.Other, StringRepresentation = "other" },
+      new { Category = WellKnownCategory.Printing, StringRepresentation = "printing" },
+      new { Category = WellKnownCategory.Process, StringRepresentation = "processes" },
+      new { Category = WellKnownCategory.Radio, StringRepresentation = "radio" },
+      new { Category = WellKnownCategory.StorageAreaNetwork, StringRepresentation = "san" },
+      new { Category = WellKnownCategory.Search, StringRepresentation = "search" },
+      new { Category = WellKnownCategory.Security, StringRepresentation = "security" },
+      new { Category = WellKnownCategory.Sensor, StringRepresentation = "sensors" },
+      new { Category = WellKnownCategory.SpamFilter, StringRepresentation = "spamfilter" },
+      new { Category = WellKnownCategory.Streaming, StringRepresentation = "streaming" },
+      new { Category = WellKnownCategory.System, StringRepresentation = "system" },
+      new { Category = WellKnownCategory.TimeSynchronization, StringRepresentation = "time" },
+      new { Category = WellKnownCategory.Video, StringRepresentation = "tv" },
+      new { Category = WellKnownCategory.Virtualization, StringRepresentation = "virtualization" },
+      new { Category = WellKnownCategory.VoIP, StringRepresentation = "voip" },
+      new { Category = WellKnownCategory.WebServer, StringRepresentation = "webserver" },
+      new { Category = WellKnownCategory.Wiki, StringRepresentation = "wiki" },
+      new { Category = WellKnownCategory.Wireless, StringRepresentation = "wireless" },
+    }) {
+      yield return new object[] { testCase.Category, $"graph_category {testCase.StringRepresentation}" };
+    }
+  }
+
+  [TestCaseSource(nameof(YieldTestCases_WithCategory_WellKnownCategory))]
+  public void WithCategory_WellKnownCategory(
+    WellKnownCategory category,
+    string expectedGraphCategoryAttribute
+  )
+    => AssertBuiltGraphAttributes(
+      new PluginGraphAttributesBuilder("title").WithCategory(category),
+      ["graph_title title", expectedGraphCategoryAttribute]
+    );
+
   [TestCase(-1, -1, "width")]
   [TestCase(-1, 0, "width")]
   [TestCase(0, -1, "width")]
