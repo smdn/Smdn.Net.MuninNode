@@ -13,4 +13,15 @@ internal static class ArgumentOutOfRangeExceptionShim {
       throw Smdn.ExceptionUtils.CreateArgumentMustBeGreaterThan(other, paramName: paramName, actualValue: value);
 #endif
   }
+
+  public static void ThrowIfLessThan<T>(T value, T other, string? paramName)
+    where T : IComparable<T>
+  {
+#if SYSTEM_ARGUMENTOUTOFRANGEEXCEPTION_THROWIFLESSTHAN
+    ArgumentOutOfRangeException.ThrowIfLessThan(value, other, paramName);
+#else
+    if (value.CompareTo(other) <= 0)
+      throw Smdn.ExceptionUtils.CreateArgumentMustBeGreaterThanOrEqualTo(other, paramName: paramName, actualValue: value);
+#endif
+  }
 }

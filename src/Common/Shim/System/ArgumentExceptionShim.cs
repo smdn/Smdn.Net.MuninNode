@@ -14,4 +14,18 @@ internal static class ArgumentExceptionShim {
       throw Smdn.ExceptionUtils.CreateArgumentMustBeNonEmptyString(paramName: paramName);
 #endif
   }
+
+  public static void ThrowIfNullOrWhiteSpace(string? argument, string? paramName)
+  {
+#if SYSTEM_ARGUMENTEXCEPTION_THROWIFNULLORWHITESPACE
+    ArgumentException.ThrowIfNullOrWhiteSpace(argument, paramName);
+#else
+    if (string.IsNullOrWhiteSpace(argument)) {
+      if (argument is null)
+        throw new ArgumentNullException(paramName: paramName);
+      else
+        throw new ArgumentException($"{paramName} is empty or consists only of white-space characters", paramName: paramName);
+    }
+#endif
+  }
 }
