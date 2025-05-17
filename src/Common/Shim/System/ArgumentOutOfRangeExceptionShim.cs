@@ -6,7 +6,7 @@ internal static class ArgumentOutOfRangeExceptionShim {
   public static void ThrowIfLessThanOrEqual<T>(T value, T other, string? paramName)
     where T : IComparable<T>
   {
-#if NET8_0_OR_GREATER
+#if SYSTEM_ARGUMENTOUTOFRANGEEXCEPTION_THROWIFLESSTHANOREQUAL
     ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, other, paramName);
 #else
     if (value.CompareTo(other) <= 0)
