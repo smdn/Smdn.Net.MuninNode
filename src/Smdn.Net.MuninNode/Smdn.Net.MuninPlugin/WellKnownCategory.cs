@@ -13,6 +13,11 @@ namespace Smdn.Net.MuninPlugin;
 /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/graph-category.html">Plugin graph categories</seealso>
 /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/graph-category.html#well-known-categories">Well known categories</seealso>
 public enum WellKnownCategory {
+  /// <remarks>
+  /// Description of Category: "Plugins that address seldom used products. Category /other/ is the default, so if the plugin doesn’t declare a category, it is also shown here.".
+  /// </remarks>
+  Other = 0,
+
   OneSec,
 
   /// <remarks>
@@ -134,11 +139,6 @@ public enum WellKnownCategory {
   /// Description of Category: "General networking metrics.".
   /// </remarks>
   Network,
-
-  /// <remarks>
-  /// Description of Category: "Plugins that address seldom used products. Category /other/ is the default, so if the plugin doesn’t declare a category, it is also shown here.".
-  /// </remarks>
-  Other,
 
   /// <remarks>
   /// Description of Category: "Monitor printers and print jobs".
