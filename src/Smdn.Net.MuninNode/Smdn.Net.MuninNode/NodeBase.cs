@@ -489,6 +489,9 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
           LogSessionOperationCanceledWhileReceiving(Logger, null);
         throw;
       }
+      catch (ObjectDisposedException) {
+        break; // client has been disconnected/disposed
+      }
 #pragma warning disable CA1031
       catch (Exception ex) {
         if (Logger is not null)
