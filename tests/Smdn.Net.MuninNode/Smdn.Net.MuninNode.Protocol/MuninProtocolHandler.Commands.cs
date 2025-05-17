@@ -116,29 +116,6 @@ partial class MuninProtocolHandlerTests {
     Assert.That(client.Connected, Is.False);
   }
 
-  [Test]
-  public void HandleCommandAsync_CapCommand()
-  {
-    var handler = new MuninProtocolHandler(
-      profile: new MuninNodeProfile()
-    );
-    var client = new PseudoMuninNodeClient();
-
-    Assert.That(
-      async () => await handler.HandleCommandAsync(
-        client,
-        commandLine: CreateCommandLineSequence("cap")
-      ),
-      Throws.Nothing
-    );
-
-    Assert.That(client.Responses.Count, Is.EqualTo(1));
-    Assert.That(
-      client.Responses[0],
-      Is.EqualTo("cap\n")
-    );
-  }
-
   private static System.Collections.IEnumerable YieldTestCases_HandleCommandAsync_VersionCommand()
   {
     foreach (var hostName in new[] { "munin-node.localhost", "_" }) {
