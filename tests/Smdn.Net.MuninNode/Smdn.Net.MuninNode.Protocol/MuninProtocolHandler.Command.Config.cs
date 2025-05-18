@@ -60,7 +60,7 @@ partial class MuninProtocolHandlerTests {
     var plugins = new[] {
       PluginFactory.CreatePlugin(
         "plugin1",
-        graphAttrs,
+        (IPluginGraphAttributes)graphAttrs,
         new[] {
           PluginFactory.CreateField("plugin1field1", static () => 1.1),
           PluginFactory.CreateField("plugin1field2", PluginFieldGraphStyle.LineWidth3, static () => 1.2)
@@ -71,7 +71,7 @@ partial class MuninProtocolHandlerTests {
         "plugin2field1",
         PluginFieldGraphStyle.Area,
         static () => 2.1,
-        graphAttrs
+        (IPluginGraphAttributes)graphAttrs
       ),
     };
 
@@ -159,7 +159,7 @@ partial class MuninProtocolHandlerTests {
 
       var plugin = PluginFactory.CreatePlugin(
         "plugin1",
-        graphAttrs,
+        (IPluginGraphAttributes)graphAttrs,
         new[] {
           PluginFactory.CreateField("plugin1field1", static () => 1.1),
         }
@@ -203,7 +203,7 @@ partial class MuninProtocolHandlerTests {
 
       var plugin = PluginFactory.CreatePlugin(
         "plugin2",
-        graphAttrs,
+        (IPluginGraphAttributes)graphAttrs,
         new[] {
           PluginFactory.CreateField("plugin1field1", static () => 2.1),
         }
@@ -259,7 +259,7 @@ partial class MuninProtocolHandlerTests {
 
       var plugin = PluginFactory.CreatePlugin(
         "plugin1",
-        graphAttrs,
+        (IPluginGraphAttributes)graphAttrs,
         new[] {
           PluginFactory.CreateField("plugin1field1", static () => 1.1),
           PluginFactory.CreateField("plugin1field2", PluginFieldGraphStyle.LineWidth3, static () => 1.2)
@@ -315,7 +315,7 @@ partial class MuninProtocolHandlerTests {
 
       var plugin = PluginFactory.CreatePlugin(
         "plugin1",
-        graphAttrs,
+        (IPluginGraphAttributes)graphAttrs,
         new[] {
           PluginFactory.CreateField("plugin1field1", static () => 1.1),
           PluginFactory.CreateField("plugin1field2", PluginFieldGraphStyle.LineWidth3, static () => 1.2)
@@ -385,7 +385,7 @@ partial class MuninProtocolHandlerTests {
         "field",
         style,
         static () => 0.0,
-        graphAttrs
+        (IPluginGraphAttributes)graphAttrs
       ),
     };
 
@@ -465,7 +465,7 @@ partial class MuninProtocolHandlerTests {
     var plugins = new[] {
       PluginFactory.CreatePlugin(
         "plugin",
-        graphAttrs,
+        (IPluginGraphAttributes)graphAttrs,
         new[] { field }
       ),
     };
@@ -506,7 +506,7 @@ partial class MuninProtocolHandlerTests {
     var plugins = new[] {
       PluginFactory.CreatePlugin(
         "plugin",
-        graphAttrs,
+        (IPluginGraphAttributes)graphAttrs,
         new[] {
           PluginFactory.CreateField(
             name: PositiveFieldName,
@@ -568,13 +568,7 @@ partial class MuninProtocolHandlerTests {
             name: PluginName,
             fieldLabel: "field",
             fetchFieldValue: static () => 0.0,
-            graphAttributes: new PluginGraphAttributes(
-              title: GraphTitle,
-              category: "test",
-              verticalLabel: "test",
-              scale: false,
-              arguments: "--args"
-            )
+            graphAttributes: new PluginGraphAttributesBuilder(title: GraphTitle).Build()
           )
         ])
       }

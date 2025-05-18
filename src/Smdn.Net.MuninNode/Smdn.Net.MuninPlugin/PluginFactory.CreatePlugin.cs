@@ -14,7 +14,7 @@ partial class PluginFactory {
     string name,
     string fieldLabel,
     Func<double?> fetchFieldValue,
-    PluginGraphAttributes graphAttributes
+    IPluginGraphAttributes graphAttributes
   )
     => CreatePlugin(
       name: name,
@@ -30,7 +30,7 @@ partial class PluginFactory {
     string fieldLabel,
     PluginFieldGraphStyle fieldGraphStyle,
     Func<double?> fetchFieldValue,
-    PluginGraphAttributes graphAttributes
+    IPluginGraphAttributes graphAttributes
   )
     => CreatePlugin(
       name: name,
@@ -49,7 +49,7 @@ partial class PluginFactory {
   /// <summary>Create a plugin which has one field.</summary>
   public static IPlugin CreatePlugin(
     string name,
-    PluginGraphAttributes graphAttributes,
+    IPluginGraphAttributes graphAttributes,
     PluginFieldBase field
   )
     => CreatePlugin(
@@ -61,10 +61,10 @@ partial class PluginFactory {
   /// <summary>Create a plugin which has multiple fields.</summary>
   public static IPlugin CreatePlugin(
     string name,
-    PluginGraphAttributes graphAttributes,
+    IPluginGraphAttributes graphAttributes,
     IReadOnlyCollection<PluginFieldBase> fields
   )
-    => new Plugin(
+    => new DefaultPlugin(
       name: name,
       graphAttributes: graphAttributes,
       fields: fields ?? throw new ArgumentNullException(nameof(fields))
@@ -73,10 +73,10 @@ partial class PluginFactory {
   /// <summary>Create a plugin which has multiple fields.</summary>
   public static IPlugin CreatePlugin(
     string name,
-    PluginGraphAttributes graphAttributes,
+    IPluginGraphAttributes graphAttributes,
     IReadOnlyCollection<IPluginField> fields
   )
-    => new Plugin(
+    => new DefaultPlugin(
       name: name,
       graphAttributes: graphAttributes,
       fields: fields ?? throw new ArgumentNullException(nameof(fields))

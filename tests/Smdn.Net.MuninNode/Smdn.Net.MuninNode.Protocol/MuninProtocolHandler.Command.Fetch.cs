@@ -16,13 +16,7 @@ partial class MuninProtocolHandlerTests {
 #pragma warning restore IDE0040
   private static System.Collections.IEnumerable YieldTestCases_HandleCommandAsync_FetchCommand()
   {
-    var graphAttrs = new PluginGraphAttributes(
-      title: "title",
-      category: "test",
-      verticalLabel: "test",
-      scale: false,
-      arguments: "--args"
-    );
+    var graphAttrs = new PluginGraphAttributesBuilder(title: "title").Build();
 
     var plugins = new[] {
       PluginFactory.CreatePlugin(
@@ -144,13 +138,7 @@ partial class MuninProtocolHandlerTests {
             name: PluginName,
             fieldLabel: "field",
             fetchFieldValue: static () => 0.0,
-            graphAttributes: new PluginGraphAttributes(
-              title: "title",
-              category: "test",
-              verticalLabel: "test",
-              scale: false,
-              arguments: "--args"
-            )
+            graphAttributes: new PluginGraphAttributesBuilder(title: "title").Build()
           )
         ])
       }
