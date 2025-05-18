@@ -12,6 +12,7 @@ namespace Smdn.Net.MuninPlugin;
 /// </summary>
 /// <seealso cref="IPluginGraphAttributes"/>
 /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#global-attributes">Plugin reference - Global attributes</seealso>
+/// <seealso href="https://guide.munin-monitoring.org/en/latest/example/graph/graph_args.html">Recommended graph_args</seealso>
 public partial class PluginGraphAttributesBuilder {
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-title">Plugin reference - Global attributes - graph_title</seealso>
   private const string RegexTitlePattern = @"^\P{C}+\z"; // except Unicode category 'C' (all other characters)
