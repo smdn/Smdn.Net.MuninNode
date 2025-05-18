@@ -1,15 +1,15 @@
-// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-2.2.0)
+// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-2.3.0)
 //   Name: Smdn.Net.MuninNode
-//   AssemblyVersion: 2.2.0.0
-//   InformationalVersion: 2.2.0+04e5ff38096e4d62b2c9bc5a716d8b2c5a6ad72d
+//   AssemblyVersion: 2.3.0.0
+//   InformationalVersion: 2.3.0+805f911ac4e163898a8e18be3121fd9baf3a44f5
 //   TargetFramework: .NETCoreApp,Version=v8.0
 //   Configuration: Release
 //   Referenced assemblies:
 //     Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60
 //     Microsoft.Extensions.Logging.Abstractions, Version=6.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60
 //     Microsoft.Extensions.Options, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60
-//     Smdn.Fundamental.Exception, Version=3.0.0.0, Culture=neutral
 //     System.Collections, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+//     System.Collections.Concurrent, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
 //     System.ComponentModel, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
 //     System.IO.Pipelines, Version=6.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51
 //     System.Linq, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
@@ -28,12 +28,14 @@ using System.Collections.ObjectModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Smdn.Net.MuninNode;
 using Smdn.Net.MuninNode.DependencyInjection;
+using Smdn.Net.MuninNode.Protocol;
 using Smdn.Net.MuninNode.Transport;
 using Smdn.Net.MuninPlugin;
 
@@ -92,11 +94,13 @@ namespace Smdn.Net.MuninNode {
   public abstract class NodeBase :
     IAsyncDisposable,
     IDisposable,
-    IMuninNode
+    IMuninNode,
+    IMuninNodeProfile
   {
     [Obsolete("Use a constructor overload that takes IMuninNodeListenerFactory as an argument.")]
     protected NodeBase(IAccessRule? accessRule, ILogger? logger) {}
     protected NodeBase(IMuninNodeListenerFactory listenerFactory, IAccessRule? accessRule, ILogger? logger) {}
+    protected NodeBase(IMuninProtocolHandlerFactory protocolHandlerFactory, IMuninNodeListenerFactory listenerFactory, IAccessRule? accessRule, ILogger? logger) {}
 
     public virtual Encoding Encoding { get; }
     public EndPoint EndPoint { get; }
@@ -107,6 +111,7 @@ namespace Smdn.Net.MuninNode {
     protected ILogger? Logger { get; }
     public virtual Version NodeVersion { get; }
     public abstract IPluginProvider PluginProvider { get; }
+    string IMuninNodeProfile.Version { get; }
 
     public async ValueTask AcceptAsync(bool throwIfCancellationRequested, CancellationToken cancellationToken) {}
     public async ValueTask AcceptSingleSessionAsync(CancellationToken cancellationToken = default) {}
@@ -117,6 +122,7 @@ namespace Smdn.Net.MuninNode {
     public async ValueTask DisposeAsync() {}
     protected virtual async ValueTask DisposeAsyncCore() {}
     protected virtual EndPoint GetLocalEndPointToBind() {}
+    protected virtual IMuninNodeProfile GetNodeProfile() {}
     public Task RunAsync(CancellationToken cancellationToken) {}
     [Obsolete("This method will be deprecated in the future.Use IMuninNodeListenerFactory and StartAsync instead.Make sure to override CreateServerSocket if you need to use this method.")]
     public void Start() {}
@@ -158,6 +164,50 @@ namespace Smdn.Net.MuninNode.DependencyInjection {
 
   public static class IServiceCollectionExtensions {
     public static IServiceCollection AddMunin(this IServiceCollection services, Action<IMuninServiceBuilder> configure) {}
+  }
+}
+
+namespace Smdn.Net.MuninNode.Protocol {
+  public interface IMuninNodeProfile {
+    Encoding Encoding { get; }
+    string HostName { get; }
+    IPluginProvider PluginProvider { get; }
+    string Version { get; }
+  }
+
+  public interface IMuninProtocolHandler {
+    ValueTask HandleCommandAsync(IMuninNodeClient client, ReadOnlySequence<byte> commandLine, CancellationToken cancellationToken);
+    ValueTask HandleTransactionEndAsync(IMuninNodeClient client, CancellationToken cancellationToken);
+    ValueTask HandleTransactionStartAsync(IMuninNodeClient client, CancellationToken cancellationToken);
+  }
+
+  public interface IMuninProtocolHandlerFactory {
+    ValueTask<IMuninProtocolHandler> CreateAsync(IMuninNodeProfile profile, CancellationToken cancellationToken);
+  }
+
+  public class MuninProtocolHandler : IMuninProtocolHandler {
+    public MuninProtocolHandler(IMuninNodeProfile profile) {}
+
+    protected bool IsDirtyConfigEnabled { get; }
+
+    protected virtual ValueTask HandleCapCommandAsync(IMuninNodeClient client, ReadOnlySequence<byte> arguments, CancellationToken cancellationToken) {}
+    public ValueTask HandleCommandAsync(IMuninNodeClient client, ReadOnlySequence<byte> commandLine, CancellationToken cancellationToken = default) {}
+    protected virtual ValueTask HandleCommandAsyncCore(IMuninNodeClient client, ReadOnlySequence<byte> commandLine, CancellationToken cancellationToken) {}
+    protected virtual ValueTask HandleConfigCommandAsync(IMuninNodeClient client, ReadOnlySequence<byte> arguments, CancellationToken cancellationToken) {}
+    protected virtual async ValueTask HandleFetchCommandAsync(IMuninNodeClient client, ReadOnlySequence<byte> arguments, CancellationToken cancellationToken) {}
+    protected virtual ValueTask HandleListCommandAsync(IMuninNodeClient client, ReadOnlySequence<byte> arguments, CancellationToken cancellationToken) {}
+    protected virtual ValueTask HandleNodesCommandAsync(IMuninNodeClient client, CancellationToken cancellationToken) {}
+    protected virtual ValueTask HandleQuitCommandAsync(IMuninNodeClient client, CancellationToken cancellationToken) {}
+    public ValueTask HandleTransactionEndAsync(IMuninNodeClient client, CancellationToken cancellationToken = default) {}
+    protected virtual ValueTask HandleTransactionEndAsyncCore(IMuninNodeClient client, CancellationToken cancellationToken) {}
+    public ValueTask HandleTransactionStartAsync(IMuninNodeClient client, CancellationToken cancellationToken = default) {}
+    protected virtual ValueTask HandleTransactionStartAsyncCore(IMuninNodeClient client, CancellationToken cancellationToken) {}
+    protected virtual ValueTask HandleVersionCommandAsync(IMuninNodeClient client, CancellationToken cancellationToken) {}
+    protected async ValueTask SendResponseAsync(IMuninNodeClient client, IEnumerable<string> responseLines, CancellationToken cancellationToken) {}
+  }
+
+  public static class MuninProtocolHandlerFactory {
+    public static IMuninProtocolHandlerFactory Default { get; }
   }
 }
 
@@ -242,6 +292,52 @@ namespace Smdn.Net.MuninPlugin {
     Stack = 2,
   }
 
+  public enum WellKnownCategory : int {
+    AntiVirus = 2,
+    ApplicationServer = 3,
+    AuthenticationServer = 4,
+    Backup = 5,
+    Cloud = 7,
+    ContentManagementSystem = 8,
+    Cpu = 9,
+    DatabaseServer = 10,
+    DevelopmentTool = 11,
+    Disk = 12,
+    Dns = 13,
+    FileSystem = 16,
+    FileTransfer = 14,
+    Forum = 15,
+    GameServer = 18,
+    HighThroughputComputing = 19,
+    LoadBalancer = 20,
+    Mail = 21,
+    MailingList = 22,
+    Memory = 23,
+    MessagingServer = 6,
+    Munin = 24,
+    Network = 25,
+    NetworkFiltering = 17,
+    OneSec = 1,
+    Other = 0,
+    Printing = 26,
+    Process = 27,
+    Radio = 28,
+    Search = 30,
+    Security = 31,
+    Sensor = 32,
+    SpamFilter = 33,
+    StorageAreaNetwork = 29,
+    Streaming = 34,
+    System = 35,
+    TimeSynchronization = 36,
+    Video = 37,
+    Virtualization = 38,
+    VoIP = 39,
+    WebServer = 40,
+    Wiki = 41,
+    Wireless = 42,
+  }
+
   public sealed class AggregatePluginProvider :
     ReadOnlyCollection<IPluginProvider>,
     INodeSessionCallback,
@@ -283,10 +379,20 @@ namespace Smdn.Net.MuninPlugin {
     public static IPluginField CreateField(string label, PluginFieldGraphStyle graphStyle, PluginFieldNormalValueRange normalRangeForWarning, PluginFieldNormalValueRange normalRangeForCritical, Func<double?> fetchValue) {}
     public static IPluginField CreateField(string name, string label, PluginFieldGraphStyle graphStyle, PluginFieldNormalValueRange normalRangeForWarning, PluginFieldNormalValueRange normalRangeForCritical, Func<double?> fetchValue) {}
     public static IPluginField CreateField(string name, string label, PluginFieldGraphStyle graphStyle, PluginFieldNormalValueRange normalRangeForWarning, PluginFieldNormalValueRange normalRangeForCritical, string? negativeFieldName, Func<double?> fetchValue) {}
+    public static IPlugin CreatePlugin(string name, IPluginGraphAttributes graphAttributes, IReadOnlyCollection<IPluginField> fields) {}
+    public static IPlugin CreatePlugin(string name, IPluginGraphAttributes graphAttributes, IReadOnlyCollection<PluginFieldBase> fields) {}
+    public static IPlugin CreatePlugin(string name, IPluginGraphAttributes graphAttributes, PluginFieldBase field) {}
+    [Obsolete("Use overloads that accept IPluginGraphAttributes instead.")]
     public static IPlugin CreatePlugin(string name, PluginGraphAttributes graphAttributes, IReadOnlyCollection<IPluginField> fields) {}
+    [Obsolete("Use overloads that accept IPluginGraphAttributes instead.")]
     public static IPlugin CreatePlugin(string name, PluginGraphAttributes graphAttributes, IReadOnlyCollection<PluginFieldBase> fields) {}
+    [Obsolete("Use overloads that accept IPluginGraphAttributes instead.")]
     public static IPlugin CreatePlugin(string name, PluginGraphAttributes graphAttributes, PluginFieldBase field) {}
+    public static IPlugin CreatePlugin(string name, string fieldLabel, Func<double?> fetchFieldValue, IPluginGraphAttributes graphAttributes) {}
+    [Obsolete("Use overloads that accept IPluginGraphAttributes instead.")]
     public static IPlugin CreatePlugin(string name, string fieldLabel, Func<double?> fetchFieldValue, PluginGraphAttributes graphAttributes) {}
+    public static IPlugin CreatePlugin(string name, string fieldLabel, PluginFieldGraphStyle fieldGraphStyle, Func<double?> fetchFieldValue, IPluginGraphAttributes graphAttributes) {}
+    [Obsolete("Use overloads that accept IPluginGraphAttributes instead.")]
     public static IPlugin CreatePlugin(string name, string fieldLabel, PluginFieldGraphStyle fieldGraphStyle, Func<double?> fetchFieldValue, PluginGraphAttributes graphAttributes) {}
   }
 
@@ -322,6 +428,40 @@ namespace Smdn.Net.MuninPlugin {
     public int? Width { get; }
 
     public IEnumerable<string> EnumerateAttributes() {}
+  }
+
+  public class PluginGraphAttributesBuilder {
+    public static Regex RegexCategory { get; }
+    public static Regex RegexTitle { get; }
+
+    public PluginGraphAttributesBuilder(string title) {}
+    public PluginGraphAttributesBuilder(string title, PluginGraphAttributesBuilder baseBuilder) {}
+
+    public PluginGraphAttributesBuilder AddGraphArgument(string argument) {}
+    public IPluginGraphAttributes Build() {}
+    public PluginGraphAttributesBuilder ClearGraphArguments() {}
+    public PluginGraphAttributesBuilder DisableUnitScaling() {}
+    public PluginGraphAttributesBuilder EnableUnitScaling() {}
+    public PluginGraphAttributesBuilder HideGraph() {}
+    public PluginGraphAttributesBuilder ShowGraph() {}
+    public PluginGraphAttributesBuilder WithCategory(WellKnownCategory category) {}
+    public PluginGraphAttributesBuilder WithCategory(string category) {}
+    public PluginGraphAttributesBuilder WithCategoryOther() {}
+    public PluginGraphAttributesBuilder WithFieldOrder(IEnumerable<string> order) {}
+    public PluginGraphAttributesBuilder WithFormatString(string printf) {}
+    public PluginGraphAttributesBuilder WithGraphBinaryBase() {}
+    public PluginGraphAttributesBuilder WithGraphDecimalBase() {}
+    public PluginGraphAttributesBuilder WithGraphLimit(double lowerLimitValue, double upperLimitValue) {}
+    public PluginGraphAttributesBuilder WithGraphLogarithmic() {}
+    public PluginGraphAttributesBuilder WithGraphLowerLimit(double @value) {}
+    public PluginGraphAttributesBuilder WithGraphRigid() {}
+    public PluginGraphAttributesBuilder WithGraphUpperLimit(double @value) {}
+    public PluginGraphAttributesBuilder WithHeight(int height) {}
+    public PluginGraphAttributesBuilder WithSize(int width, int height) {}
+    public PluginGraphAttributesBuilder WithTotal(string labelForTotal) {}
+    public PluginGraphAttributesBuilder WithUpdateRate(TimeSpan updateRate) {}
+    public PluginGraphAttributesBuilder WithVerticalLabel(string verticalLabel) {}
+    public PluginGraphAttributesBuilder WithWidth(int width) {}
   }
 
   public readonly struct PluginFieldAttributes {
