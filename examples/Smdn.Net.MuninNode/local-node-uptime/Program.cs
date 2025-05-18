@@ -26,18 +26,12 @@ var plugins = new[] {
     // Set the number of minutes elapsed from the start time of the process as the 'uptime' value.
     fetchFieldValue: () => (DateTime.Now - startAt).TotalMinutes,
     // Configure the drawing on the graph for this plugin.
-    graphAttributes: new PluginGraphAttributes(
-      // 'Well known categories' are defined by Munin.
-      // See https://guide.munin-monitoring.org/en/latest/reference/graph-category.html
-      category: "system",
-      title: $"Uptime of {NodeHostName}",
-      verticalLabel: "Uptime [minutes]",
-      scale: false,
-      // Specify arguments for graph drawing. See below for more information about graph arguments:
-      //   https://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-args
-      //   https://guide.munin-monitoring.org/en/latest/example/graph/graph_args.html
-      arguments: "--base 1000 --lower-limit 0"
-    )
+    graphAttributes: new PluginGraphAttributesBuilder(title: $"Uptime of {NodeHostName}")
+      .WithCategory(WellKnownCategory.System)
+      .WithVerticalLabel("Uptime [minutes]")
+      .WithGraphDecimalBase()
+      .WithGraphLowerLimit(0)
+      .Build()
   ),
   // You can also run multiple plugins for one single node.
   // PluginFactory.CreatePlugin(name: "sensor1", ...),

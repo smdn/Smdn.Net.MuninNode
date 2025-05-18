@@ -26,13 +26,11 @@ var plugins = new[] {
       PluginFactory.CreateField(label: "value2", graphStyle: PluginFieldGraphStyle.LineStack, fetchValue: FetchValue2),
       PluginFactory.CreateField(label: "value3", graphStyle: PluginFieldGraphStyle.LineWidth2, fetchValue: FetchValue3),
     },
-    graphAttributes: new PluginGraphAttributes(
-      category: "system",
-      title: "random numbers",
-      verticalLabel: "number",
-      scale: false,
-      arguments: "--base 1000 --lower-limit 0 --upper-limit 10"
-    )
+    graphAttributes: new PluginGraphAttributesBuilder(title: "random numbers")
+      .WithCategory(WellKnownCategory.System)
+      .WithVerticalLabel("number")
+      .WithGraphLimit(0, 10)
+      .Build()
   ),
 };
 

@@ -62,13 +62,11 @@ class Program {
                 ],
                 // Configures the 'attributes' of the graph when drawn data as a graph.
                 // See: https://guide.munin-monitoring.org/en/latest/reference/plugin.html#global-attributes
-                graphAttributes: new PluginGraphAttributes(
-                  category: "sensors",
-                  title: "Temperature",
-                  verticalLabel: "Degree Celsius",
-                  scale: false,
-                  arguments: "--base 1000 --lower-limit 0 --upper-limit 50"
-                )
+                graphAttributes: new PluginGraphAttributesBuilder(title: "Temperature")
+                  .WithCategory(WellKnownCategory.Sensor)
+                  .WithVerticalLabel("Degree Celsius")
+                  .WithGraphLimit(0, 50)
+                  .Build()
               )
             );
             // One or more plug-ins can be added.
