@@ -112,6 +112,8 @@ partial class NodeBase {
       ? createHandlerValueTask.Result
       : createHandlerValueTask.AsTask().GetAwaiter().GetResult();
 
+    sessionCountdownEvent.Reset();
+
     Logger?.LogInformation("started (end point: {EndPoint})", listener.EndPoint);
   }
 }

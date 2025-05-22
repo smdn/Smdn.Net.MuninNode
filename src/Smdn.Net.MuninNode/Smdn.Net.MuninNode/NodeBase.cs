@@ -78,6 +78,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
     }
   }
 
+  private CountdownEvent sessionCountdownEvent = new(initialCount: 1);
   private bool disposed;
 
   protected NodeBase(
@@ -135,6 +136,9 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
 
     protocolHandler = null;
 
+    sessionCountdownEvent?.Dispose();
+    sessionCountdownEvent = null!;
+
     disposed = true;
   }
 
@@ -150,6 +154,9 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
       disposableProtocolHandler.Dispose();
 
     protocolHandler = null;
+
+    sessionCountdownEvent?.Dispose();
+    sessionCountdownEvent = null!;
 
     disposed = true;
   }
@@ -240,6 +247,67 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
 
       if (Logger is not null)
         LogStartedNode(Logger, HostName, listener.EndPoint, null);
+
+      sessionCountdownEvent.Reset();
+    }
+  }
+
+  /// <summary>
+  /// Stops accepting connections from clients at the <c>Munin-Node</c> currently running.
+  /// </summary>
+  /// <param name="cancellationToken">
+  /// The <see cref="CancellationToken"/> to monitor for cancellation requests.
+  /// </param>
+  /// <returns>
+  /// The <see cref="ValueTask"/> that represents the asynchronous operation,
+  /// starting the <c>Munin-Node</c> instance.
+  /// </returns>
+  /// <remarks>
+  /// If current <c>Munin-Node</c> has already stopped, this method does nothing and returns the result.
+  /// </remarks>
+  public ValueTask StopAsync(CancellationToken cancellationToken)
+  {
+    ThrowIfDisposed();
+
+    if (listener is null)
+      return default; // already stopped
+
+    return StopAsyncCore();
+
+    async ValueTask StopAsyncCore()
+    {
+      if (Logger is not null)
+        LogStoppingNode(Logger, HostName, null);
+
+      // decrement by the initial value of 1 (re)set in Start()/StartAsync()
+      sessionCountdownEvent.Signal();
+
+      try {
+        // wait for all sessions to complete
+        sessionCountdownEvent.Wait(cancellationToken);
+      }
+      catch (OperationCanceledException ex) when (cancellationToken.Equals(ex.CancellationToken)) {
+        // revert decremented counter value
+        sessionCountdownEvent.AddCount();
+
+        throw;
+      }
+
+      await listener.DisposeAsync().ConfigureAwait(false);
+
+      listener = null;
+
+      if (protocolHandler is not null) {
+        if (protocolHandler is IAsyncDisposable asyncDisposableProtocolHandler)
+          await asyncDisposableProtocolHandler.DisposeAsync().ConfigureAwait(false);
+        else if (protocolHandler is IDisposable disposableProtocolHandler)
+          disposableProtocolHandler.Dispose();
+
+        protocolHandler = null;
+      }
+
+      if (Logger is not null)
+        LogStoppedNode(Logger, HostName, null);
     }
   }
 
@@ -335,6 +403,8 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
     using var scope = Logger?.BeginScope(client.EndPoint);
 
     try {
+      sessionCountdownEvent.AddCount();
+
       cancellationToken.ThrowIfCancellationRequested();
 
       if (!CanAccept(client))
@@ -347,6 +417,8 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
     }
     finally {
       await client.DisposeAsync().ConfigureAwait(false);
+
+      sessionCountdownEvent.Signal();
 
       if (Logger is not null)
         LogAcceptedConnectionClosed(Logger, null);

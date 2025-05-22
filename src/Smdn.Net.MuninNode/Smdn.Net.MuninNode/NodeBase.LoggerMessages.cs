@@ -21,6 +21,16 @@ partial class NodeBase {
     eventId: default, // TODO
     formatString: "Started munin-node '{HostName}' on '{EndPoint}'."
   );
+  private static readonly Action<ILogger, string, Exception?> LogStoppingNode = LoggerMessage.Define<string>(
+    LogLevel.Debug,
+    eventId: default, // TODO
+    formatString: "Stopping munin-node '{HostName}'."
+  );
+  private static readonly Action<ILogger, string, Exception?> LogStoppedNode = LoggerMessage.Define<string>(
+    LogLevel.Information,
+    eventId: default, // TODO
+    formatString: "Stopped munin-node '{HostName}'."
+  );
   private static readonly Action<ILogger, Exception?> LogStartedAcceptingConnections = LoggerMessage.Define(
     LogLevel.Information,
     eventId: default, // TODO
