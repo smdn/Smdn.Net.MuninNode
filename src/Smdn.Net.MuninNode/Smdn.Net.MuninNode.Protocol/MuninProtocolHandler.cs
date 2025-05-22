@@ -597,11 +597,17 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     List<string> responseLines
   )
   {
+    var shouldHandleNegativeFields = dataSource
+      .Fields
+      .Any(static f => !string.IsNullOrEmpty(f.Attributes.NegativeFieldName));
+
     // The fields referenced by {fieldname}.negative must be defined ahread of others,
     // and thus lists the negative field settings first.
     // Otherwise, the following error occurs when generating the graph.
     // "[RRD ERROR] Unable to graph /var/cache/munin/www/XXX.png : undefined v name XXXXXXXXXXXXXX"
-    var orderedFields = dataSource.Fields.OrderBy(f => IsNegativeField(f, dataSource.Fields) ? 0 : 1);
+    IEnumerable<IPluginField> orderedFields = shouldHandleNegativeFields
+      ? dataSource.Fields.OrderBy(f => IsNegativeField(f, dataSource.Fields) ? 0 : 1)
+      : dataSource.Fields;
 
     foreach (var field in orderedFields) {
       var fieldAttrs = field.Attributes;
@@ -618,7 +624,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       if (FormatNormalValueRange(fieldAttrs.NormalRangeForCritical) is string attrCritical)
         responseLines.Add($"{field.Name}.critical {attrCritical}");
 
-      if (!string.IsNullOrEmpty(fieldAttrs.NegativeFieldName)) {
+      if (shouldHandleNegativeFields && !string.IsNullOrEmpty(fieldAttrs.NegativeFieldName)) {
         var negativeField = dataSource.Fields.FirstOrDefault(
           f => string.Equals(fieldAttrs.NegativeFieldName, f.Name, StringComparison.Ordinal)
         );
@@ -628,7 +634,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       }
 
       // this field is defined as the negative field of other field, so should not be graphed
-      if (IsNegativeField(field, dataSource.Fields))
+      if (shouldHandleNegativeFields && IsNegativeField(field, dataSource.Fields))
         graph = false;
 
       if (graph is bool drawGraph)
