@@ -29,7 +29,7 @@ This library provides APIs to run Munin-Node as a background service integrated 
 If you want to integrate with .NET Generic Host, especially if you want to implement Munin-Node running as a **Windows Services** or **systemd unit**, you can use this extension library. See [this example](./examples/Smdn.Net.MuninNode.Hosting/getting-started/) for detail.
 
 # Usage
-To use the released packge, add `<PackageReference>` to the project file.
+To use the released package, add `<PackageReference>` to the project file.
 
 ```xml
   <ItemGroup>
@@ -76,7 +76,7 @@ quit                                  <-- type `quit` to close connection
 Connection closed by foreign host.
 ```
 
-# For contributers
+# For contributors
 Contributions are appreciated!
 
 If there's a feature you would like to add or a bug you would like to fix, please read [Contribution guidelines](./CONTRIBUTING.md) and create an Issue or Pull Request.

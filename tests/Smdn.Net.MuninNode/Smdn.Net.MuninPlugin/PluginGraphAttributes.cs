@@ -116,7 +116,7 @@ public class PluginGraphAttributesTests {
   [TestCase(-1, typeof(ArgumentOutOfRangeException))]
   [TestCase(0, typeof(ArgumentOutOfRangeException))]
   [TestCase(1, null)]
-  public void Ctor_Widith(int? width, Type? expectedArgumentExceptionType)
+  public void Ctor_Width(int? width, Type? expectedArgumentExceptionType)
     => Assert.That(
       () => new PluginGraphAttributes(
         title: "title",

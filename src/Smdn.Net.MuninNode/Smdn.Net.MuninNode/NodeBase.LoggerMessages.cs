@@ -69,7 +69,7 @@ partial class NodeBase {
   private static readonly Action<ILogger, Exception?> LogUnexpectedExceptionWhileStartingTransaction = LoggerMessage.Define(
     LogLevel.Error,
     eventId: default, // TODO
-    formatString: "Unexpected exception occured while starting transaction."
+    formatString: "Unexpected exception occurred while starting transaction."
   );
   private static readonly Action<ILogger, Exception?> LogSessionStarted = LoggerMessage.Define(
     LogLevel.Information,
@@ -89,9 +89,9 @@ partial class NodeBase {
   private static readonly Action<ILogger, Exception?> LogSessionUnexpectedExceptionWhileReceiving = LoggerMessage.Define(
     LogLevel.Error,
     eventId: default, // TODO
-    formatString: "Unexpected exception occured while receiving."
+    formatString: "Unexpected exception occurred while receiving."
   );
-  private static readonly Action<ILogger, Exception?> LogSessionClientDisconnectedWhileSeinding = LoggerMessage.Define(
+  private static readonly Action<ILogger, Exception?> LogSessionClientDisconnectedWhileSending = LoggerMessage.Define(
     LogLevel.Information,
     eventId: default, // TODO
     formatString: "Client disconnected while sending."
@@ -104,7 +104,7 @@ partial class NodeBase {
   private static readonly Action<ILogger, Exception?> LogSessionUnexpectedExceptionWhileProcessingCommand = LoggerMessage.Define(
     LogLevel.Error,
     eventId: default, // TODO
-    formatString: "Unexpected exception occured while processing command."
+    formatString: "Unexpected exception occurred while processing command."
   );
 
   private static readonly Func<ILogger, string, IDisposable?> LoggerScopeForSession = LoggerMessage.DefineScope<string>(

@@ -80,7 +80,7 @@ partial class LocalNode {
   /// Creates a new instance of the <see cref="LocalNode"/> class.
   /// </summary>
   /// <param name="plugins">
-  /// The readolny collection of <see cref="IPlugin"/>s provided by this node.
+  /// The readonly collection of <see cref="IPlugin"/>s provided by this node.
   /// </param>
   /// <param name="port">
   /// The port number on which this node accepts connections.

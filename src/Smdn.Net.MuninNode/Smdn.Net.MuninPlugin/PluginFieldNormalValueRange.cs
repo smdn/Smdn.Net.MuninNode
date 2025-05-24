@@ -9,7 +9,7 @@ namespace Smdn.Net.MuninPlugin;
 /// Represents the range of normal values on the graph.
 /// </summary>
 /// <remarks>
-/// With <c>{fieldname}.warning</c> or <c>{fieldname}.ciritical</c>, you can define the upper and lower limits of values that are considered to be warning or critical.
+/// With <c>{fieldname}.warning</c> or <c>{fieldname}.critical</c>, you can define the upper and lower limits of values that are considered to be warning or critical.
 /// This type defines the upper limit, lower limit, or range that is considered to be normal value.
 /// </remarks>
 /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#fieldname-critical">Plugin reference - Field name attributes - {fieldname}.critical</seealso>

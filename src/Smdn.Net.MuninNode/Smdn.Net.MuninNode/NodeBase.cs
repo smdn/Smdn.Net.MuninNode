@@ -338,8 +338,8 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
   /// The <see cref="ValueTask" /> this method returns will never complete unless the cancellation requested by the <paramref name="cancellationToken" />.
   /// </summary>
   /// <param name="throwIfCancellationRequested">
-  /// If <see langworkd="true" />, throws an <see cref="OperationCanceledException" /> on cancellation requested.
-  /// If <see langworkd="false" />, completes the task without throwing an <see cref="OperationCanceledException" />.
+  /// If <see langword="true" />, throws an <see cref="OperationCanceledException" /> on cancellation requested.
+  /// If <see langword="false" />, completes the task without throwing an <see cref="OperationCanceledException" />.
   /// </param>
   /// <param name="cancellationToken">
   /// The <see cref="CancellationToken" /> to stop accepting sessions.
@@ -625,7 +625,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
       }
       catch (MuninNodeClientDisconnectedException) {
         if (Logger is not null)
-          LogSessionClientDisconnectedWhileSeinding(Logger, null);
+          LogSessionClientDisconnectedWhileSending(Logger, null);
         break; // expected exception
       }
       catch (OperationCanceledException) {
