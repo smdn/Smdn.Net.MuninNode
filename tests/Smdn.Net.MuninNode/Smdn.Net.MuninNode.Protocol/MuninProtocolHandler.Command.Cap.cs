@@ -57,8 +57,9 @@ partial class MuninProtocolHandlerTests {
     );
   }
 
-  private class DirtyConfigMuninProtocolHandler(IMuninNodeProfile profile) : MuninProtocolHandler(profile) {
+  private class CapCommandMuninProtocolHandler(IMuninNodeProfile profile) : MuninProtocolHandler(profile) {
     public new bool IsDirtyConfigEnabled => base.IsDirtyConfigEnabled;
+    public new bool IsMultigraphEnabled => base.IsMultigraphEnabled;
   }
 
   [TestCase("cap dirtyconfig")]
@@ -70,7 +71,7 @@ partial class MuninProtocolHandlerTests {
   [TestCase("cap x-cap  dirtyconfig")]
   public void HandleCommandAsync_CapCommand_DirtyConfig(string capCommandLine)
   {
-    var handler = new DirtyConfigMuninProtocolHandler(
+    var handler = new CapCommandMuninProtocolHandler(
       profile: new MuninNodeProfile()
     );
     var client = new PseudoMuninNodeClient();
@@ -92,5 +93,76 @@ partial class MuninProtocolHandlerTests {
     );
 
     Assert.That(handler.IsDirtyConfigEnabled, Is.True);
+  }
+
+  [TestCase("cap multigraph")]
+  [TestCase("cap  multigraph")]
+  [TestCase("cap multigraph ")]
+  [TestCase("cap multigraph x-cap")]
+  [TestCase("cap multigraph  x-cap")]
+  [TestCase("cap x-cap multigraph")]
+  [TestCase("cap x-cap  multigraph")]
+  public void HandleCommandAsync_CapCommand_Multigraph(string capCommandLine)
+  {
+    var handler = new CapCommandMuninProtocolHandler(
+      profile: new MuninNodeProfile()
+    );
+    var client = new PseudoMuninNodeClient();
+
+    Assert.That(handler.IsMultigraphEnabled, Is.False);
+
+    Assert.That(
+      async () => await handler.HandleCommandAsync(
+        client,
+        commandLine: CreateCommandLineSequence(capCommandLine)
+      ),
+      Throws.Nothing
+    );
+
+    Assert.That(client.Responses.Count, Is.EqualTo(1));
+    Assert.That(
+      client.Responses[0],
+      Is.EqualTo("cap multigraph\n")
+    );
+
+    Assert.That(handler.IsMultigraphEnabled, Is.True);
+  }
+
+  [TestCase("cap dirtyconfig multigraph", true, true, "cap dirtyconfig multigraph\n")]
+  [TestCase("cap multigraph dirtyconfig", true, true, "cap dirtyconfig multigraph\n")]
+  [TestCase("cap x-cap multigraph dirtyconfig", true, true, "cap dirtyconfig multigraph\n")]
+  [TestCase("cap multigraph x-cap dirtyconfig", true, true, "cap dirtyconfig multigraph\n")]
+  [TestCase("cap multigraph dirtyconfig x-cap", true, true, "cap dirtyconfig multigraph\n")]
+  public void HandleCommandAsync_CapCommand_CombinedCapacities(
+    string capCommandLine,
+    bool expectDirtyConfigToBeEnabled,
+    bool expectMultigraphToBeEnabled,
+    string expectedResponseLine
+  )
+  {
+    var handler = new CapCommandMuninProtocolHandler(
+      profile: new MuninNodeProfile()
+    );
+    var client = new PseudoMuninNodeClient();
+
+    Assert.That(handler.IsDirtyConfigEnabled, Is.False);
+    Assert.That(handler.IsMultigraphEnabled, Is.False);
+
+    Assert.That(
+      async () => await handler.HandleCommandAsync(
+        client,
+        commandLine: CreateCommandLineSequence(capCommandLine)
+      ),
+      Throws.Nothing
+    );
+
+    Assert.That(client.Responses.Count, Is.EqualTo(1));
+    Assert.That(
+      client.Responses[0],
+      Is.EqualTo(expectedResponseLine)
+    );
+
+    Assert.That(handler.IsDirtyConfigEnabled, Is.EqualTo(expectDirtyConfigToBeEnabled));
+    Assert.That(handler.IsMultigraphEnabled, Is.EqualTo(expectMultigraphToBeEnabled));
   }
 }

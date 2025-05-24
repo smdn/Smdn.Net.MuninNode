@@ -228,7 +228,7 @@ public partial class NodeBaseTests {
   }
 
   private class PseudoPluginWithSessionCallback : IPlugin, INodeSessionCallback {
-    public string Name => throw new NotImplementedException();
+    public string Name => "plugin";
     public IPluginGraphAttributes GraphAttributes => throw new NotImplementedException();
     public IPluginDataSource DataSource => throw new NotImplementedException();
 

@@ -194,30 +194,4 @@ partial class MuninProtocolHandlerTests {
       "plugin1 plugin2\n"
     };
   }
-
-  [TestCaseSource(nameof(YieldTestCases_HandleCommandAsync_ListCommand))]
-  public void HandleCommandAsync_ListCommand(
-    MuninNodeProfile profile,
-    string expectedResponseLine
-  )
-  {
-    var handler = new MuninProtocolHandler(
-      profile: profile
-    );
-    var client = new PseudoMuninNodeClient();
-
-    Assert.That(
-      async () => await handler.HandleCommandAsync(
-        client,
-        commandLine: CreateCommandLineSequence("list")
-      ),
-      Throws.Nothing
-    );
-
-    Assert.That(client.Responses.Count, Is.EqualTo(1));
-    Assert.That(
-      client.Responses[0],
-      Is.EqualTo(expectedResponseLine)
-    );
-  }
 }

@@ -69,6 +69,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
   private readonly string versionInformation;
   private readonly ArrayBufferWriterPool bufferWriterPool = new(initialCapacity: 256);
   private readonly StringListPool responseLineListPool = new(initialCapacity: 32);
+  private readonly Dictionary<string, IPlugin> plugins = new(StringComparer.Ordinal);
 
   /// <summary>
   /// Gets a value indicating whether the <c>munin master</c> supports
@@ -80,6 +81,21 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
   /// </seealso>
   protected bool IsDirtyConfigEnabled { get; private set; }
 
+  /// <summary>
+  /// Gets a value indicating whether the <c>munin master</c> supports
+  /// <c>multigraph</c> protocol extension and enables it.
+  /// </summary>
+  /// <seealso cref="HandleCapCommandAsync"/>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html">
+  /// Protocol extension: multiple graphs from one plugin
+  /// </seealso>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/plugin/multigraphing.html">
+  /// Multigraph plugins
+  /// </seealso>
+  protected bool IsMultigraphEnabled { get; private set; }
+
+  private string joinedPluginList = string.Empty;
+
   public MuninProtocolHandler(
     IMuninNodeProfile profile
   )
@@ -88,6 +104,24 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
 
     banner = $"# munin node at {profile.HostName}";
     versionInformation = $"munins node on {profile.HostName} version: {profile.Version}";
+
+    ReinitializePluginDictionary();
+  }
+
+  private void ReinitializePluginDictionary()
+  {
+    var flattenMultigraphPlugins = !IsMultigraphEnabled;
+
+    plugins.Clear();
+
+    foreach (var plugin in profile.PluginProvider.EnumeratePlugins(flattenMultigraphPlugins)) {
+      plugins[plugin.Name] = plugin; // duplicate plugin names are not considered
+    }
+
+    joinedPluginList = string.Join(
+      ' ',
+      profile.PluginProvider.EnumeratePlugins(flattenMultigraphPlugins).Select(static plugin => plugin.Name)
+    );
   }
 
   /// <inheritdoc cref="IMuninProtocolHandler.HandleTransactionStartAsync"/>
@@ -397,11 +431,15 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
   /// even when <c>dirtyconfig</c> is enabled.
   /// </remarks>
   /// <seealso cref="IsDirtyConfigEnabled"/>
+  /// <seealso cref="IsMultigraphEnabled"/>
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
   /// Data exchange between master and node - `cap` command
   /// </seealso>
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html">
   /// Protocol extension: dirtyconfig
+  /// </seealso>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html">
+  /// Protocol extension: multiple graphs from one plugin
   /// </seealso>
   protected virtual ValueTask HandleCapCommandAsync(
     IMuninNodeClient client,
@@ -409,17 +447,36 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     CancellationToken cancellationToken
   )
   {
+    var wasMultigraphEnabled = IsMultigraphEnabled;
+
     // 'Protocol extension: dirtyconfig' (https://guide.munin-monitoring.org/en/latest/plugin/protocol-dirtyconfig.html)
     IsDirtyConfigEnabled = SequenceContains(arguments, "dirtyconfig"u8);
 
-    // TODO: multigraph (https://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
-    var responseLine = IsDirtyConfigEnabled ? "cap dirtyconfig" : "cap";
+    // 'Protocol extension: multiple graphs from one plugin' (https://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
+    IsMultigraphEnabled = SequenceContains(arguments, "multigraph"u8);
+
+    if (IsMultigraphEnabled != wasMultigraphEnabled)
+      ReinitializePluginDictionary();
 
     return SendResponseAsync(
       client: client ?? throw new ArgumentNullException(nameof(client)),
-      responseLine: responseLine,
+      responseLine: GetCapResponseLine(IsDirtyConfigEnabled, IsMultigraphEnabled),
       cancellationToken: cancellationToken
     );
+
+    static string GetCapResponseLine(bool dirtyconfig, bool multigraph)
+    {
+      if (dirtyconfig && multigraph)
+        return "cap dirtyconfig multigraph";
+
+      if (dirtyconfig)
+        return "cap dirtyconfig";
+
+      if (multigraph)
+        return "cap multigraph";
+
+      return "cap";
+    }
   }
 
   /// <summary>
@@ -437,7 +494,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     // XXX: ignore [node] arguments
     return SendResponseAsync(
       client: client ?? throw new ArgumentNullException(nameof(client)),
-      responseLine: string.Join(" ", profile.PluginProvider.Plugins.Select(static plugin => plugin.Name)),
+      responseLine: joinedPluginList,
       cancellationToken: cancellationToken
     );
   }
@@ -458,11 +515,8 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       throw new ArgumentNullException(nameof(client));
 
     var queryItem = profile.Encoding.GetString(arguments);
-    var plugin = profile.PluginProvider.Plugins.FirstOrDefault(
-      plugin => string.Equals(queryItem, plugin.Name, StringComparison.Ordinal)
-    );
 
-    if (plugin is null) {
+    if (!plugins.TryGetValue(queryItem, out var plugin)) {
       await SendResponseAsync(
         client,
         ResponseLinesUnknownService,
@@ -475,11 +529,25 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     var responseLines = responseLineListPool.Take();
 
     try {
-      await WriteFetchResponseAsync(
-        plugin.DataSource,
-        responseLines,
-        cancellationToken
-      ).ConfigureAwait(false);
+      if (plugin is IMultigraphPlugin multigraphPlugin) {
+        // 'Protocol extension: multiple graphs from one plugin' (https://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
+        foreach (var subPlugin in multigraphPlugin.Plugins) {
+          responseLines.Add($"multigraph {subPlugin.Name}");
+
+          await WriteFetchResponseAsync(
+            subPlugin.DataSource,
+            responseLines,
+            cancellationToken
+          ).ConfigureAwait(false);
+        }
+      }
+      else {
+        await WriteFetchResponseAsync(
+          plugin.DataSource,
+          responseLines,
+          cancellationToken
+        ).ConfigureAwait(false);
+      }
 
       responseLines.Add(".");
 
@@ -525,11 +593,8 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       throw new ArgumentNullException(nameof(client));
 
     var queryItem = profile.Encoding.GetString(arguments);
-    var plugin = profile.PluginProvider.Plugins.FirstOrDefault(
-      plugin => string.Equals(queryItem, plugin.Name, StringComparison.Ordinal)
-    );
 
-    if (plugin is null) {
+    if (!plugins.TryGetValue(queryItem, out var plugin)) {
       return SendResponseAsync(
         client,
         ResponseLinesUnknownService,
@@ -544,16 +609,25 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       var responseLines = responseLineListPool.Take();
 
       try {
-        WriteConfigResponse(
-          plugin,
-          responseLines
-        );
+        if (plugin is IMultigraphPlugin multigraphPlugin) {
+          // 'Protocol extension: multiple graphs from one plugin' (https://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
+          foreach (var subPlugin in multigraphPlugin.Plugins) {
+            responseLines.Add($"multigraph {subPlugin.Name}");
 
-        if (IsDirtyConfigEnabled) {
-          await WriteFetchResponseAsync(
-            dataSource: plugin.DataSource,
-            responseLines: responseLines,
-            cancellationToken: cancellationToken
+            await WriteConfigResponseAsync(
+              subPlugin,
+              includeFetchResponse: IsDirtyConfigEnabled,
+              responseLines,
+              cancellationToken
+            ).ConfigureAwait(false);
+          }
+        }
+        else {
+          await WriteConfigResponseAsync(
+            plugin,
+            includeFetchResponse: IsDirtyConfigEnabled,
+            responseLines,
+            cancellationToken
           ).ConfigureAwait(false);
         }
 
@@ -568,6 +642,29 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       finally {
         responseLineListPool.Return(responseLines);
       }
+    }
+
+    static ValueTask WriteConfigResponseAsync(
+      IPlugin plugin,
+      bool includeFetchResponse,
+      List<string> responseLines,
+      CancellationToken cancellationToken
+    )
+    {
+      WriteConfigResponse(
+        plugin,
+        responseLines
+      );
+
+      if (includeFetchResponse) {
+        return WriteFetchResponseAsync(
+          dataSource: plugin.DataSource,
+          responseLines: responseLines,
+          cancellationToken: cancellationToken
+        );
+      }
+
+      return default;
     }
   }
 

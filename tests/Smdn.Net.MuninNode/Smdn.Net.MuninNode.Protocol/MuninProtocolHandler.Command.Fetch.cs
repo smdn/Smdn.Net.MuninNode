@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 using NUnit.Framework;
@@ -181,5 +180,112 @@ partial class MuninProtocolHandlerTests {
 
     Assert.That(client.Responses[0], Does.EndWith("\n.\n"));
     Assert.That(client.Responses[0].TrimEnd(), Does.Not.Contain("\n.\n"));
+  }
+
+  [Test]
+  public void HandleCommandAsync_FetchCommand_Multigraph(
+    [Values] bool enableMultigraph
+  )
+  {
+    const string NonMultigraphPluginName = "nonmultigraph";
+    const string NonMultigraphFieldLabel = "nonmultigraph_field";
+    const string MultigraphPluginName = "multigraph";
+    const string MultigraphSubPluginName = "multigraph_sub";
+    const string MultigraphFieldLabel = "multigraph_field";
+    const string ExpectedFieldValue = "0";
+
+    var handler = new MuninProtocolHandler(
+      profile: new MuninNodeProfile() {
+        PluginProvider = new PluginProvider([
+          PluginFactory.CreatePlugin(
+            name: NonMultigraphPluginName,
+            fieldLabel: NonMultigraphFieldLabel,
+            fetchFieldValue: static () => 0.0,
+            graphAttributes: new PluginGraphAttributesBuilder(title: "title").Build()
+          ),
+          new MultigraphPlugin(
+            name: MultigraphPluginName,
+            plugins: [
+              PluginFactory.CreatePlugin(
+                name: MultigraphSubPluginName,
+                fieldLabel: MultigraphFieldLabel,
+                fetchFieldValue: static () => 0.0,
+                graphAttributes: new PluginGraphAttributesBuilder(title: "title").Build()
+              )
+            ]
+          )
+        ])
+      }
+    );
+
+    var client = new PseudoMuninNodeClient();
+
+    // cap command
+    Assert.That(
+      async () => await handler.HandleCommandAsync(
+        client,
+        commandLine: CreateCommandLineSequence(enableMultigraph ? "cap multigraph" : "cap")
+      ),
+      Throws.Nothing
+    );
+
+    Assert.That(client.Responses.Count, Is.EqualTo(1));
+    Assert.That(
+      client.Responses[0],
+      Is.EqualTo(enableMultigraph ? "cap multigraph\n" : "cap\n")
+    );
+
+    client.ClearResponses();
+
+    // fetch command (against the multigraph plugin)
+    Assert.That(
+      async () => await handler.HandleCommandAsync(
+        client,
+        commandLine: CreateCommandLineSequence($"fetch {(enableMultigraph ? MultigraphPluginName : MultigraphSubPluginName)}")
+      ),
+      Throws.Nothing
+    );
+
+    Assert.That(client.Responses.Count, Is.EqualTo(1));
+    Assert.That(
+      client.Responses[0],
+      enableMultigraph
+        ? Does.Contain($"multigraph {MultigraphSubPluginName}\n{MultigraphFieldLabel}.value {ExpectedFieldValue}\n")
+        : Does.Contain($"{MultigraphFieldLabel}.value {ExpectedFieldValue}\n")
+    );
+
+    client.ClearResponses();
+
+    // fetch command (against the plugin that is multigraph but not listed)
+    Assert.That(
+      async () => await handler.HandleCommandAsync(
+        client,
+        commandLine: CreateCommandLineSequence($"fetch {(enableMultigraph ? MultigraphSubPluginName : MultigraphPluginName)}")
+      ),
+      Throws.Nothing
+    );
+
+    Assert.That(client.Responses.Count, Is.EqualTo(1));
+    Assert.That(
+      client.Responses[0],
+      Is.EqualTo("# Unknown service\n.\n")
+    );
+
+    client.ClearResponses();
+
+    // fetch command (against the non-multigraph plugin)
+    Assert.That(
+      async () => await handler.HandleCommandAsync(
+        client,
+        commandLine: CreateCommandLineSequence($"fetch {NonMultigraphPluginName}")
+      ),
+      Throws.Nothing
+    );
+
+    Assert.That(client.Responses.Count, Is.EqualTo(1));
+    Assert.That(
+      client.Responses[0],
+      Does.Contain($"{NonMultigraphFieldLabel}.value {ExpectedFieldValue}\n")
+    );
   }
 }
