@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
@@ -487,9 +488,8 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
       if (PluginProvider.SessionCallback is INodeSessionCallback pluginProviderSessionCallback)
         await pluginProviderSessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
 
-      foreach (var plugin in PluginProvider.Plugins) {
-        if (plugin.SessionCallback is INodeSessionCallback pluginSessionCallback)
-          await pluginSessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+      foreach (var pluginSessionCallback in EnumerateSessionCallbackForPlugins(PluginProvider)) {
+        await pluginSessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
       }
 
       // https://docs.microsoft.com/ja-jp/dotnet/standard/io/pipelines
@@ -504,15 +504,22 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
         LogSessionClosed(Logger, null);
     }
     finally {
-      foreach (var plugin in PluginProvider.Plugins) {
-        if (plugin.SessionCallback is INodeSessionCallback pluginSessionCallback)
-          await pluginSessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+      foreach (var pluginSessionCallback in EnumerateSessionCallbackForPlugins(PluginProvider)) {
+        await pluginSessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
       }
 
       if (PluginProvider.SessionCallback is INodeSessionCallback pluginProviderSessionCallback)
         await pluginProviderSessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
 
       await protocolHandler.HandleTransactionEndAsync(client, cancellationToken).ConfigureAwait(false);
+    }
+
+    static IEnumerable<INodeSessionCallback> EnumerateSessionCallbackForPlugins(IPluginProvider pluginProvider)
+    {
+      foreach (var plugin in pluginProvider.EnumeratePlugins(flattenMultigraphPlugins: true)) {
+        if (plugin.SessionCallback is INodeSessionCallback pluginSessionCallback)
+          yield return pluginSessionCallback;
+      }
     }
   }
 

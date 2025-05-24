@@ -19,6 +19,14 @@ namespace Smdn.Net.MuninNode.Protocol;
 
 [TestFixture]
 public partial class MuninProtocolHandlerTests {
+  private class MultigraphPlugin(string name, IReadOnlyCollection<IPlugin> plugins) : IMultigraphPlugin {
+    public string Name { get; } = name;
+    public IReadOnlyCollection<IPlugin> Plugins { get; } = plugins;
+    public IPluginDataSource DataSource => throw new NotSupportedException();
+    public IPluginGraphAttributes GraphAttributes => throw new NotSupportedException();
+    public INodeSessionCallback? SessionCallback => throw new NotSupportedException();
+  }
+
   private class PluginProvider(IReadOnlyCollection<IPlugin> plugins) : IPluginProvider {
     public IReadOnlyCollection<IPlugin> Plugins { get; } = plugins;
     public INodeSessionCallback? SessionCallback => null;
