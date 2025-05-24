@@ -1,7 +1,7 @@
-// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-2.3.0)
+// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-2.4.0)
 //   Name: Smdn.Net.MuninNode
-//   AssemblyVersion: 2.3.0.0
-//   InformationalVersion: 2.3.0+805f911ac4e163898a8e18be3121fd9baf3a44f5
+//   AssemblyVersion: 2.4.0.0
+//   InformationalVersion: 2.4.0+6578cec572157dafbc9518cc746aae28f7f1ce6d
 //   TargetFramework: .NETStandard,Version=v2.1
 //   Configuration: Release
 //   Referenced assemblies:
@@ -120,6 +120,7 @@ namespace Smdn.Net.MuninNode {
     [Obsolete("This method will be deprecated in the future.Use IMuninNodeListenerFactory and StartAsync instead.Make sure to override CreateServerSocket if you need to use this method.")]
     public void Start() {}
     public ValueTask StartAsync(CancellationToken cancellationToken = default) {}
+    public ValueTask StopAsync(CancellationToken cancellationToken = default) {}
     protected void ThrowIfDisposed() {}
     protected void ThrowIfPluginProviderIsNull() {}
   }
@@ -182,6 +183,7 @@ namespace Smdn.Net.MuninNode.Protocol {
     public MuninProtocolHandler(IMuninNodeProfile profile) {}
 
     protected bool IsDirtyConfigEnabled { get; }
+    protected bool IsMultigraphEnabled { get; }
 
     protected virtual ValueTask HandleCapCommandAsync(IMuninNodeClient client, ReadOnlySequence<byte> arguments, CancellationToken cancellationToken) {}
     public ValueTask HandleCommandAsync(IMuninNodeClient client, ReadOnlySequence<byte> commandLine, CancellationToken cancellationToken = default) {}
@@ -196,7 +198,7 @@ namespace Smdn.Net.MuninNode.Protocol {
     public ValueTask HandleTransactionStartAsync(IMuninNodeClient client, CancellationToken cancellationToken = default) {}
     protected virtual ValueTask HandleTransactionStartAsyncCore(IMuninNodeClient client, CancellationToken cancellationToken) {}
     protected virtual ValueTask HandleVersionCommandAsync(IMuninNodeClient client, CancellationToken cancellationToken) {}
-    protected async ValueTask SendResponseAsync(IMuninNodeClient client, IEnumerable<string> responseLines, CancellationToken cancellationToken) {}
+    protected ValueTask SendResponseAsync(IMuninNodeClient client, IEnumerable<string> responseLines, CancellationToken cancellationToken) {}
   }
 
   public static class MuninProtocolHandlerFactory {
@@ -238,6 +240,10 @@ namespace Smdn.Net.MuninNode.Transport {
 }
 
 namespace Smdn.Net.MuninPlugin {
+  public interface IMultigraphPlugin : IPlugin {
+    IReadOnlyCollection<IPlugin> Plugins { get; }
+  }
+
   public interface INodeSessionCallback {
     ValueTask ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken);
     ValueTask ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken);
@@ -343,6 +349,16 @@ namespace Smdn.Net.MuninPlugin {
 
     async ValueTask INodeSessionCallback.ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken) {}
     async ValueTask INodeSessionCallback.ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken) {}
+  }
+
+  public class MultigraphPlugin : IMultigraphPlugin {
+    public MultigraphPlugin(string name, IReadOnlyCollection<IPlugin> plugins) {}
+
+    public IPluginDataSource DataSource { get; }
+    public IPluginGraphAttributes GraphAttributes { get; }
+    public string Name { get; }
+    public IReadOnlyCollection<IPlugin> Plugins { get; }
+    public INodeSessionCallback? SessionCallback { get; }
   }
 
   public class Plugin :
