@@ -266,7 +266,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
   /// <remarks>
   /// If current <c>Munin-Node</c> has already stopped, this method does nothing and returns the result.
   /// </remarks>
-  public ValueTask StopAsync(CancellationToken cancellationToken)
+  public ValueTask StopAsync(CancellationToken cancellationToken = default)
   {
     ThrowIfDisposed();
 
