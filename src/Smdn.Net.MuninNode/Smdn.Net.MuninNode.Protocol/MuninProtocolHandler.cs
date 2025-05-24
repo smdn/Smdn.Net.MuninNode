@@ -303,11 +303,6 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     }
   }
 
-  private static readonly string[] ResponseLinesUnknownService = [
-    "# Unknown service",
-    ".",
-  ];
-
   private ValueTask SendResponseAsync(
     IMuninNodeClient client,
     string responseLine,
@@ -398,6 +393,29 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     finally {
       bufferWriterPool.Return(writer);
     }
+  }
+
+  private static readonly ReadOnlyMemory<byte> UnknownServiceResponse = "# Unknown service\n.\n"u8.ToArray();
+
+  private static ValueTask SendUnknownServiceResponseAsync(
+    IMuninNodeClient client,
+    CancellationToken cancellationToken
+  )
+  {
+    if (client is null)
+      throw new ArgumentNullException(nameof(client));
+
+#if SYSTEM_THREADING_TASKS_VALUETASK_FROMCANCELED
+    if (cancellationToken.IsCancellationRequested)
+      return ValueTask.FromCanceled(cancellationToken);
+#else
+    cancellationToken.ThrowIfCancellationRequested();
+#endif
+
+    return client.SendAsync(
+      UnknownServiceResponse,
+      cancellationToken
+    );
   }
 
   /// <summary>
@@ -548,9 +566,8 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     var queryItem = profile.Encoding.GetString(arguments);
 
     if (!plugins.TryGetValue(queryItem, out var plugin)) {
-      await SendResponseAsync(
+      await SendUnknownServiceResponseAsync(
         client,
-        ResponseLinesUnknownService,
         cancellationToken
       ).ConfigureAwait(false);
 
@@ -626,9 +643,8 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     var queryItem = profile.Encoding.GetString(arguments);
 
     if (!plugins.TryGetValue(queryItem, out var plugin)) {
-      return SendResponseAsync(
+      return SendUnknownServiceResponseAsync(
         client,
-        ResponseLinesUnknownService,
         cancellationToken
       );
     }
