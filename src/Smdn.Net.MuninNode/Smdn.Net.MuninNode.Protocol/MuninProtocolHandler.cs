@@ -5,9 +5,7 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-#if SYSTEM_TEXT_ENCODINGEXTENSIONS
 using System.Text;
-#endif
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -57,9 +55,9 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     ) {
   }
 
-  private sealed class StringListPool(int initialCapacity)
-    : ObjectPool<List<string>>(
-      create: () => new List<string>(capacity: initialCapacity),
+  private sealed class StringBuilderPool(int initialCapacity)
+    : ObjectPool<StringBuilder>(
+      create: () => new StringBuilder(capacity: initialCapacity),
       clear: item => item.Clear()
     ) {
   }
@@ -68,7 +66,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
   private readonly string banner;
   private readonly string versionInformation;
   private readonly ArrayBufferWriterPool bufferWriterPool = new(initialCapacity: 256);
-  private readonly StringListPool responseLineListPool = new(initialCapacity: 32);
+  private readonly StringBuilderPool responseBuilderPool = new(initialCapacity: 512);
   private readonly Dictionary<string, IPlugin> plugins = new(StringComparer.Ordinal);
 
   /// <summary>
@@ -305,10 +303,6 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     }
   }
 
-#pragma warning disable IDE0230
-  private static readonly ReadOnlyMemory<byte> EndOfLine = new[] { (byte)'\n' };
-#pragma warning restore IDE0230
-
   private static readonly string[] ResponseLinesUnknownService = [
     "# Unknown service",
     ".",
@@ -325,7 +319,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       cancellationToken: cancellationToken
     );
 
-  protected async ValueTask SendResponseAsync(
+  protected ValueTask SendResponseAsync(
     IMuninNodeClient client,
     IEnumerable<string> responseLines,
     CancellationToken cancellationToken
@@ -336,28 +330,65 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     if (responseLines is null)
       throw new ArgumentNullException(nameof(responseLines));
 
+    var builder = responseBuilderPool.Take();
+
+    try {
+      foreach (var line in responseLines) {
+        builder.Append(line).Append('\n');
+      }
+
+      return SendResponseAsync(client, builder, cancellationToken);
+    }
+    finally {
+      responseBuilderPool.Return(builder);
+    }
+  }
+
+  private async ValueTask SendResponseAsync(
+    IMuninNodeClient client,
+    StringBuilder responseBuilder,
+    CancellationToken cancellationToken
+  )
+  {
+    if (client is null)
+      throw new ArgumentNullException(nameof(client));
+    if (responseBuilder is null)
+      throw new ArgumentNullException(nameof(responseBuilder));
+
     cancellationToken.ThrowIfCancellationRequested();
 
     var writer = bufferWriterPool.Take();
 
     try {
-      foreach (var responseLine in responseLines) {
+#if SYSTEM_TEXT_STRINGBUILDER_GETCHUNKS
+      foreach (var chunk in responseBuilder.GetChunks()) {
 #if SYSTEM_TEXT_ENCODINGEXTENSIONS
-        _ = profile.Encoding.GetBytes(responseLine, writer);
-
-        writer.Write(EndOfLine.Span);
+        _ = profile.Encoding.GetBytes(chunk.Span, writer);
 #else
-        var totalByteCount = profile.Encoding.GetByteCount(responseLine) + EndOfLine.Length;
-        var buffer = writer.GetMemory(totalByteCount);
-        var bytesWritten = profile.Encoding.GetBytes(responseLine, buffer.Span);
-
-        EndOfLine.CopyTo(buffer[bytesWritten..]);
-
-        bytesWritten += EndOfLine.Length;
+        var byteCount = profile.Encoding.GetByteCount(chunk);
+        var buffer = writer.GetMemory(byteCount);
+        var bytesWritten = profile.Encoding.GetBytes(chunk, buffer.Span);
 
         writer.Advance(bytesWritten);
 #endif
       }
+#else
+      var responseChars = ArrayPool<char>.Shared.Rent(responseBuilder.Length);
+
+      try {
+        responseBuilder.CopyTo(0, responseChars, 0, responseBuilder.Length);
+
+        var responseCharsMemory = responseChars.AsMemory(0, responseBuilder.Length);
+        var byteCount = profile.Encoding.GetByteCount(responseCharsMemory.Span);
+        var buffer = writer.GetMemory(byteCount);
+        var bytesWritten = profile.Encoding.GetBytes(responseCharsMemory.Span, buffer.Span);
+
+        writer.Advance(bytesWritten);
+      }
+      finally {
+        ArrayPool<char>.Shared.Return(responseChars);
+      }
+#endif
 
       await client.SendAsync(
         buffer: writer.WrittenMemory,
@@ -526,17 +557,17 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       return;
     }
 
-    var responseLines = responseLineListPool.Take();
+    var responseBuilder = responseBuilderPool.Take();
 
     try {
       if (plugin is IMultigraphPlugin multigraphPlugin) {
         // 'Protocol extension: multiple graphs from one plugin' (https://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
         foreach (var subPlugin in multigraphPlugin.Plugins) {
-          responseLines.Add($"multigraph {subPlugin.Name}");
+          responseBuilder.Append(provider: null, $"multigraph {subPlugin.Name}\n");
 
           await WriteFetchResponseAsync(
             subPlugin.DataSource,
-            responseLines,
+            responseBuilder,
             cancellationToken
           ).ConfigureAwait(false);
         }
@@ -544,27 +575,27 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       else {
         await WriteFetchResponseAsync(
           plugin.DataSource,
-          responseLines,
+          responseBuilder,
           cancellationToken
         ).ConfigureAwait(false);
       }
 
-      responseLines.Add(".");
+      responseBuilder.Append(".\n");
 
       await SendResponseAsync(
         client: client,
-        responseLines: responseLines,
+        responseBuilder: responseBuilder,
         cancellationToken: cancellationToken
       ).ConfigureAwait(false);
     }
     finally {
-      responseLineListPool.Return(responseLines);
+      responseBuilderPool.Return(responseBuilder);
     }
   }
 
   private static async ValueTask WriteFetchResponseAsync(
     IPluginDataSource dataSource,
-    List<string> responseLines,
+    StringBuilder responseBuilder,
     CancellationToken cancellationToken
   )
   {
@@ -573,7 +604,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
         cancellationToken: cancellationToken
       ).ConfigureAwait(false);
 
-      responseLines.Add($"{field.Name}.value {valueString}");
+      responseBuilder.Append(provider: null, $"{field.Name}.value {valueString}\n");
     }
   }
 
@@ -606,18 +637,18 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
 
     async ValueTask HandleConfigCommandAsyncCore()
     {
-      var responseLines = responseLineListPool.Take();
+      var responseBuilder = responseBuilderPool.Take();
 
       try {
         if (plugin is IMultigraphPlugin multigraphPlugin) {
           // 'Protocol extension: multiple graphs from one plugin' (https://guide.munin-monitoring.org/en/latest/plugin/protocol-multigraph.html)
           foreach (var subPlugin in multigraphPlugin.Plugins) {
-            responseLines.Add($"multigraph {subPlugin.Name}");
+            responseBuilder.Append(provider: null, $"multigraph {subPlugin.Name}\n");
 
             await WriteConfigResponseAsync(
               subPlugin,
               includeFetchResponse: IsDirtyConfigEnabled,
-              responseLines,
+              responseBuilder,
               cancellationToken
             ).ConfigureAwait(false);
           }
@@ -626,40 +657,40 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
           await WriteConfigResponseAsync(
             plugin,
             includeFetchResponse: IsDirtyConfigEnabled,
-            responseLines,
+            responseBuilder,
             cancellationToken
           ).ConfigureAwait(false);
         }
 
-        responseLines.Add(".");
+        responseBuilder.Append(".\n");
 
         await SendResponseAsync(
           client: client,
-          responseLines: responseLines,
+          responseBuilder: responseBuilder,
           cancellationToken: cancellationToken
         ).ConfigureAwait(false);
       }
       finally {
-        responseLineListPool.Return(responseLines);
+        responseBuilderPool.Return(responseBuilder);
       }
     }
 
     static ValueTask WriteConfigResponseAsync(
       IPlugin plugin,
       bool includeFetchResponse,
-      List<string> responseLines,
+      StringBuilder responseBuilder,
       CancellationToken cancellationToken
     )
     {
       WriteConfigResponse(
         plugin,
-        responseLines
+        responseBuilder
       );
 
       if (includeFetchResponse) {
         return WriteFetchResponseAsync(
           dataSource: plugin.DataSource,
-          responseLines: responseLines,
+          responseBuilder: responseBuilder,
           cancellationToken: cancellationToken
         );
       }
@@ -670,28 +701,28 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
 
   private static void WriteConfigResponse(
     IPlugin plugin,
-    List<string> responseLines
+    StringBuilder responseBuilder
   )
   {
     /*
      * global attributes
      */
-    responseLines.AddRange(
-      plugin.GraphAttributes.EnumerateAttributes()
-    );
+    foreach (var graphAttribute in plugin.GraphAttributes.EnumerateAttributes()) {
+      responseBuilder.Append(graphAttribute).Append('\n');
+    }
 
     /*
      * data source attributes
      */
     WriteConfigDataSourceAttributes(
       plugin.DataSource,
-      responseLines
+      responseBuilder
     );
   }
 
   private static void WriteConfigDataSourceAttributes(
     IPluginDataSource dataSource,
-    List<string> responseLines
+    StringBuilder responseBuilder
   )
   {
     var shouldHandleNegativeFields = dataSource
@@ -710,16 +741,16 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       var fieldAttrs = field.Attributes;
       bool? graph = null;
 
-      responseLines.Add($"{field.Name}.label {fieldAttrs.Label}");
+      responseBuilder.Append(provider: null, $"{field.Name}.label {fieldAttrs.Label}\n");
 
       if (TranslateFieldDrawAttribute(fieldAttrs.GraphStyle) is string attrDraw)
-        responseLines.Add($"{field.Name}.draw {attrDraw}");
+        responseBuilder.Append(provider: null, $"{field.Name}.draw {attrDraw}\n");
 
       if (FormatNormalValueRange(fieldAttrs.NormalRangeForWarning) is string attrWarning)
-        responseLines.Add($"{field.Name}.warning {attrWarning}");
+        responseBuilder.Append(provider: null, $"{field.Name}.warning {attrWarning}\n");
 
       if (FormatNormalValueRange(fieldAttrs.NormalRangeForCritical) is string attrCritical)
-        responseLines.Add($"{field.Name}.critical {attrCritical}");
+        responseBuilder.Append(provider: null, $"{field.Name}.critical {attrCritical}\n");
 
       if (shouldHandleNegativeFields && !string.IsNullOrEmpty(fieldAttrs.NegativeFieldName)) {
         var negativeField = dataSource.Fields.FirstOrDefault(
@@ -727,7 +758,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
         );
 
         if (negativeField is not null)
-          responseLines.Add($"{field.Name}.negative {negativeField.Name}");
+          responseBuilder.Append(provider: null, $"{field.Name}.negative {negativeField.Name}\n");
       }
 
       // this field is defined as the negative field of other field, so should not be graphed
@@ -735,7 +766,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
         graph = false;
 
       if (graph is bool drawGraph)
-        responseLines.Add($"{field.Name}.graph {(drawGraph ? "yes" : "no")}");
+        responseBuilder.Append(provider: null, $"{field.Name}.graph {(drawGraph ? "yes" : "no")}\n");
     }
 
     static bool IsNegativeField(IPluginField field, IReadOnlyCollection<IPluginField> fields)
