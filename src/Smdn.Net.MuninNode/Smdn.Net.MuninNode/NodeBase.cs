@@ -228,6 +228,10 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
       if (Logger is not null)
         LogStartingNode(Logger, null);
 
+      await StartingAsync(cancellationToken).ConfigureAwait(false);
+
+      cancellationToken.ThrowIfCancellationRequested();
+
       listener = await listenerFactory.CreateAsync(
         endPoint: GetLocalEndPointToBind(),
         node: this,
@@ -246,12 +250,46 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
         cancellationToken: cancellationToken
       ).ConfigureAwait(false);
 
+      sessionCountdownEvent.Reset();
+
+      await StartedAsync(cancellationToken).ConfigureAwait(false);
+
       if (Logger is not null)
         LogStartedNode(Logger, HostName, listener.EndPoint, null);
-
-      sessionCountdownEvent.Reset();
     }
   }
+
+  /// <summary>
+  /// Provides an extension point for starting the <c>Munin-Node</c> instance.
+  /// If overridden in a derived class, it is invoked before the <c>Munin-Node</c> is started
+  /// by a call to the <see cref="StartAsync"/> method.
+  /// </summary>
+  /// <param name="cancellationToken">
+  /// The <see cref="CancellationToken"/> to monitor for cancellation requests.
+  /// </param>
+  /// <returns>
+  /// The <see cref="ValueTask"/> that represents the asynchronous operation.
+  /// </returns>
+  /// <seealso cref="StartAsync"/>
+  /// <seealso cref="StartedAsync"/>
+  protected virtual ValueTask StartingAsync(CancellationToken cancellationToken)
+    => default; // nothing to do in this class
+
+  /// <summary>
+  /// Provides an extension point for starting the <c>Munin-Node</c> instance.
+  /// If overridden in a derived class, it is invoked after the <c>Munin-Node</c> is started
+  /// by a call to the <see cref="StartAsync"/> method.
+  /// </summary>
+  /// <param name="cancellationToken">
+  /// The <see cref="CancellationToken"/> to monitor for cancellation requests.
+  /// </param>
+  /// <returns>
+  /// The <see cref="ValueTask"/> that represents the asynchronous operation.
+  /// </returns>
+  /// <seealso cref="StartAsync"/>
+  /// <seealso cref="StartingAsync"/>
+  protected virtual ValueTask StartedAsync(CancellationToken cancellationToken)
+    => default; // nothing to do in this class
 
   /// <summary>
   /// Stops accepting connections from clients at the <c>Munin-Node</c> currently running.
@@ -277,8 +315,14 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
 
     async ValueTask StopAsyncCore()
     {
+      cancellationToken.ThrowIfCancellationRequested();
+
       if (Logger is not null)
         LogStoppingNode(Logger, HostName, null);
+
+      await StoppingAsync(cancellationToken).ConfigureAwait(false);
+
+      cancellationToken.ThrowIfCancellationRequested();
 
       // decrement by the initial value of 1 (re)set in Start()/StartAsync()
       sessionCountdownEvent.Signal();
@@ -307,10 +351,44 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
         protocolHandler = null;
       }
 
+      await StoppedAsync(cancellationToken).ConfigureAwait(false);
+
       if (Logger is not null)
         LogStoppedNode(Logger, HostName, null);
     }
   }
+
+  /// <summary>
+  /// Provides an extension point for stopping the <c>Munin-Node</c> instance.
+  /// If overridden in a derived class, it is invoked before the <c>Munin-Node</c> is stopped
+  /// by a call to the <see cref="StopAsync"/> method.
+  /// </summary>
+  /// <param name="cancellationToken">
+  /// The <see cref="CancellationToken"/> to monitor for cancellation requests.
+  /// </param>
+  /// <returns>
+  /// The <see cref="ValueTask"/> that represents the asynchronous operation.
+  /// </returns>
+  /// <seealso cref="StopAsync"/>
+  /// <seealso cref="StoppedAsync"/>
+  protected virtual ValueTask StoppingAsync(CancellationToken cancellationToken)
+    => default; // nothing to do in this class
+
+  /// <summary>
+  /// Provides an extension point for stopping the <c>Munin-Node</c> instance.
+  /// If overridden in a derived class, it is invoked after the <c>Munin-Node</c> is stopped
+  /// by a call to the <see cref="StopAsync"/> method.
+  /// </summary>
+  /// <param name="cancellationToken">
+  /// The <see cref="CancellationToken"/> to monitor for cancellation requests.
+  /// </param>
+  /// <returns>
+  /// The <see cref="ValueTask"/> that represents the asynchronous operation.
+  /// </returns>
+  /// <seealso cref="StopAsync"/>
+  /// <seealso cref="StoppingAsync"/>
+  protected virtual ValueTask StoppedAsync(CancellationToken cancellationToken)
+    => default; // nothing to do in this class
 
   /// <inheritdoc cref="IMuninNode.RunAsync(CancellationToken)"/>
   /// <seealso cref="IMuninNode.RunAsync(CancellationToken)"/>

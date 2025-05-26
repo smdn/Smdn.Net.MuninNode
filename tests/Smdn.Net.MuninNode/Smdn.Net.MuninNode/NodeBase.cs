@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 using NUnit.Framework;
 
+using Smdn.Net.MuninNode.Transport;
 using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode;
@@ -67,6 +68,63 @@ public partial class NodeBaseTests {
               : throw new NotSupportedException(),
         port: 0
       );
+  }
+
+  private class TestLifecycleLocalNode : NodeBase {
+    public EventHandler? NodeStarting = null;
+    public EventHandler? NodeStarted = null;
+    public EventHandler? NodeStopping = null;
+    public EventHandler? NodeStopped = null;
+
+    private class NullPluginProvider : IPluginProvider {
+      public IReadOnlyCollection<IPlugin> Plugins { get; } = [];
+      public INodeSessionCallback? SessionCallback => null;
+    }
+
+    public override IPluginProvider PluginProvider { get; } = new NullPluginProvider();
+    public override string HostName => "test.munin-node.localhost";
+
+    public TestLifecycleLocalNode()
+#pragma warning disable CS0618
+      : base(
+        listenerFactory: new PseudoMuninNodeListenerFactory(),
+        accessRule: null,
+        logger: null
+      )
+#pragma warning restore CS0618
+    {
+    }
+
+    protected override EndPoint GetLocalEndPointToBind()
+      => new IPEndPoint(IPAddress.Any, port: 0);
+
+    protected override ValueTask StartingAsync(CancellationToken cancellationToken)
+    {
+      NodeStarting?.Invoke(this, EventArgs.Empty);
+
+      return default;
+    }
+
+    protected override ValueTask StartedAsync(CancellationToken cancellationToken)
+    {
+      NodeStarted?.Invoke(this, EventArgs.Empty);
+
+      return default;
+    }
+
+    protected override ValueTask StoppingAsync(CancellationToken cancellationToken)
+    {
+      NodeStopping?.Invoke(this, EventArgs.Empty);
+
+      return default;
+    }
+
+    protected override ValueTask StoppedAsync(CancellationToken cancellationToken)
+    {
+      NodeStopped?.Invoke(this, EventArgs.Empty);
+
+      return default;
+    }
   }
 
   private static NodeBase CreateNode()
@@ -218,6 +276,72 @@ public partial class NodeBaseTests {
   }
 
   [Test]
+  public async Task StartAsync_CancellationRequestedBeforeStarting()
+  {
+    await using var node = new TestLifecycleLocalNode();
+    var cancellationToken = new CancellationToken(canceled: true);
+
+    var numberOfInvocationOfStartingAsync = 0;
+    var numberOfInvocationOfStartedAsync = 0;
+
+    node.NodeStarting += (_, _) => numberOfInvocationOfStartingAsync++;
+    node.NodeStarted += (_, _) => numberOfInvocationOfStartedAsync++;
+
+    Assert.That(async () => await node.StartAsync(cancellationToken), Throws.InstanceOf<OperationCanceledException>());
+
+    Assert.That(numberOfInvocationOfStartingAsync, Is.Zero);
+    Assert.That(numberOfInvocationOfStartedAsync, Is.Zero);
+
+    Assert.That(() => _ = node.EndPoint, Throws.InvalidOperationException, "must not be started");
+  }
+
+  [Test]
+  public async Task StartAsync_CancellationRequestedWhileStarting()
+  {
+    await using var node = new TestLifecycleLocalNode();
+    using var cts = new CancellationTokenSource();
+
+    var numberOfInvocationOfStartingAsync = 0;
+    var numberOfInvocationOfStartedAsync = 0;
+
+    node.NodeStarting += (_, _) => {
+      numberOfInvocationOfStartingAsync++;
+      cts.Cancel();
+    };
+    node.NodeStarted += (_, _) => numberOfInvocationOfStartedAsync++;
+
+    Assert.That(async () => await node.StartAsync(cts.Token), Throws.InstanceOf<OperationCanceledException>());
+
+    Assert.That(numberOfInvocationOfStartingAsync, Is.EqualTo(1));
+    Assert.That(numberOfInvocationOfStartedAsync, Is.Zero);
+
+    Assert.That(() => _ = node.EndPoint, Throws.InvalidOperationException, "must not be started");
+  }
+
+  [Test]
+  public async Task StartAsync_CancellationRequestedAfterStarted()
+  {
+    await using var node = new TestLifecycleLocalNode();
+    using var cts = new CancellationTokenSource();
+
+    var numberOfInvocationOfStartingAsync = 0;
+    var numberOfInvocationOfStartedAsync = 0;
+
+    node.NodeStarting += (_, _) => numberOfInvocationOfStartingAsync++;
+    node.NodeStarted += (_, _) => {
+      numberOfInvocationOfStartedAsync++;
+      cts.Cancel();
+    };
+
+    Assert.That(async () => await node.StartAsync(cts.Token), Throws.Nothing, "requested cancellation must be ignored");
+
+    Assert.That(numberOfInvocationOfStartingAsync, Is.EqualTo(1));
+    Assert.That(numberOfInvocationOfStartedAsync, Is.EqualTo(1));
+
+    Assert.That(() => _ = node.EndPoint, Throws.Nothing, "must be started");
+  }
+
+  [Test]
   public async Task StopAsync_StartedByStartAsync()
   {
     await using var node = CreateNode();
@@ -297,5 +421,80 @@ public partial class NodeBaseTests {
       async () => await node.StopAsync(ctsStopTimeout.Token),
       Throws.Nothing
     );
+  }
+
+  [Test]
+  public async Task StopAsync_CancellationRequestedBeforeStopping()
+  {
+    await using var node = new TestLifecycleLocalNode();
+
+    await node.StartAsync();
+
+    var cancellationToken = new CancellationToken(canceled: true);
+
+    var numberOfInvocationOfStoppingAsync = 0;
+    var numberOfInvocationOfStoppedAsync = 0;
+
+    node.NodeStopping += (_, _) => numberOfInvocationOfStoppingAsync++;
+    node.NodeStopped += (_, _) => numberOfInvocationOfStoppedAsync++;
+
+    Assert.That(async () => await node.StopAsync(cancellationToken), Throws.InstanceOf<OperationCanceledException>());
+
+    Assert.That(numberOfInvocationOfStoppingAsync, Is.Zero);
+    Assert.That(numberOfInvocationOfStoppedAsync, Is.Zero);
+
+    Assert.That(() => _ = node.EndPoint, Throws.Nothing, "must not be stopped");
+  }
+
+  [Test]
+  public async Task StopAsync_CancellationRequestedWhileStopping()
+  {
+    await using var node = new TestLifecycleLocalNode();
+
+    await node.StartAsync();
+
+    using var cts = new CancellationTokenSource();
+
+    var numberOfInvocationOfStoppingAsync = 0;
+    var numberOfInvocationOfStoppedAsync = 0;
+
+    node.NodeStopping += (_, _) => {
+      numberOfInvocationOfStoppingAsync++;
+      cts.Cancel();
+    };
+    node.NodeStopped += (_, _) => numberOfInvocationOfStoppedAsync++;
+
+    Assert.That(async () => await node.StopAsync(cts.Token), Throws.InstanceOf<OperationCanceledException>());
+
+    Assert.That(numberOfInvocationOfStoppingAsync, Is.EqualTo(1));
+    Assert.That(numberOfInvocationOfStoppedAsync, Is.Zero);
+
+    Assert.That(() => _ = node.EndPoint, Throws.Nothing, "must not be stopped");
+  }
+
+  [Test]
+  public async Task StopAsync_CancellationRequestedAfterStopped()
+  {
+    await using var node = new TestLifecycleLocalNode();
+
+    await node.StartAsync();
+
+    using var cts = new CancellationTokenSource();
+
+    var numberOfInvocationOfStoppingAsync = 0;
+    var numberOfInvocationOfStoppedAsync = 0;
+
+    node.NodeStopping += (_, _) => numberOfInvocationOfStoppingAsync++;
+    node.NodeStopped += (_, _) => {
+      numberOfInvocationOfStoppedAsync++;
+      cts.Cancel();
+    };
+
+    Assert.That(async () => await node.StopAsync(cts.Token), Throws.Nothing, "requested cancellation must be ignored");
+
+    Assert.That(numberOfInvocationOfStoppingAsync, Is.EqualTo(1));
+    Assert.That(numberOfInvocationOfStoppedAsync, Is.EqualTo(1));
+
+    Assert.That(() => _ = node.EndPoint, Throws.InvalidOperationException, "must be stopped");
   }
 }
