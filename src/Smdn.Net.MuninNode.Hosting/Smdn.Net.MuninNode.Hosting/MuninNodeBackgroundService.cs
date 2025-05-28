@@ -73,6 +73,22 @@ public class MuninNodeBackgroundService : BackgroundService {
     logger?.LogInformation("Munin node '{HostName}' starting.", node.HostName);
 
     await node.RunAsync(stoppingToken).ConfigureAwait(false);
+  }
+
+  public override async Task StopAsync(CancellationToken cancellationToken)
+  {
+    if (node is null)
+      throw new ObjectDisposedException(GetType().FullName);
+
+    logger?.LogInformation("Munin node '{HostName}' stopping.", node.HostName);
+
+    await base.StopAsync(cancellationToken).ConfigureAwait(false);
+
+    cancellationToken.ThrowIfCancellationRequested();
+
+    // attempt graceful shutdown if possible
+    if (node is NodeBase stoppableNode)
+      await stoppableNode.StopAsync(cancellationToken).ConfigureAwait(false);
 
     logger?.LogInformation("Munin node '{HostName}' stopped.", node.HostName);
 
