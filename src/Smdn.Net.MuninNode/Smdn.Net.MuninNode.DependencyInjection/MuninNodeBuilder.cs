@@ -14,7 +14,7 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode.DependencyInjection;
 
-internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
+public class MuninNodeBuilder : IMuninNodeBuilder {
   private readonly List<Func<IServiceProvider, IPlugin>> pluginFactories = new(capacity: 4);
   private Func<IServiceProvider, IPluginProvider>? buildPluginProvider;
   private Func<IServiceProvider, INodeSessionCallback>? buildSessionCallback;
@@ -23,13 +23,13 @@ internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
   public IServiceCollection Services { get; }
   public string ServiceKey { get; }
 
-  public DefaultMuninNodeBuilder(IMuninServiceBuilder serviceBuilder, string serviceKey)
+  internal MuninNodeBuilder(IMuninServiceBuilder serviceBuilder, string serviceKey)
   {
     Services = (serviceBuilder ?? throw new ArgumentNullException(nameof(serviceBuilder))).Services;
     ServiceKey = serviceKey ?? throw new ArgumentNullException(nameof(serviceKey));
   }
 
-  public void AddPluginFactory(Func<IServiceProvider, IPlugin> buildPlugin)
+  internal void AddPluginFactory(Func<IServiceProvider, IPlugin> buildPlugin)
   {
     if (buildPlugin is null)
       throw new ArgumentNullException(nameof(buildPlugin));
@@ -37,7 +37,7 @@ internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
     pluginFactories.Add(serviceProvider => buildPlugin(serviceProvider));
   }
 
-  public void SetPluginProviderFactory(
+  internal void SetPluginProviderFactory(
     Func<IServiceProvider, IPluginProvider> buildPluginProvider
   )
   {
@@ -47,7 +47,7 @@ internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
     this.buildPluginProvider = buildPluginProvider;
   }
 
-  public void SetSessionCallbackFactory(
+  internal void SetSessionCallbackFactory(
     Func<IServiceProvider, INodeSessionCallback> buildSessionCallback
   )
   {
@@ -57,7 +57,7 @@ internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
     this.buildSessionCallback = buildSessionCallback;
   }
 
-  public void SetListenerFactory(
+  internal void SetListenerFactory(
     Func<IServiceProvider, IMuninNodeListenerFactory> buildListenerFactory
   )
   {

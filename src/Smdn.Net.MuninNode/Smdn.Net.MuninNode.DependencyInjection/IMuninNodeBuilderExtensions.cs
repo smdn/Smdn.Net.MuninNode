@@ -48,10 +48,10 @@ public static class IMuninNodeBuilderExtensions {
     if (buildPlugin is null)
       throw new ArgumentNullException(nameof(buildPlugin));
 
-    if (builder is not DefaultMuninNodeBuilder defaultMuninNodeBuilder)
+    if (builder is not MuninNodeBuilder muninNodeBuilder)
       throw new NotSupportedException($"The builder implementation of type `{builder.GetType().FullName}` does not support service key configuration.");
 
-    defaultMuninNodeBuilder.AddPluginFactory(buildPlugin);
+    muninNodeBuilder.AddPluginFactory(buildPlugin);
 
     return builder;
   }
@@ -94,10 +94,10 @@ public static class IMuninNodeBuilderExtensions {
     if (buildPluginProvider is null)
       throw new ArgumentNullException(nameof(buildPluginProvider));
 
-    if (builder is not DefaultMuninNodeBuilder defaultMuninNodeBuilder)
+    if (builder is not MuninNodeBuilder muninNodeBuilder)
       throw new NotSupportedException($"The builder implementation of type `{builder.GetType().FullName}` does not support service key configuration.");
 
-    defaultMuninNodeBuilder.SetPluginProviderFactory(buildPluginProvider);
+    muninNodeBuilder.SetPluginProviderFactory(buildPluginProvider);
 
     return builder;
   }
@@ -171,10 +171,10 @@ public static class IMuninNodeBuilderExtensions {
     if (buildSessionCallback is null)
       throw new ArgumentNullException(nameof(buildSessionCallback));
 
-    if (builder is not DefaultMuninNodeBuilder defaultMuninNodeBuilder)
+    if (builder is not MuninNodeBuilder muninNodeBuilder)
       throw new NotSupportedException($"The builder implementation of type `{builder.GetType().FullName}` does not support service key configuration.");
 
-    defaultMuninNodeBuilder.SetSessionCallbackFactory(buildSessionCallback);
+    muninNodeBuilder.SetSessionCallbackFactory(buildSessionCallback);
 
     return builder;
   }
@@ -232,10 +232,10 @@ public static class IMuninNodeBuilderExtensions {
     if (buildListenerFactory is null)
       throw new ArgumentNullException(nameof(buildListenerFactory));
 
-    if (builder is not DefaultMuninNodeBuilder defaultMuninNodeBuilder)
+    if (builder is not MuninNodeBuilder muninNodeBuilder)
       throw new NotSupportedException($"The builder implementation of type `{builder.GetType().FullName}` does not support service key configuration.");
 
-    defaultMuninNodeBuilder.SetListenerFactory(buildListenerFactory);
+    muninNodeBuilder.SetListenerFactory(buildListenerFactory);
 
     return builder;
   }

@@ -46,7 +46,7 @@ public static class IMuninServiceBuilderExtensions {
 
     configure(options);
 
-    var nodeBuilder = new DefaultMuninNodeBuilder(
+    var nodeBuilder = new MuninNodeBuilder(
       serviceBuilder: builder,
       serviceKey: options.HostName // use configured hostname as a service key and option name
     );
