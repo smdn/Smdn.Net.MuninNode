@@ -239,4 +239,22 @@ public static class IMuninNodeBuilderExtensions {
 
     return builder;
   }
+
+  internal static TMuninNode Build<TMuninNode>(
+    this IMuninNodeBuilder builder,
+    IServiceProvider serviceProvider
+  ) where TMuninNode : IMuninNode
+  {
+    if (builder is null)
+      throw new ArgumentNullException(nameof(builder));
+    if (serviceProvider is null)
+      throw new ArgumentNullException(nameof(serviceProvider));
+
+    var n = builder.Build(serviceProvider);
+
+    if (n is not TMuninNode node)
+      throw new InvalidOperationException($"The type '{n.GetType()}' of the constructed instance did not match the requested type '{typeof(TMuninNode)}'.");
+
+    return node;
+  }
 }

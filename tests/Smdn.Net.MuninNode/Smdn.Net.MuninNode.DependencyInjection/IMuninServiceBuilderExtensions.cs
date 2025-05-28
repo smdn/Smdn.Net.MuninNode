@@ -251,6 +251,133 @@ public class IMuninServiceBuilderExtensionsTests {
     Assert.That(keyedNode.HostName, Is.EqualTo(HostName));
   }
 
+  [Test]
+  public void AddNode_CustomBuilderType_AbstractServiceType()
+  {
+    const string HostName = "munin-node.localhost";
+    var services = new ServiceCollection();
+
+    services.AddMunin(configure: builder => {
+      builder.AddNode<IMuninNode, CustomMuninNode, MuninNodeOptions, CustomMuninNodeBuilder<MuninNodeOptions>>(
+        configure: options => options.HostName = HostName,
+        createBuilder: static (serviceBuilder, serviceKey) => new CustomMuninNodeBuilder<MuninNodeOptions>(
+          serviceBuilder: serviceBuilder,
+          serviceKey: serviceKey,
+          nodeFactory: static (options, pluginProvider, listenerFactory, serviceProvider) => new CustomMuninNode(
+            options,
+            pluginProvider,
+            listenerFactory
+          )
+        )
+      );
+    });
+
+    var serviceProvider = services.BuildServiceProvider();
+
+    var node = serviceProvider.GetService<IMuninNode>();
+
+    Assert.That(node, Is.Not.Null);
+    Assert.That(node, Is.TypeOf<CustomMuninNode>());
+    Assert.That(node.HostName, Is.EqualTo(HostName));
+
+    var keyedNode = serviceProvider.GetKeyedService<IMuninNode>(HostName);
+
+    Assert.That(keyedNode, Is.Not.Null);
+    Assert.That(keyedNode, Is.TypeOf<CustomMuninNode>());
+    Assert.That(keyedNode.HostName, Is.EqualTo(HostName));
+  }
+
+  [Test]
+  public void AddNode_CustomBuilderType_ConcreteServiceType()
+  {
+    const string HostName = "munin-node.localhost";
+    var services = new ServiceCollection();
+
+    services.AddMunin(configure: builder => {
+      builder.AddNode<CustomMuninNode, MuninNodeOptions, CustomMuninNodeBuilder<MuninNodeOptions>>(
+        configure: options => options.HostName = HostName,
+        createBuilder: static (serviceBuilder, serviceKey) => new CustomMuninNodeBuilder<MuninNodeOptions>(
+          serviceBuilder: serviceBuilder,
+          serviceKey: serviceKey,
+          nodeFactory: static (options, pluginProvider, listenerFactory, serviceProvider) => new CustomMuninNode(
+            options,
+            pluginProvider,
+            listenerFactory
+          )
+        )
+      );
+    });
+
+    var serviceProvider = services.BuildServiceProvider();
+
+    var node = serviceProvider.GetService<CustomMuninNode>();
+
+    Assert.That(node, Is.Not.Null);
+    Assert.That(node.HostName, Is.EqualTo(HostName));
+
+    var keyedNode = serviceProvider.GetKeyedService<CustomMuninNode>(HostName);
+
+    Assert.That(keyedNode, Is.Not.Null);
+    Assert.That(keyedNode.HostName, Is.EqualTo(HostName));
+  }
+
+  private class ExtendedCustomMuninNode : CustomMuninNode {
+    public ExtendedCustomMuninNode(
+      MuninNodeOptions options,
+      IPluginProvider pluginProvider,
+      IMuninNodeListenerFactory? listenerFactory
+    )
+      : base(
+        options: options,
+        pluginProvider: pluginProvider,
+        listenerFactory: listenerFactory
+      )
+    {
+    }
+  }
+
+  [Test]
+  public void AddNode_CustomBuilderType_ConcreteServiceType_ImplementationTypeMismatch()
+  {
+    const string HostName = "munin-node.localhost";
+    var services = new ServiceCollection();
+
+    services.AddMunin(configure: builder => {
+      builder.AddNode<ExtendedCustomMuninNode, MuninNodeOptions, CustomMuninNodeBuilder<MuninNodeOptions>>(
+        configure: options => options.HostName = HostName,
+        createBuilder: static (serviceBuilder, serviceKey) => new CustomMuninNodeBuilder<MuninNodeOptions>(
+          serviceBuilder: serviceBuilder,
+          serviceKey: serviceKey,
+          nodeFactory: static (options, pluginProvider, listenerFactory, serviceProvider) => new CustomMuninNode(
+            options,
+            pluginProvider,
+            listenerFactory
+          )
+        )
+      );
+    });
+
+    var serviceProvider = services.BuildServiceProvider();
+
+    Assert.That(
+      () => serviceProvider.GetService<ExtendedCustomMuninNode>(),
+      Throws.InvalidOperationException
+    );
+    Assert.That(
+      () => serviceProvider.GetService<CustomMuninNode>(),
+      Is.Null
+    );
+
+    Assert.That(
+      () => serviceProvider.GetKeyedService<ExtendedCustomMuninNode>(HostName),
+      Throws.InvalidOperationException
+    );
+    Assert.That(
+      () => serviceProvider.GetKeyedService<CustomMuninNode>(HostName),
+      Is.Null
+    );
+  }
+
   private class CustomMuninNodeOptions : MuninNodeOptions {
     public string? ExtraOption { get; set; }
 
@@ -297,5 +424,27 @@ public class IMuninServiceBuilderExtensionsTests {
 
     Assert.That(options.HostName, Is.EqualTo(HostName));
     Assert.That(options.ExtraOption, Is.EqualTo(ExtraOptionValue));
+
+    var node = serviceProvider.GetService<IMuninNode>();
+
+    Assert.That(node, Is.Not.Null);
+    Assert.That(node, Is.TypeOf<CustomMuninNode>());
+
+    var customNode = (CustomMuninNode)node;
+
+    Assert.That(customNode.Options, Is.TypeOf<CustomMuninNodeOptions>());
+    Assert.That((customNode.Options as CustomMuninNodeOptions)!.ExtraOption, Is.EqualTo(ExtraOptionValue));
+    Assert.That(customNode.HostName, Is.EqualTo(HostName));
+
+    var keyedNode = serviceProvider.GetKeyedService<IMuninNode>(HostName);
+
+    Assert.That(keyedNode, Is.Not.Null);
+    Assert.That(keyedNode, Is.TypeOf<CustomMuninNode>());
+
+    var customKeyedNode = (CustomMuninNode)keyedNode;
+
+    Assert.That(customKeyedNode.Options, Is.TypeOf<CustomMuninNodeOptions>());
+    Assert.That((customKeyedNode.Options as CustomMuninNodeOptions)!.ExtraOption, Is.EqualTo(ExtraOptionValue));
+    Assert.That(customKeyedNode.HostName, Is.EqualTo(HostName));
   }
 }
