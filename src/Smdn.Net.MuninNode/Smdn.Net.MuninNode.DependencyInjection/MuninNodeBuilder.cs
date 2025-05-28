@@ -23,7 +23,7 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
   public IServiceCollection Services { get; }
   public string ServiceKey { get; }
 
-  internal MuninNodeBuilder(IMuninServiceBuilder serviceBuilder, string serviceKey)
+  protected internal MuninNodeBuilder(IMuninServiceBuilder serviceBuilder, string serviceKey)
   {
     Services = (serviceBuilder ?? throw new ArgumentNullException(nameof(serviceBuilder))).Services;
     ServiceKey = serviceKey ?? throw new ArgumentNullException(nameof(serviceKey));
@@ -72,8 +72,7 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
     if (serviceProvider is null)
       throw new ArgumentNullException(nameof(serviceProvider));
 
-    return new DefaultMuninNode(
-      options: GetConfiguredOptions<MuninNodeOptions>(serviceProvider),
+    return Build(
       pluginProvider: buildPluginProvider is null
         ? new PluginProvider(
             plugins: pluginFactories.Select(factory => factory(serviceProvider)).ToList(),
@@ -81,7 +80,7 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
           )
         : buildPluginProvider.Invoke(serviceProvider),
       listenerFactory: buildListenerFactory?.Invoke(serviceProvider),
-      logger: serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<DefaultMuninNode>()
+      serviceProvider: serviceProvider
     );
   }
 
@@ -97,6 +96,23 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
       Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
       SessionCallback = sessionCallback;
     }
+  }
+
+  protected virtual IMuninNode Build(
+    IPluginProvider pluginProvider,
+    IMuninNodeListenerFactory? listenerFactory,
+    IServiceProvider serviceProvider
+  )
+  {
+    if (serviceProvider is null)
+      throw new ArgumentNullException(nameof(serviceProvider));
+
+    return new DefaultMuninNode(
+      options: GetConfiguredOptions<MuninNodeOptions>(serviceProvider),
+      pluginProvider: pluginProvider,
+      listenerFactory: listenerFactory,
+      logger: serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<DefaultMuninNode>()
+    );
   }
 
   protected TMuninNodeOptions GetConfiguredOptions<TMuninNodeOptions>(IServiceProvider serviceProvider)

@@ -8,6 +8,9 @@ using Microsoft.Extensions.Options;
 
 using NUnit.Framework;
 
+using Smdn.Net.MuninNode.Transport;
+using Smdn.Net.MuninPlugin;
+
 namespace Smdn.Net.MuninNode.DependencyInjection;
 
 [TestFixture]
@@ -163,6 +166,91 @@ public class IMuninServiceBuilderExtensionsTests {
     Assert.That(node, Is.Not.SameAs(anotherNode));
   }
 
+  private class CustomMuninNodeBuilder<TMuninNodeOptions> : MuninNodeBuilder
+    where TMuninNodeOptions : MuninNodeOptions
+  {
+    private readonly Func<TMuninNodeOptions, IPluginProvider, IMuninNodeListenerFactory?, IServiceProvider, IMuninNode> nodeFactory;
+
+    public CustomMuninNodeBuilder(
+      IMuninServiceBuilder serviceBuilder,
+      string serviceKey,
+      Func<TMuninNodeOptions, IPluginProvider, IMuninNodeListenerFactory?, IServiceProvider, IMuninNode> nodeFactory
+    )
+      : base(serviceBuilder, serviceKey)
+    {
+      this.nodeFactory = nodeFactory;
+    }
+
+    protected override IMuninNode Build(
+      IPluginProvider pluginProvider,
+      IMuninNodeListenerFactory? listenerFactory,
+      IServiceProvider serviceProvider
+    )
+      => nodeFactory(
+        GetConfiguredOptions<TMuninNodeOptions>(serviceProvider),
+        pluginProvider,
+        listenerFactory,
+        serviceProvider
+      );
+  }
+
+  private class CustomMuninNode : LocalNode {
+    public MuninNodeOptions Options { get; }
+    public override string HostName => Options.HostName;
+    public override IPluginProvider PluginProvider { get; }
+
+    public CustomMuninNode(
+      MuninNodeOptions options,
+      IPluginProvider pluginProvider,
+      IMuninNodeListenerFactory? listenerFactory
+    )
+      : base(
+        listenerFactory: listenerFactory,
+        accessRule: null,
+        logger: null
+      )
+    {
+      Options = options;
+      PluginProvider = pluginProvider;
+    }
+  }
+
+  [Test]
+  public void AddNode_CustomBuilderType()
+  {
+    const string HostName = "munin-node.localhost";
+    var services = new ServiceCollection();
+
+    services.AddMunin(configure: builder => {
+      builder.AddNode<MuninNodeOptions, CustomMuninNodeBuilder<MuninNodeOptions>>(
+        configure: options => options.HostName = HostName,
+        createBuilder: static (serviceBuilder, serviceKey) => new CustomMuninNodeBuilder<MuninNodeOptions>(
+          serviceBuilder: serviceBuilder,
+          serviceKey: serviceKey,
+          nodeFactory: static (options, pluginProvider, listenerFactory, serviceProvider) => new CustomMuninNode(
+            options,
+            pluginProvider,
+            listenerFactory
+          )
+        )
+      );
+    });
+
+    var serviceProvider = services.BuildServiceProvider();
+
+    var node = serviceProvider.GetService<IMuninNode>();
+
+    Assert.That(node, Is.Not.Null);
+    Assert.That(node, Is.TypeOf<CustomMuninNode>());
+    Assert.That(node.HostName, Is.EqualTo(HostName));
+
+    var keyedNode = serviceProvider.GetKeyedService<IMuninNode>(HostName);
+
+    Assert.That(keyedNode, Is.Not.Null);
+    Assert.That(keyedNode, Is.TypeOf<CustomMuninNode>());
+    Assert.That(keyedNode.HostName, Is.EqualTo(HostName));
+  }
+
   private class CustomMuninNodeOptions : MuninNodeOptions {
     public string? ExtraOption { get; set; }
 
@@ -184,11 +272,20 @@ public class IMuninServiceBuilderExtensionsTests {
     var services = new ServiceCollection();
 
     services.AddMunin(configure: builder => {
-      builder.AddNode<CustomMuninNodeOptions>(
+      builder.AddNode<CustomMuninNodeOptions, CustomMuninNodeBuilder<CustomMuninNodeOptions>>(
         configure: options => {
           options.HostName = HostName;
           options.ExtraOption = ExtraOptionValue;
-        }
+        },
+        createBuilder: static (serviceBuilder, serviceKey) => new CustomMuninNodeBuilder<CustomMuninNodeOptions>(
+          serviceBuilder: serviceBuilder,
+          serviceKey: serviceKey,
+          nodeFactory: static (options, pluginProvider, listenerFactory, serviceProvider) => new CustomMuninNode(
+            options,
+            pluginProvider,
+            listenerFactory
+          )
+        )
       );
     });
 
