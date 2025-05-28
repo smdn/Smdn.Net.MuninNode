@@ -1,8 +1,5 @@
 // SPDX-FileCopyrightText: 2025 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
-
-#pragma warning disable CA1848 // For improved performance, use the LoggerMessage delegates instead of calling 'LoggerExtensions.LogInformation(ILogger, string?, params object?[])'
-
 using System;
 using System.Net;
 using System.Threading;
@@ -14,6 +11,22 @@ using Microsoft.Extensions.Logging;
 namespace Smdn.Net.MuninNode.Hosting;
 
 public class MuninNodeBackgroundService : BackgroundService {
+  private static readonly Action<ILogger, string, Exception?> LogStarting = LoggerMessage.Define<string>(
+    LogLevel.Information,
+    eventId: default, // TODO
+    formatString: "Munin node '{HostName}' starting."
+  );
+  private static readonly Action<ILogger, string, Exception?> LogStopping = LoggerMessage.Define<string>(
+    LogLevel.Information,
+    eventId: default, // TODO
+    formatString: "Munin node '{HostName}' stopping."
+  );
+  private static readonly Action<ILogger, string, Exception?> LogStopped = LoggerMessage.Define<string>(
+    LogLevel.Information,
+    eventId: default, // TODO
+    formatString: "Munin node '{HostName}' stopped."
+  );
+
   private IMuninNode node;
   private readonly ILogger<MuninNodeBackgroundService>? logger;
 
@@ -70,7 +83,8 @@ public class MuninNodeBackgroundService : BackgroundService {
     if (node is null)
       throw new ObjectDisposedException(GetType().FullName);
 
-    logger?.LogInformation("Munin node '{HostName}' starting.", node.HostName);
+    if (logger is not null)
+      LogStarting(logger, node.HostName, null);
 
     await node.RunAsync(stoppingToken).ConfigureAwait(false);
   }
@@ -80,7 +94,8 @@ public class MuninNodeBackgroundService : BackgroundService {
     if (node is null)
       throw new ObjectDisposedException(GetType().FullName);
 
-    logger?.LogInformation("Munin node '{HostName}' stopping.", node.HostName);
+    if (logger is not null)
+      LogStopping(logger, node.HostName, null);
 
     await base.StopAsync(cancellationToken).ConfigureAwait(false);
 
@@ -90,7 +105,8 @@ public class MuninNodeBackgroundService : BackgroundService {
     if (node is NodeBase stoppableNode)
       await stoppableNode.StopAsync(cancellationToken).ConfigureAwait(false);
 
-    logger?.LogInformation("Munin node '{HostName}' stopped.", node.HostName);
+    if (logger is not null)
+      LogStopped(logger, node.HostName, null);
 
     if (node is IDisposable disposableNode)
       disposableNode.Dispose();
