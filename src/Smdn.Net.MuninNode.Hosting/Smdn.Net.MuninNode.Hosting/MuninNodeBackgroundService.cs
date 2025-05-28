@@ -28,10 +28,11 @@ public class MuninNodeBackgroundService : BackgroundService {
   );
 
   private IMuninNode node;
-  private readonly ILogger<MuninNodeBackgroundService>? logger;
 
   /// <inheritdoc cref="IMuninNode.EndPoint"/>
   public EndPoint EndPoint => (node ?? throw new ObjectDisposedException(GetType().FullName)).EndPoint;
+
+  protected ILogger? Logger { get; }
 
 #if false
   // TODO: support ServiceKey
@@ -43,7 +44,7 @@ public class MuninNodeBackgroundService : BackgroundService {
   )
   {
     this.node = serviceProvider.GetRequiredKeyedService<IMuninNode>(serviceKey);
-    this.logger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<MuninNodeBackgroundService>();
+    Logger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<MuninNodeBackgroundService>();
   }
 #endif
 
@@ -63,7 +64,7 @@ public class MuninNodeBackgroundService : BackgroundService {
   )
   {
     this.node = node ?? throw new ArgumentNullException(nameof(node));
-    this.logger = logger;
+    Logger = logger;
   }
 
   public override void Dispose()
@@ -83,8 +84,8 @@ public class MuninNodeBackgroundService : BackgroundService {
     if (node is null)
       throw new ObjectDisposedException(GetType().FullName);
 
-    if (logger is not null)
-      LogStarting(logger, node.HostName, null);
+    if (Logger is not null)
+      LogStarting(Logger, node.HostName, null);
 
     await node.RunAsync(stoppingToken).ConfigureAwait(false);
   }
@@ -94,8 +95,8 @@ public class MuninNodeBackgroundService : BackgroundService {
     if (node is null)
       throw new ObjectDisposedException(GetType().FullName);
 
-    if (logger is not null)
-      LogStopping(logger, node.HostName, null);
+    if (Logger is not null)
+      LogStopping(Logger, node.HostName, null);
 
     await base.StopAsync(cancellationToken).ConfigureAwait(false);
 
@@ -105,8 +106,8 @@ public class MuninNodeBackgroundService : BackgroundService {
     if (node is NodeBase stoppableNode)
       await stoppableNode.StopAsync(cancellationToken).ConfigureAwait(false);
 
-    if (logger is not null)
-      LogStopped(logger, node.HostName, null);
+    if (Logger is not null)
+      LogStopped(Logger, node.HostName, null);
 
     if (node is IDisposable disposableNode)
       disposableNode.Dispose();
