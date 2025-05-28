@@ -132,6 +132,99 @@ public class MuninNodeBackgroundServiceTests {
     }
   }
 
+  private class EmptyPluginProvider : IPluginProvider {
+    public IReadOnlyCollection<IPlugin> Plugins { get; } = [];
+    public INodeSessionCallback? SessionCallback => null;
+  }
+
+  private class EmptyNode : LocalNode {
+    public override IPluginProvider PluginProvider { get; } = new EmptyPluginProvider();
+    public override string HostName => "munin-node.localhost";
+
+    public EmptyNode()
+      : base(
+        listenerFactory: null,
+        accessRule: null,
+        logger: null
+      )
+    {
+    }
+  }
+
+  private class HookStartNode : EmptyNode {
+    public EventHandler? Starting = null;
+    public EventHandler? Started = null;
+
+    public HookStartNode()
+      : base()
+    {
+    }
+
+    protected override ValueTask StartingAsync(CancellationToken cancellationToken)
+    {
+      Starting?.Invoke(this, EventArgs.Empty);
+
+      return default;
+    }
+
+    protected override ValueTask StartedAsync(CancellationToken cancellationToken)
+    {
+      Started?.Invoke(this, EventArgs.Empty);
+
+      return default;
+    }
+  }
+
+  [Test]
+  public void StartAsync_CancellationRequestedBeforeStarting()
+  {
+    var numberOfTimesStartingInvoked = 0;
+    var numberOfTimesStartedInvoked = 0;
+
+    using var hookStartNode = new HookStartNode();
+
+    hookStartNode.Starting += (_, _) => numberOfTimesStartingInvoked++;
+    hookStartNode.Started += (_, _) => numberOfTimesStartedInvoked++;
+
+    using var muninNodeService = new MuninNodeBackgroundService(hookStartNode);
+
+    // start service
+    Assert.That(
+      async () => await muninNodeService.StartAsync(cancellationToken: new(canceled: true)),
+      Throws.InstanceOf<OperationCanceledException>()
+    );
+
+    Assert.That(numberOfTimesStartingInvoked, Is.Zero);
+    Assert.That(numberOfTimesStartedInvoked, Is.Zero);
+  }
+
+  [Test]
+  public void StartAsync_CancellationRequestedWhileStarting()
+  {
+    var numberOfTimesStartingInvoked = 0;
+    var numberOfTimesStartedInvoked = 0;
+
+    using var hookStartNode = new HookStartNode();
+    using var ctsStarting = new CancellationTokenSource();
+
+    hookStartNode.Starting += (_, _) => {
+      numberOfTimesStartingInvoked++;
+      ctsStarting.Cancel();
+    };
+    hookStartNode.Started += (_, _) => numberOfTimesStartedInvoked++;
+
+    using var muninNodeService = new MuninNodeBackgroundService(hookStartNode);
+
+    // start service
+    Assert.That(
+      async () => await muninNodeService.StartAsync(cancellationToken: ctsStarting.Token),
+      Throws.InstanceOf<OperationCanceledException>()
+    );
+
+    Assert.That(numberOfTimesStartingInvoked, Is.EqualTo(1));
+    Assert.That(numberOfTimesStartedInvoked, Is.Zero);
+  }
+
   private class NullMuninNode : IMuninNode {
     public string HostName => "munin-node.localhost";
     public EndPoint EndPoint { get; } = new IPEndPoint(IPAddress.Any, 0);
@@ -160,24 +253,12 @@ public class MuninNodeBackgroundServiceTests {
     );
   }
 
-  private class HookStopNode : LocalNode {
-    private sealed class NullPluginProvider : IPluginProvider {
-      public IReadOnlyCollection<IPlugin> Plugins { get; } = [];
-      public INodeSessionCallback? SessionCallback => null;
-    }
-
-    public override IPluginProvider PluginProvider { get; } = new NullPluginProvider();
-    public override string HostName => "munin-node.localhost";
-
+  private class HookStopNode : EmptyNode {
     public EventHandler? Stopping = null;
     public EventHandler? Stopped = null;
 
     public HookStopNode()
-      : base(
-        listenerFactory: null,
-        accessRule: null,
-        logger: null
-      )
+      : base()
     {
     }
 

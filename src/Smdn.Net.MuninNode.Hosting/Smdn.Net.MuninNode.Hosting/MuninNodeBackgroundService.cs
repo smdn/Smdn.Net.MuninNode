@@ -16,6 +16,11 @@ public class MuninNodeBackgroundService : BackgroundService {
     eventId: default, // TODO
     formatString: "Munin node '{HostName}' starting."
   );
+  private static readonly Action<ILogger, string, Exception?> LogStarted = LoggerMessage.Define<string>(
+    LogLevel.Information,
+    eventId: default, // TODO
+    formatString: "Munin node '{HostName}' started."
+  );
   private static readonly Action<ILogger, string, Exception?> LogStopping = LoggerMessage.Define<string>(
     LogLevel.Information,
     eventId: default, // TODO
@@ -79,13 +84,26 @@ public class MuninNodeBackgroundService : BackgroundService {
     GC.SuppressFinalize(this);
   }
 
-  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+  public override async Task StartAsync(CancellationToken cancellationToken)
   {
     if (node is null)
       throw new ObjectDisposedException(GetType().FullName);
 
+    cancellationToken.ThrowIfCancellationRequested();
+
     if (Logger is not null)
       LogStarting(Logger, node.HostName, null);
+
+    await base.StartAsync(cancellationToken).ConfigureAwait(false);
+
+    if (Logger is not null)
+      LogStarted(Logger, node.HostName, null);
+  }
+
+  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+  {
+    if (node is null)
+      throw new ObjectDisposedException(GetType().FullName);
 
     await node.RunAsync(stoppingToken).ConfigureAwait(false);
   }
