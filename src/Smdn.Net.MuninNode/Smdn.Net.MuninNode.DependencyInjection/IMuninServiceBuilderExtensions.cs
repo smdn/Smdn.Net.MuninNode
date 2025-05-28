@@ -11,7 +11,9 @@ public static class IMuninServiceBuilderExtensions {
   /// <summary>
   /// Adds a <c>Munin-Node</c> to the <see cref="IMuninServiceBuilder"/> with default configurations.
   /// </summary>
-  /// <param name="builder">An <see cref="IMuninNodeBuilder"/> to build the <c>Munin-Node</c> to be added.</param>
+  /// <param name="builder">
+  /// An <see cref="IMuninServiceBuilder"/> that the built <c>Munin-Node</c> will be added to.
+  /// </param>
   /// <returns>The current <see cref="IMuninNodeBuilder"/> so that additional calls can be chained.</returns>
   public static IMuninNodeBuilder AddNode(
     this IMuninServiceBuilder builder
@@ -25,7 +27,7 @@ public static class IMuninServiceBuilderExtensions {
   /// Adds a <c>Munin-Node</c> to the <see cref="IMuninServiceBuilder"/> with specified configurations.
   /// </summary>
   /// <param name="builder">
-  /// An <see cref="IMuninNodeBuilder"/> to build the <c>Munin-Node</c> to be added.
+  /// An <see cref="IMuninServiceBuilder"/> that the built <c>Munin-Node</c> will be added to.
   /// </param>
   /// <param name="configure">
   /// An <see cref="Action{MuninNodeOptions}"/> to setup <see cref="MuninNodeOptions"/> to
@@ -36,29 +38,48 @@ public static class IMuninServiceBuilderExtensions {
     this IMuninServiceBuilder builder,
     Action<MuninNodeOptions> configure
   )
+    => AddNode<MuninNodeOptions>(
+      builder: builder ?? throw new ArgumentNullException(nameof(builder)),
+      configure: configure ?? throw new ArgumentNullException(nameof(configure))
+    );
+
+  /// <summary>
+  /// Adds a <c>Munin-Node</c> to the <see cref="IMuninServiceBuilder"/> with specified configurations.
+  /// </summary>
+  /// <typeparam name="TMuninNodeOptions">
+  /// The extended type of <see cref="MuninNodeOptions"/> to configure the <c>Munin-Node</c>.
+  /// </typeparam>
+  /// <param name="builder">
+  /// An <see cref="IMuninServiceBuilder"/> that the built <c>Munin-Node</c> will be added to.
+  /// </param>
+  /// <param name="configure">
+  /// An <see cref="Action{TMuninNodeOptions}"/> to setup <typeparamref name="TMuninNodeOptions"/> to
+  /// configure the <c>Munin-Node</c> to be built.
+  /// </param>
+  /// <returns>The current <see cref="IMuninNodeBuilder"/> so that additional calls can be chained.</returns>
+  public static IMuninNodeBuilder AddNode<TMuninNodeOptions>(
+    this IMuninServiceBuilder builder,
+    Action<TMuninNodeOptions> configure
+  )
+    where TMuninNodeOptions : MuninNodeOptions, new()
   {
     if (builder is null)
       throw new ArgumentNullException(nameof(builder));
     if (configure is null)
       throw new ArgumentNullException(nameof(configure));
 
-    var options = new MuninNodeOptions();
+    var configuredOptions = new TMuninNodeOptions();
 
-    configure(options);
+    configure(configuredOptions);
 
     var nodeBuilder = new MuninNodeBuilder(
       serviceBuilder: builder,
-      serviceKey: options.HostName // use configured hostname as a service key and option name
+      serviceKey: configuredOptions.HostName // use configured hostname as a service key and option name
     );
 
-    _ = builder.Services.Configure<MuninNodeOptions>(
+    _ = builder.Services.Configure<TMuninNodeOptions>(
       name: nodeBuilder.ServiceKey, // configure MuninNodeOptions for this builder
-      opts => {
-        opts.Address = options.Address;
-        opts.Port = options.Port;
-        opts.HostName = options.HostName;
-        opts.AccessRule = options.AccessRule;
-      }
+      options => options.Configure(configuredOptions)
     );
 
     builder.Services.Add(

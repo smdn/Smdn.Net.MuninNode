@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 using NUnit.Framework;
 
@@ -160,5 +161,44 @@ public class IMuninServiceBuilderExtensionsTests {
     Assert.That(node, Is.Not.Null);
     Assert.That(node.HostName, Is.EqualTo(hostName));
     Assert.That(node, Is.Not.SameAs(anotherNode));
+  }
+
+  private class CustomMuninNodeOptions : MuninNodeOptions {
+    public string? ExtraOption { get; set; }
+
+    protected override void Configure(MuninNodeOptions baseOptions)
+    {
+      base.Configure(baseOptions ?? throw new ArgumentNullException(nameof(baseOptions)));
+
+      if (baseOptions is CustomMuninNodeOptions options)
+        ExtraOption = options.ExtraOption;
+    }
+  }
+
+  [Test]
+  public void AddNode_CustomOptionsType()
+  {
+    const string HostName = "munin-node.localhost";
+    const string ExtraOptionValue = "foo";
+
+    var services = new ServiceCollection();
+
+    services.AddMunin(configure: builder => {
+      builder.AddNode<CustomMuninNodeOptions>(
+        configure: options => {
+          options.HostName = HostName;
+          options.ExtraOption = ExtraOptionValue;
+        }
+      );
+    });
+
+    var serviceProvider = services.BuildServiceProvider();
+
+    var options = serviceProvider
+      .GetRequiredService<IOptionsMonitor<CustomMuninNodeOptions>>()
+      .Get(name: HostName);
+
+    Assert.That(options.HostName, Is.EqualTo(HostName));
+    Assert.That(options.ExtraOption, Is.EqualTo(ExtraOptionValue));
   }
 }

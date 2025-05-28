@@ -73,7 +73,7 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
       throw new ArgumentNullException(nameof(serviceProvider));
 
     return new DefaultMuninNode(
-      options: serviceProvider.GetRequiredService<IOptionsMonitor<MuninNodeOptions>>().Get(name: ServiceKey),
+      options: GetConfiguredOptions<MuninNodeOptions>(serviceProvider),
       pluginProvider: buildPluginProvider is null
         ? new PluginProvider(
             plugins: pluginFactories.Select(factory => factory(serviceProvider)).ToList(),
@@ -97,5 +97,16 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
       Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
       SessionCallback = sessionCallback;
     }
+  }
+
+  protected TMuninNodeOptions GetConfiguredOptions<TMuninNodeOptions>(IServiceProvider serviceProvider)
+    where TMuninNodeOptions : MuninNodeOptions
+  {
+    if (serviceProvider is null)
+      throw new ArgumentNullException(nameof(serviceProvider));
+
+    return serviceProvider
+      .GetRequiredService<IOptionsMonitor<TMuninNodeOptions>>()
+      .Get(name: ServiceKey);
   }
 }
