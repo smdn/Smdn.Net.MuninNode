@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: MIT
 using System;
 using System.Collections.Generic;
+#if SYSTEM_DIAGNOSTICS_CODEANALYSIS_MEMBERNOTNULLATTRIBUTE
+using System.Diagnostics.CodeAnalysis;
+#endif
 using System.Text.RegularExpressions;
 
 namespace Smdn.Net.MuninPlugin;
@@ -42,8 +45,7 @@ public partial class PluginGraphAttributesBuilder {
     }
   }
 
-  private readonly string title;
-
+  private string title;
   private bool? showGraph;
   private string? category;
   private int? height;
@@ -106,14 +108,14 @@ public partial class PluginGraphAttributesBuilder {
   /// <paramref name="title"/> contains invalid characters.
   /// </exception>
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-title">Plugin reference - Global attributes - graph_title</seealso>
+#if !SYSTEM_DIAGNOSTICS_CODEANALYSIS_MEMBERNOTNULLATTRIBUTE
+#pragma warning disable CS8618
+#endif
   public PluginGraphAttributesBuilder(string title)
   {
-    ArgumentExceptionShim.ThrowIfNullOrWhiteSpace(title, nameof(title));
-
-    ThrowIfNotMatch(RegexTitle, title, nameof(title), "graph_title");
-
-    this.title = title;
+    WithTitle(title);
   }
+#pragma warning restore CS8618
 
   /// <summary>Sets a value for the <c>graph</c> to <c>yes</c>.</summary>
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph">Plugin reference - Global attributes - graph</seealso>
@@ -227,6 +229,27 @@ public partial class PluginGraphAttributesBuilder {
   public PluginGraphAttributesBuilder DisableUnitScaling()
   {
     this.scale = false;
+
+    return this;
+  }
+
+  /// <summary>Overwrites a value for the <c>graph_title</c>.</summary>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-title">Plugin reference - Global attributes - graph_title</seealso>
+  /// <exception cref="ArgumentNullException"><paramref name="title"/> is <see langword="null"/>.</exception>
+  /// <exception cref="ArgumentException">
+  /// <paramref name="title"/> is empty, or
+  /// <paramref name="title"/> contains invalid characters.
+  /// </exception>
+#if SYSTEM_DIAGNOSTICS_CODEANALYSIS_MEMBERNOTNULLATTRIBUTE
+  [MemberNotNull(nameof(title))]
+#endif
+  public PluginGraphAttributesBuilder WithTitle(string title)
+  {
+    ArgumentExceptionShim.ThrowIfNullOrWhiteSpace(title, nameof(title));
+
+    ThrowIfNotMatch(RegexTitle, title, nameof(title), "graph_title");
+
+    this.title = title;
 
     return this;
   }

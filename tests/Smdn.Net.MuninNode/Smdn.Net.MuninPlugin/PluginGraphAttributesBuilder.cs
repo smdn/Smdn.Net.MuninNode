@@ -10,18 +10,41 @@ namespace Smdn.Net.MuninPlugin;
 
 [TestFixture]
 public partial class PluginGraphAttributesBuilderTests {
-  [TestCase(null, typeof(ArgumentNullException))]
-  [TestCase("", typeof(ArgumentException))]
-  [TestCase(" ", typeof(ArgumentException))]
-  [TestCase("\0", typeof(ArgumentException))]
-  [TestCase("\0title", typeof(ArgumentException))]
-  [TestCase("\ntitle", typeof(ArgumentException))]
-  [TestCase("\rtitle", typeof(ArgumentException))]
-  [TestCase("\ttitle", typeof(ArgumentException))]
-  [TestCase("title\0", typeof(ArgumentException))]
-  [TestCase("title\n", typeof(ArgumentException))]
-  [TestCase("title\r", typeof(ArgumentException))]
-  [TestCase("title\t", typeof(ArgumentException))]
+  private static System.Collections.IEnumerable YieldTestCases_WithTitle_ArgumentException()
+  {
+    yield return new object?[] { null, typeof(ArgumentNullException) };
+    yield return new object?[] { "", typeof(ArgumentException) };
+    yield return new object?[] { " ", typeof(ArgumentException) };
+    yield return new object?[] { "\0", typeof(ArgumentException) };
+    yield return new object?[] { "\0title", typeof(ArgumentException) };
+    yield return new object?[] { "\ntitle", typeof(ArgumentException) };
+    yield return new object?[] { "\rtitle", typeof(ArgumentException) };
+    yield return new object?[] { "\ttitle", typeof(ArgumentException) };
+    yield return new object?[] { "title\0", typeof(ArgumentException) };
+    yield return new object?[] { "title\n", typeof(ArgumentException) };
+    yield return new object?[] { "title\r", typeof(ArgumentException) };
+    yield return new object?[] { "title\t", typeof(ArgumentException) };
+  }
+
+  private static System.Collections.IEnumerable YieldTestCases_WithTitle()
+  {
+    yield return new object[] { "t" };
+    yield return new object[] { "title" };
+    yield return new object[] { "Title" };
+    yield return new object[] { "TITLE" };
+    yield return new object[] { "title0" };
+    yield return new object[] { "title9" };
+    yield return new object[] { "0title" };
+    yield return new object[] { "9title" };
+    yield return new object[] { "title-x" };
+    yield return new object[] { ".title." };
+    yield return new object[] { "'title'" };
+    yield return new object[] { "title - title" };
+    yield return new object[] { "<title>" };
+    yield return new object[] { "タイトル" };
+  }
+
+  [TestCaseSource(nameof(YieldTestCases_WithTitle_ArgumentException))]
   public void Ctor_ArgumentException(string? title, Type expectedTypeOfException)
     => Assert.That(
       () => new PluginGraphAttributesBuilder(
@@ -43,20 +66,7 @@ public partial class PluginGraphAttributesBuilderTests {
       Is.EquivalentTo(expectedAttributeList).Using((IEqualityComparer<string>)StringComparer.Ordinal)
     );
 
-  [TestCase("t")]
-  [TestCase("title")]
-  [TestCase("Title")]
-  [TestCase("TITLE")]
-  [TestCase("title0")]
-  [TestCase("title9")]
-  [TestCase("0title")]
-  [TestCase("9title")]
-  [TestCase("title-x")]
-  [TestCase(".title.")]
-  [TestCase("'title'")]
-  [TestCase("title - title")]
-  [TestCase("<title>")]
-  [TestCase("タイトル")]
+  [TestCaseSource(nameof(YieldTestCases_WithTitle))]
   public void Ctor(string title)
     => AssertBuiltGraphAttributes(
       new PluginGraphAttributesBuilder(title),
@@ -279,6 +289,25 @@ public partial class PluginGraphAttributesBuilderTests {
     => AssertBuiltGraphAttributes(
       new PluginGraphAttributesBuilder("title").DisableUnitScaling(),
       ["graph_title title", "graph_scale no"]
+    );
+
+  [TestCaseSource(nameof(YieldTestCases_WithTitle_ArgumentException))]
+  public void WithTitle_ArgumentException(string? title, Type expectedTypeOfException)
+    => Assert.That(
+      () => new PluginGraphAttributesBuilder("title")
+        .WithTitle(title: title!),
+      Throws
+        .TypeOf(expectedTypeOfException)
+        .With
+        .Property(nameof(ArgumentException.ParamName))
+        .EqualTo("title")
+    );
+
+  [TestCaseSource(nameof(YieldTestCases_WithTitle))]
+  public void WithTitle(string title)
+    => AssertBuiltGraphAttributes(
+      new PluginGraphAttributesBuilder("title").WithTitle(title),
+      [$"graph_title {title}"]
     );
 
   [TestCase(null, typeof(ArgumentNullException))]
