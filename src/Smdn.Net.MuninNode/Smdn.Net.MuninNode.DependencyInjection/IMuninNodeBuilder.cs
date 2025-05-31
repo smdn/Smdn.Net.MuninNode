@@ -14,6 +14,7 @@ namespace Smdn.Net.MuninNode.DependencyInjection;
 /// <see cref="IMuninNodeBuilderExtensions.AddPlugin"/>
 /// <see cref="IMuninNodeBuilderExtensions.UseListenerFactory"/>
 /// <see cref="IMuninNodeBuilderExtensions.UseSessionCallback"/>
+[Obsolete($"Use or inherit {nameof(MuninNodeBuilder)} instead.")]
 public interface IMuninNodeBuilder {
   /// <summary>
   /// Gets the <see cref="IServiceCollection"/> where the <c>Munin-Node</c> services are configured.

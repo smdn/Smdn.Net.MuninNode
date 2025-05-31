@@ -15,9 +15,11 @@ public static class IMuninServiceBuilderExtensions {
   /// An <see cref="IMuninServiceBuilder"/> that the built <c>Munin-Node</c> will be added to.
   /// </param>
   /// <returns>The current <see cref="IMuninNodeBuilder"/> so that additional calls can be chained.</returns>
+#pragma warning disable CS0618 // TODO: return IMuninNodeBuilder instead of MuninNodeBuilder
   public static IMuninNodeBuilder AddNode(
     this IMuninServiceBuilder builder
   )
+#pragma warning restore CS0618
     => AddNode(
       builder: builder,
       configure: _ => { }
@@ -34,10 +36,12 @@ public static class IMuninServiceBuilderExtensions {
   /// configure the <c>Munin-Node</c> to be built.
   /// </param>
   /// <returns>The current <see cref="IMuninNodeBuilder"/> so that additional calls can be chained.</returns>
+#pragma warning disable CS0618 // TODO: return IMuninNodeBuilder instead of MuninNodeBuilder
   public static IMuninNodeBuilder AddNode(
     this IMuninServiceBuilder builder,
     Action<MuninNodeOptions> configure
   )
+#pragma warning restore CS0618
     => AddNode<
       IMuninNode,
       IMuninNode,

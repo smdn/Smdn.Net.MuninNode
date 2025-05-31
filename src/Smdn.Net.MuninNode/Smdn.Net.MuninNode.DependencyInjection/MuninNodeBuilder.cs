@@ -14,13 +14,30 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode.DependencyInjection;
 
+/// <summary>
+/// Provides builder pattern for configuring and building the <c>Munin-Node</c>.
+/// </summary>
+/// <seealso cref="MuninNodeBuilderExtensions"/>
+#pragma warning disable CS0618 // TODO: remove IMuninNodeBuilder
 public class MuninNodeBuilder : IMuninNodeBuilder {
+#pragma warning restore CS0618
   private readonly List<Func<IServiceProvider, IPlugin>> pluginFactories = new(capacity: 4);
   private Func<IServiceProvider, IPluginProvider>? buildPluginProvider;
   private Func<IServiceProvider, INodeSessionCallback>? buildSessionCallback;
   private Func<IServiceProvider, IMuninNodeListenerFactory>? buildListenerFactory;
 
+  /// <summary>
+  /// Gets the <see cref="IServiceCollection"/> where the <c>Munin-Node</c> services are configured.
+  /// </summary>
   public IServiceCollection Services { get; }
+
+  /// <summary>
+  /// Gets the <see cref="string"/> key of <c>Munin-Node</c> service.
+  /// </summary>
+  /// <remarks>
+  /// The value set as the hostname of the <c>Munin-Node</c> (see <see cref="MuninNodeOptions.HostName"/>) is used as the service key.
+  /// </remarks>
+  /// <see cref="IMuninServiceBuilderExtensions.AddNode(IMuninServiceBuilder, Action{MuninNodeOptions})"/>
   public string ServiceKey { get; }
 
   protected internal MuninNodeBuilder(IMuninServiceBuilder serviceBuilder, string serviceKey)
@@ -67,6 +84,13 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
     this.buildListenerFactory = buildListenerFactory;
   }
 
+  /// <summary>
+  /// Builds the <c>Munin-Node</c> with current configurations.
+  /// </summary>
+  /// <param name="serviceProvider">
+  /// An <see cref="IServiceProvider"/> that provides the services to be used by the <see cref="IMuninNode"/> being built.
+  /// </param>
+  /// <returns>An initialized <see cref="IMuninNode"/>.</returns>
   public IMuninNode Build(IServiceProvider serviceProvider)
   {
     if (serviceProvider is null)

@@ -29,11 +29,13 @@ public static class IServiceCollectionExtensions {
   /// <paramref name="configureNode"/> is <see langword="null"/>, or
   /// <paramref name="buildNode"/> is <see langword="null"/>.
   /// </exception>
+#pragma warning disable CS0618 // accept MuninNodeBuilder instead of IMuninNodeBuilder
   public static IServiceCollection AddHostedMuninNodeService(
     this IServiceCollection services,
     Action<MuninNodeOptions> configureNode,
     Action<IMuninNodeBuilder> buildNode
   )
+#pragma warning restore CS0618
   {
     if (services is null)
       throw new ArgumentNullException(nameof(services));
