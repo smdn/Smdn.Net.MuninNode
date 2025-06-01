@@ -12,4 +12,7 @@ internal sealed class LoopbackOnlyAccessRule : IAccessRule {
     => IPAddress.IsLoopback(
       (remoteEndPoint ?? throw new ArgumentNullException(nameof(remoteEndPoint))).Address
     );
+
+  public override string ToString()
+    => nameof(LoopbackOnlyAccessRule);
 }

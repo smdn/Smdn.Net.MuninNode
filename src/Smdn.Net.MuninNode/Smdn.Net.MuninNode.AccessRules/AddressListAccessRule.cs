@@ -52,4 +52,7 @@ internal sealed class AddressListAccessRule : IAccessRule {
 
     return false;
   }
+
+  public override string ToString()
+    => $"{{{nameof(AddressListAccessRule)}: {nameof(addressListAllowFrom)}={string.Join(", ", addressListAllowFrom)}; {nameof(shouldConsiderIPv4MappedIPv6Address)}={shouldConsiderIPv4MappedIPv6Address}}}";
 }
