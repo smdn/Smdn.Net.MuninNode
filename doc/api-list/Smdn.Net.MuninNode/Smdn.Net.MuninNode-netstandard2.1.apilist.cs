@@ -1,7 +1,7 @@
-// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-2.4.0)
+// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-2.5.0)
 //   Name: Smdn.Net.MuninNode
-//   AssemblyVersion: 2.4.0.0
-//   InformationalVersion: 2.4.0+6578cec572157dafbc9518cc746aae28f7f1ce6d
+//   AssemblyVersion: 2.5.0.0
+//   InformationalVersion: 2.5.0+41ff114bf69b864033a05a389896010d3eefe4d5
 //   TargetFramework: .NETStandard,Version=v2.1
 //   Configuration: Release
 //   Referenced assemblies:
@@ -63,7 +63,7 @@ namespace Smdn.Net.MuninNode {
     protected override Socket CreateServerSocket() {}
   }
 
-  public sealed class MuninNodeOptions {
+  public class MuninNodeOptions {
     public const string DefaultHostName = "munin-node.localhost";
     public const int DefaultPort = 4949;
 
@@ -78,6 +78,7 @@ namespace Smdn.Net.MuninNode {
 
     public MuninNodeOptions AllowFrom(IReadOnlyList<IPAddress> addresses, bool shouldConsiderIPv4MappedIPv6Address = true) {}
     public MuninNodeOptions AllowFromLoopbackOnly() {}
+    internal protected virtual void Configure(MuninNodeOptions baseOptions) {}
     public MuninNodeOptions UseAnyAddress() {}
     public MuninNodeOptions UseAnyAddress(int port) {}
     public MuninNodeOptions UseLoopbackAddress() {}
@@ -120,13 +121,18 @@ namespace Smdn.Net.MuninNode {
     [Obsolete("This method will be deprecated in the future.Use IMuninNodeListenerFactory and StartAsync instead.Make sure to override CreateServerSocket if you need to use this method.")]
     public void Start() {}
     public ValueTask StartAsync(CancellationToken cancellationToken = default) {}
+    protected virtual ValueTask StartedAsync(CancellationToken cancellationToken) {}
+    protected virtual ValueTask StartingAsync(CancellationToken cancellationToken) {}
     public ValueTask StopAsync(CancellationToken cancellationToken = default) {}
+    protected virtual ValueTask StoppedAsync(CancellationToken cancellationToken) {}
+    protected virtual ValueTask StoppingAsync(CancellationToken cancellationToken) {}
     protected void ThrowIfDisposed() {}
     protected void ThrowIfPluginProviderIsNull() {}
   }
 }
 
 namespace Smdn.Net.MuninNode.DependencyInjection {
+  [Obsolete("Use or inherit MuninNodeBuilder instead.")]
   public interface IMuninNodeBuilder {
     string ServiceKey { get; }
     IServiceCollection Services { get; }
@@ -138,6 +144,7 @@ namespace Smdn.Net.MuninNode.DependencyInjection {
     IServiceCollection Services { get; }
   }
 
+  [Obsolete("Use MuninNodeBuilderExtensions instead.")]
   public static class IMuninNodeBuilderExtensions {
     public static IMuninNodeBuilder AddPlugin(this IMuninNodeBuilder builder, Func<IServiceProvider, IPlugin> buildPlugin) {}
     public static IMuninNodeBuilder AddPlugin(this IMuninNodeBuilder builder, IPlugin plugin) {}
@@ -154,10 +161,38 @@ namespace Smdn.Net.MuninNode.DependencyInjection {
   public static class IMuninServiceBuilderExtensions {
     public static IMuninNodeBuilder AddNode(this IMuninServiceBuilder builder) {}
     public static IMuninNodeBuilder AddNode(this IMuninServiceBuilder builder, Action<MuninNodeOptions> configure) {}
+    public static TMuninNodeBuilder AddNode<TMuninNode, TMuninNodeOptions, TMuninNodeBuilder>(this IMuninServiceBuilder builder, Action<TMuninNodeOptions> configure, Func<IMuninServiceBuilder, string, TMuninNodeBuilder> createBuilder) where TMuninNode : class, IMuninNode where TMuninNodeOptions : MuninNodeOptions, new() where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNodeBuilder AddNode<TMuninNodeOptions, TMuninNodeBuilder>(this IMuninServiceBuilder builder, Action<TMuninNodeOptions> configure, Func<IMuninServiceBuilder, string, TMuninNodeBuilder> createBuilder) where TMuninNodeOptions : MuninNodeOptions, new() where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNodeBuilder AddNode<TMuninNodeService, TMuninNodeImplementation, TMuninNodeOptions, TMuninNodeBuilder>(this IMuninServiceBuilder builder, Action<TMuninNodeOptions> configure, Func<IMuninServiceBuilder, string, TMuninNodeBuilder> createBuilder) where TMuninNodeService : class, IMuninNode where TMuninNodeImplementation : class, TMuninNodeService where TMuninNodeOptions : MuninNodeOptions, new() where TMuninNodeBuilder : MuninNodeBuilder {}
   }
 
   public static class IServiceCollectionExtensions {
     public static IServiceCollection AddMunin(this IServiceCollection services, Action<IMuninServiceBuilder> configure) {}
+  }
+
+  public class MuninNodeBuilder : IMuninNodeBuilder {
+    internal protected MuninNodeBuilder(IMuninServiceBuilder serviceBuilder, string serviceKey) {}
+
+    public string ServiceKey { get; }
+    public IServiceCollection Services { get; }
+
+    protected virtual IMuninNode Build(IPluginProvider pluginProvider, IMuninNodeListenerFactory? listenerFactory, IServiceProvider serviceProvider) {}
+    public IMuninNode Build(IServiceProvider serviceProvider) {}
+    protected TMuninNodeOptions GetConfiguredOptions<TMuninNodeOptions>(IServiceProvider serviceProvider) where TMuninNodeOptions : MuninNodeOptions {}
+  }
+
+  public static class MuninNodeBuilderExtensions {
+    public static TMuninNodeBuilder AddPlugin<TMuninNodeBuilder>(this TMuninNodeBuilder builder, Func<IServiceProvider, IPlugin> buildPlugin) where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNodeBuilder AddPlugin<TMuninNodeBuilder>(this TMuninNodeBuilder builder, IPlugin plugin) where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNode Build<TMuninNode>(this MuninNodeBuilder builder, IServiceProvider serviceProvider) where TMuninNode : IMuninNode {}
+    public static TMuninNodeBuilder UseListenerFactory<TMuninNodeBuilder>(this TMuninNodeBuilder builder, Func<IServiceProvider, EndPoint, IMuninNode, CancellationToken, ValueTask<IMuninNodeListener>> createListenerAsyncFunc) where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNodeBuilder UseListenerFactory<TMuninNodeBuilder>(this TMuninNodeBuilder builder, Func<IServiceProvider, IMuninNodeListenerFactory> buildListenerFactory) where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNodeBuilder UseListenerFactory<TMuninNodeBuilder>(this TMuninNodeBuilder builder, IMuninNodeListenerFactory listenerFactory) where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNodeBuilder UsePluginProvider<TMuninNodeBuilder>(this TMuninNodeBuilder builder, Func<IServiceProvider, IPluginProvider> buildPluginProvider) where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNodeBuilder UsePluginProvider<TMuninNodeBuilder>(this TMuninNodeBuilder builder, IPluginProvider pluginProvider) where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNodeBuilder UseSessionCallback<TMuninNodeBuilder>(this TMuninNodeBuilder builder, Func<IServiceProvider, INodeSessionCallback> buildSessionCallback) where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNodeBuilder UseSessionCallback<TMuninNodeBuilder>(this TMuninNodeBuilder builder, Func<string, CancellationToken, ValueTask>? reportSessionStartedAsyncFunc, Func<string, CancellationToken, ValueTask>? reportSessionClosedAsyncFunc) where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNodeBuilder UseSessionCallback<TMuninNodeBuilder>(this TMuninNodeBuilder builder, INodeSessionCallback sessionCallback) where TMuninNodeBuilder : MuninNodeBuilder {}
   }
 }
 
@@ -467,6 +502,7 @@ namespace Smdn.Net.MuninPlugin {
     public PluginGraphAttributesBuilder WithGraphUpperLimit(double @value) {}
     public PluginGraphAttributesBuilder WithHeight(int height) {}
     public PluginGraphAttributesBuilder WithSize(int width, int height) {}
+    public PluginGraphAttributesBuilder WithTitle(string title) {}
     public PluginGraphAttributesBuilder WithTotal(string labelForTotal) {}
     public PluginGraphAttributesBuilder WithUpdateRate(TimeSpan updateRate) {}
     public PluginGraphAttributesBuilder WithVerticalLabel(string verticalLabel) {}
