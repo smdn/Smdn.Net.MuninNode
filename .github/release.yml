@@ -7,7 +7,7 @@ changelog:
     labels:
       - release-target
   categories:
-    - title: Notable changes
+    - title: Notable changes (may include changes not directly related)
       labels:
         - "*"
       exclude:
