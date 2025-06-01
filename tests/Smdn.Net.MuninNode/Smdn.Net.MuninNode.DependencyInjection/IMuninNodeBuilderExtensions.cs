@@ -306,7 +306,7 @@ public class IMuninNodeBuilderExtensionsTests {
   private static System.Collections.IEnumerable YieldTestCases_UseSessionCallback_FuncSessionCallback()
   {
     yield return new object[] {
-      (IMuninNodeBuilder builder) => {
+      (MuninNodeBuilder builder) => {
         builder.UseSessionCallback(
           reportSessionStartedAsyncFunc: null,
           reportSessionClosedAsyncFunc: null
@@ -326,7 +326,7 @@ public class IMuninNodeBuilderExtensionsTests {
     };
 
     yield return new object[] {
-      (IMuninNodeBuilder builder) => {
+      (MuninNodeBuilder builder) => {
         builder.UseSessionCallback(
           reportSessionStartedAsyncFunc: (sessionId, ct) => throw new NotImplementedException($"sessionId={sessionId}"),
           reportSessionClosedAsyncFunc: null
@@ -350,7 +350,7 @@ public class IMuninNodeBuilderExtensionsTests {
     };
 
     yield return new object[] {
-      (IMuninNodeBuilder builder) => {
+      (MuninNodeBuilder builder) => {
         builder.UseSessionCallback(
           reportSessionStartedAsyncFunc: null,
           reportSessionClosedAsyncFunc: (sessionId, ct) => throw new NotImplementedException($"sessionId={sessionId}")
@@ -376,14 +376,14 @@ public class IMuninNodeBuilderExtensionsTests {
 
   [TestCaseSource(nameof(YieldTestCases_UseSessionCallback_FuncSessionCallback))]
   public void UseSessionCallback_FuncSessionCallback(
-    Action<IMuninNodeBuilder> callUseSessionCallback,
+    Action<MuninNodeBuilder> callUseSessionCallback,
     Action<NodeBase> assertBuiltNode
   )
   {
     var services = new ServiceCollection();
 
     services.AddMunin(
-      builder => callUseSessionCallback(builder.AddNode(option => { }))
+      builder => callUseSessionCallback((MuninNodeBuilder)builder.AddNode(option => { }))
     );
 
     var serviceProvider = services.BuildServiceProvider();

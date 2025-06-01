@@ -11,7 +11,16 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode.DependencyInjection;
 
+[Obsolete($"Use {nameof(MuninNodeBuilderExtensions)} instead.")]
 public static class IMuninNodeBuilderExtensions {
+  private static MuninNodeBuilder ThrowIfBuilderTypeIsNotSupported(IMuninNodeBuilder builder)
+  {
+    if (builder is not MuninNodeBuilder muninNodeBuilder)
+      throw new NotSupportedException($"The builder implementation of type `{builder.GetType().FullName}` does not support service key configuration.");
+
+    return muninNodeBuilder;
+  }
+
 #pragma warning disable CS0419
   /// <remarks>
   /// If <see cref="UsePluginProvider"/> is called, the configurations made by this method will be overridden.
@@ -21,17 +30,10 @@ public static class IMuninNodeBuilderExtensions {
     IPlugin plugin
   )
 #pragma warning restore CS0419
-  {
-    if (builder is null)
-      throw new ArgumentNullException(nameof(builder));
-    if (plugin is null)
-      throw new ArgumentNullException(nameof(plugin));
-
-    return AddPlugin(
-      builder: builder,
-      buildPlugin: _ => plugin
+    => MuninNodeBuilderExtensions.AddPlugin(
+      builder: ThrowIfBuilderTypeIsNotSupported(builder ?? throw new ArgumentNullException(nameof(builder))),
+      plugin: plugin ?? throw new ArgumentNullException(nameof(plugin))
     );
-  }
 
 #pragma warning disable CS0419
   /// <remarks>
@@ -42,19 +44,10 @@ public static class IMuninNodeBuilderExtensions {
     Func<IServiceProvider, IPlugin> buildPlugin
   )
 #pragma warning restore CS0419
-  {
-    if (builder is null)
-      throw new ArgumentNullException(nameof(builder));
-    if (buildPlugin is null)
-      throw new ArgumentNullException(nameof(buildPlugin));
-
-    if (builder is not DefaultMuninNodeBuilder defaultMuninNodeBuilder)
-      throw new NotSupportedException($"The builder implementation of type `{builder.GetType().FullName}` does not support service key configuration.");
-
-    defaultMuninNodeBuilder.AddPluginFactory(buildPlugin);
-
-    return builder;
-  }
+    => MuninNodeBuilderExtensions.AddPlugin(
+      builder: ThrowIfBuilderTypeIsNotSupported(builder ?? throw new ArgumentNullException(nameof(builder))),
+      buildPlugin: buildPlugin ?? throw new ArgumentNullException(nameof(buildPlugin))
+    );
 
 #pragma warning disable CS0419
   /// <remarks>
@@ -66,17 +59,10 @@ public static class IMuninNodeBuilderExtensions {
     IPluginProvider pluginProvider
   )
 #pragma warning restore CS0419
-  {
-    if (builder is null)
-      throw new ArgumentNullException(nameof(builder));
-    if (pluginProvider is null)
-      throw new ArgumentNullException(nameof(pluginProvider));
-
-    return UsePluginProvider(
-      builder: builder,
-      buildPluginProvider: _ => pluginProvider
+    => MuninNodeBuilderExtensions.UsePluginProvider(
+      builder: ThrowIfBuilderTypeIsNotSupported(builder ?? throw new ArgumentNullException(nameof(builder))),
+      pluginProvider: pluginProvider ?? throw new ArgumentNullException(nameof(pluginProvider))
     );
-  }
 
 #pragma warning disable CS0419
   /// <remarks>
@@ -88,19 +74,10 @@ public static class IMuninNodeBuilderExtensions {
     Func<IServiceProvider, IPluginProvider> buildPluginProvider
   )
 #pragma warning restore CS0419
-  {
-    if (builder is null)
-      throw new ArgumentNullException(nameof(builder));
-    if (buildPluginProvider is null)
-      throw new ArgumentNullException(nameof(buildPluginProvider));
-
-    if (builder is not DefaultMuninNodeBuilder defaultMuninNodeBuilder)
-      throw new NotSupportedException($"The builder implementation of type `{builder.GetType().FullName}` does not support service key configuration.");
-
-    defaultMuninNodeBuilder.SetPluginProviderFactory(buildPluginProvider);
-
-    return builder;
-  }
+    => MuninNodeBuilderExtensions.UsePluginProvider(
+      builder: ThrowIfBuilderTypeIsNotSupported(builder ?? throw new ArgumentNullException(nameof(builder))),
+      buildPluginProvider: buildPluginProvider ?? throw new ArgumentNullException(nameof(buildPluginProvider))
+    );
 
 #pragma warning disable CS0419
   /// <remarks>
@@ -111,17 +88,10 @@ public static class IMuninNodeBuilderExtensions {
     INodeSessionCallback sessionCallback
   )
 #pragma warning restore CS0419
-  {
-    if (builder is null)
-      throw new ArgumentNullException(nameof(builder));
-    if (sessionCallback is null)
-      throw new ArgumentNullException(nameof(sessionCallback));
-
-    return UseSessionCallback(
-      builder: builder,
-      buildSessionCallback: _ => sessionCallback
+    => MuninNodeBuilderExtensions.UseSessionCallback(
+      builder: ThrowIfBuilderTypeIsNotSupported(builder ?? throw new ArgumentNullException(nameof(builder))),
+      sessionCallback: sessionCallback ?? throw new ArgumentNullException(nameof(sessionCallback))
     );
-  }
 
 #pragma warning disable CS0419
   /// <remarks>
@@ -133,28 +103,11 @@ public static class IMuninNodeBuilderExtensions {
     Func<string, CancellationToken, ValueTask>? reportSessionClosedAsyncFunc
   )
 #pragma warning restore CS0419
-    => UseSessionCallback(
-      builder: builder,
-      buildSessionCallback: _ => new SessionCallbackFuncWrapper(
-        reportSessionStartedAsyncFunc,
-        reportSessionClosedAsyncFunc
-      )
+    => MuninNodeBuilderExtensions.UseSessionCallback(
+      builder: ThrowIfBuilderTypeIsNotSupported(builder ?? throw new ArgumentNullException(nameof(builder))),
+      reportSessionStartedAsyncFunc: reportSessionStartedAsyncFunc,
+      reportSessionClosedAsyncFunc: reportSessionClosedAsyncFunc
     );
-
-  private sealed class SessionCallbackFuncWrapper(
-    Func<string, CancellationToken, ValueTask>? reportSessionStartedAsyncFunc,
-    Func<string, CancellationToken, ValueTask>? reportSessionClosedAsyncFunc
-  ) : INodeSessionCallback {
-    public ValueTask ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken)
-      => reportSessionStartedAsyncFunc is null
-        ? default
-        : reportSessionStartedAsyncFunc(sessionId, cancellationToken);
-
-    public ValueTask ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken)
-      => reportSessionClosedAsyncFunc is null
-        ? default
-        : reportSessionClosedAsyncFunc(sessionId, cancellationToken);
-  }
 
 #pragma warning disable CS0419
   /// <remarks>
@@ -165,78 +118,35 @@ public static class IMuninNodeBuilderExtensions {
     Func<IServiceProvider, INodeSessionCallback> buildSessionCallback
   )
 #pragma warning restore CS0419
-  {
-    if (builder is null)
-      throw new ArgumentNullException(nameof(builder));
-    if (buildSessionCallback is null)
-      throw new ArgumentNullException(nameof(buildSessionCallback));
-
-    if (builder is not DefaultMuninNodeBuilder defaultMuninNodeBuilder)
-      throw new NotSupportedException($"The builder implementation of type `{builder.GetType().FullName}` does not support service key configuration.");
-
-    defaultMuninNodeBuilder.SetSessionCallbackFactory(buildSessionCallback);
-
-    return builder;
-  }
+    => MuninNodeBuilderExtensions.UseSessionCallback(
+      builder: ThrowIfBuilderTypeIsNotSupported(builder ?? throw new ArgumentNullException(nameof(builder))),
+      buildSessionCallback: buildSessionCallback ?? throw new ArgumentNullException(nameof(buildSessionCallback))
+    );
 
   public static IMuninNodeBuilder UseListenerFactory(
     this IMuninNodeBuilder builder,
     IMuninNodeListenerFactory listenerFactory
   )
-  {
-    if (builder is null)
-      throw new ArgumentNullException(nameof(builder));
-    if (listenerFactory is null)
-      throw new ArgumentNullException(nameof(listenerFactory));
-
-    return UseListenerFactory(
-      builder: builder,
-      buildListenerFactory: _ => listenerFactory
+    => MuninNodeBuilderExtensions.UseListenerFactory(
+      builder: ThrowIfBuilderTypeIsNotSupported(builder ?? throw new ArgumentNullException(nameof(builder))),
+      listenerFactory: listenerFactory ?? throw new ArgumentNullException(nameof(listenerFactory))
     );
-  }
 
   public static IMuninNodeBuilder UseListenerFactory(
     this IMuninNodeBuilder builder,
     Func<IServiceProvider, EndPoint, IMuninNode, CancellationToken, ValueTask<IMuninNodeListener>> createListenerAsyncFunc
   )
-  {
-    if (builder is null)
-      throw new ArgumentNullException(nameof(builder));
-    if (createListenerAsyncFunc is null)
-      throw new ArgumentNullException(nameof(createListenerAsyncFunc));
-
-    return UseListenerFactory(
-      builder: builder,
-      buildListenerFactory: serviceProvider => new CreateListenerAsyncFuncWrapper(
-        serviceProvider,
-        createListenerAsyncFunc
-      )
+    => MuninNodeBuilderExtensions.UseListenerFactory(
+      builder: ThrowIfBuilderTypeIsNotSupported(builder ?? throw new ArgumentNullException(nameof(builder))),
+      createListenerAsyncFunc: createListenerAsyncFunc ?? throw new ArgumentNullException(nameof(createListenerAsyncFunc))
     );
-  }
-
-  private sealed class CreateListenerAsyncFuncWrapper(
-    IServiceProvider serviceProvider,
-    Func<IServiceProvider, EndPoint, IMuninNode, CancellationToken, ValueTask<IMuninNodeListener>> createListenerAsyncFunc
-  ) : IMuninNodeListenerFactory {
-    public ValueTask<IMuninNodeListener> CreateAsync(EndPoint endPoint, IMuninNode node, CancellationToken cancellationToken)
-      => createListenerAsyncFunc(serviceProvider, endPoint, node, cancellationToken);
-  }
 
   public static IMuninNodeBuilder UseListenerFactory(
     this IMuninNodeBuilder builder,
     Func<IServiceProvider, IMuninNodeListenerFactory> buildListenerFactory
   )
-  {
-    if (builder is null)
-      throw new ArgumentNullException(nameof(builder));
-    if (buildListenerFactory is null)
-      throw new ArgumentNullException(nameof(buildListenerFactory));
-
-    if (builder is not DefaultMuninNodeBuilder defaultMuninNodeBuilder)
-      throw new NotSupportedException($"The builder implementation of type `{builder.GetType().FullName}` does not support service key configuration.");
-
-    defaultMuninNodeBuilder.SetListenerFactory(buildListenerFactory);
-
-    return builder;
-  }
+    => MuninNodeBuilderExtensions.UseListenerFactory(
+      builder: ThrowIfBuilderTypeIsNotSupported(builder ?? throw new ArgumentNullException(nameof(builder))),
+      buildListenerFactory: buildListenerFactory ?? throw new ArgumentNullException(nameof(buildListenerFactory))
+    );
 }

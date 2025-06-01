@@ -14,7 +14,7 @@ namespace Smdn.Net.MuninNode;
 /// Options to configure the <c>Munin-Node</c>.
 /// </summary>
 /// <see cref="DependencyInjection.IMuninServiceBuilderExtensions.AddNode(DependencyInjection.IMuninServiceBuilder, Action{MuninNodeOptions})"/>
-public sealed class MuninNodeOptions {
+public class MuninNodeOptions {
   private static IPAddress LoopbackAddress => Socket.OSSupportsIPv6 ? IPAddress.IPv6Loopback : IPAddress.Loopback;
   private static IPAddress AnyAddress => Socket.OSSupportsIPv6 ? IPAddress.IPv6Any : IPAddress.Any;
 
@@ -123,6 +123,17 @@ public sealed class MuninNodeOptions {
   public MuninNodeOptions Clone()
     => (MuninNodeOptions)MemberwiseClone();
 #endif
+
+  protected internal virtual void Configure(MuninNodeOptions baseOptions)
+  {
+    if (baseOptions is null)
+      throw new ArgumentNullException(nameof(baseOptions));
+
+    Address = baseOptions.Address;
+    Port = baseOptions.Port;
+    HostName = baseOptions.HostName;
+    AccessRule = baseOptions.AccessRule;
+  }
 
   /// <summary>
   /// Set the value of the <see cref="Address"/> property to use the address of

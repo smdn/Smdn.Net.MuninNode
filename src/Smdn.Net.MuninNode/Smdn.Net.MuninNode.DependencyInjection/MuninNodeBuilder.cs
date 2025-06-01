@@ -14,22 +14,39 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode.DependencyInjection;
 
-internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
+/// <summary>
+/// Provides builder pattern for configuring and building the <c>Munin-Node</c>.
+/// </summary>
+/// <seealso cref="MuninNodeBuilderExtensions"/>
+#pragma warning disable CS0618 // TODO: remove IMuninNodeBuilder
+public class MuninNodeBuilder : IMuninNodeBuilder {
+#pragma warning restore CS0618
   private readonly List<Func<IServiceProvider, IPlugin>> pluginFactories = new(capacity: 4);
   private Func<IServiceProvider, IPluginProvider>? buildPluginProvider;
   private Func<IServiceProvider, INodeSessionCallback>? buildSessionCallback;
   private Func<IServiceProvider, IMuninNodeListenerFactory>? buildListenerFactory;
 
+  /// <summary>
+  /// Gets the <see cref="IServiceCollection"/> where the <c>Munin-Node</c> services are configured.
+  /// </summary>
   public IServiceCollection Services { get; }
+
+  /// <summary>
+  /// Gets the <see cref="string"/> key of <c>Munin-Node</c> service.
+  /// </summary>
+  /// <remarks>
+  /// The value set as the hostname of the <c>Munin-Node</c> (see <see cref="MuninNodeOptions.HostName"/>) is used as the service key.
+  /// </remarks>
+  /// <see cref="IMuninServiceBuilderExtensions.AddNode(IMuninServiceBuilder, Action{MuninNodeOptions})"/>
   public string ServiceKey { get; }
 
-  public DefaultMuninNodeBuilder(IMuninServiceBuilder serviceBuilder, string serviceKey)
+  protected internal MuninNodeBuilder(IMuninServiceBuilder serviceBuilder, string serviceKey)
   {
     Services = (serviceBuilder ?? throw new ArgumentNullException(nameof(serviceBuilder))).Services;
     ServiceKey = serviceKey ?? throw new ArgumentNullException(nameof(serviceKey));
   }
 
-  public void AddPluginFactory(Func<IServiceProvider, IPlugin> buildPlugin)
+  internal void AddPluginFactory(Func<IServiceProvider, IPlugin> buildPlugin)
   {
     if (buildPlugin is null)
       throw new ArgumentNullException(nameof(buildPlugin));
@@ -37,7 +54,7 @@ internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
     pluginFactories.Add(serviceProvider => buildPlugin(serviceProvider));
   }
 
-  public void SetPluginProviderFactory(
+  internal void SetPluginProviderFactory(
     Func<IServiceProvider, IPluginProvider> buildPluginProvider
   )
   {
@@ -47,7 +64,7 @@ internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
     this.buildPluginProvider = buildPluginProvider;
   }
 
-  public void SetSessionCallbackFactory(
+  internal void SetSessionCallbackFactory(
     Func<IServiceProvider, INodeSessionCallback> buildSessionCallback
   )
   {
@@ -57,7 +74,7 @@ internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
     this.buildSessionCallback = buildSessionCallback;
   }
 
-  public void SetListenerFactory(
+  internal void SetListenerFactory(
     Func<IServiceProvider, IMuninNodeListenerFactory> buildListenerFactory
   )
   {
@@ -67,13 +84,19 @@ internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
     this.buildListenerFactory = buildListenerFactory;
   }
 
+  /// <summary>
+  /// Builds the <c>Munin-Node</c> with current configurations.
+  /// </summary>
+  /// <param name="serviceProvider">
+  /// An <see cref="IServiceProvider"/> that provides the services to be used by the <see cref="IMuninNode"/> being built.
+  /// </param>
+  /// <returns>An initialized <see cref="IMuninNode"/>.</returns>
   public IMuninNode Build(IServiceProvider serviceProvider)
   {
     if (serviceProvider is null)
       throw new ArgumentNullException(nameof(serviceProvider));
 
-    return new DefaultMuninNode(
-      options: serviceProvider.GetRequiredService<IOptionsMonitor<MuninNodeOptions>>().Get(name: ServiceKey),
+    return Build(
       pluginProvider: buildPluginProvider is null
         ? new PluginProvider(
             plugins: pluginFactories.Select(factory => factory(serviceProvider)).ToList(),
@@ -81,7 +104,7 @@ internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
           )
         : buildPluginProvider.Invoke(serviceProvider),
       listenerFactory: buildListenerFactory?.Invoke(serviceProvider),
-      logger: serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<DefaultMuninNode>()
+      serviceProvider: serviceProvider
     );
   }
 
@@ -97,5 +120,33 @@ internal sealed class DefaultMuninNodeBuilder : IMuninNodeBuilder {
       Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
       SessionCallback = sessionCallback;
     }
+  }
+
+  protected virtual IMuninNode Build(
+    IPluginProvider pluginProvider,
+    IMuninNodeListenerFactory? listenerFactory,
+    IServiceProvider serviceProvider
+  )
+  {
+    if (serviceProvider is null)
+      throw new ArgumentNullException(nameof(serviceProvider));
+
+    return new DefaultMuninNode(
+      options: GetConfiguredOptions<MuninNodeOptions>(serviceProvider),
+      pluginProvider: pluginProvider,
+      listenerFactory: listenerFactory,
+      logger: serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<DefaultMuninNode>()
+    );
+  }
+
+  protected TMuninNodeOptions GetConfiguredOptions<TMuninNodeOptions>(IServiceProvider serviceProvider)
+    where TMuninNodeOptions : MuninNodeOptions
+  {
+    if (serviceProvider is null)
+      throw new ArgumentNullException(nameof(serviceProvider));
+
+    return serviceProvider
+      .GetRequiredService<IOptionsMonitor<TMuninNodeOptions>>()
+      .Get(name: ServiceKey);
   }
 }
