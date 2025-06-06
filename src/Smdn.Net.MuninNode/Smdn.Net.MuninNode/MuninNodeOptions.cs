@@ -124,6 +124,15 @@ public class MuninNodeOptions {
     => (MuninNodeOptions)MemberwiseClone();
 #endif
 
+  /// <summary>
+  /// Configure this instance to have the same values as the instance passed as an argument.
+  /// </summary>
+  /// <param name="baseOptions">
+  /// A <see cref="MuninNodeOptions"/> that holds the values that are used to configure this instance.
+  /// </param>
+  /// <exception cref="ArgumentNullException">
+  /// <paramref name="baseOptions"/> is <see langword="null"/>.
+  /// </exception>
   protected internal virtual void Configure(MuninNodeOptions baseOptions)
   {
     if (baseOptions is null)
