@@ -153,7 +153,7 @@ public partial class NodeBaseTests {
       );
 
       var connected = !(
-        client.Client.Poll(1 /*microsecs*/, SelectMode.SelectRead) &&
+        client.Client.Poll(1 /*microseconds*/, SelectMode.SelectRead) &&
         client.Client.Available == 0
       );
 
@@ -190,7 +190,7 @@ public partial class NodeBaseTests {
       }
 
       var connected = !(
-        client.Client.Poll(1 /*microsecs*/, SelectMode.SelectRead) &&
+        client.Client.Poll(1 /*microseconds*/, SelectMode.SelectRead) &&
         client.Client.Available == 0
       );
 

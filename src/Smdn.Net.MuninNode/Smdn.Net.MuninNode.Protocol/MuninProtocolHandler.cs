@@ -101,7 +101,12 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     this.profile = profile ?? throw new ArgumentNullException(nameof(profile));
 
     banner = $"# munin node at {profile.HostName}";
+
+    // cSpell:disable
+    // the typo 'munins' is intentional, follows the actual munin-node implementation
+    // ref: https://github.com/munin-monitoring/munin/blob/master/lib/Munin/Node/Server.pm#L320-L322
     versionInformation = $"munins node on {profile.HostName} version: {profile.Version}";
+    // cSpell:enable
 
     ReinitializePluginDictionary();
   }
@@ -745,7 +750,7 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       .Fields
       .Any(static f => !string.IsNullOrEmpty(f.Attributes.NegativeFieldName));
 
-    // The fields referenced by {fieldname}.negative must be defined ahread of others,
+    // The fields referenced by {fieldname}.negative must be defined ahead of others,
     // and thus lists the negative field settings first.
     // Otherwise, the following error occurs when generating the graph.
     // "[RRD ERROR] Unable to graph /var/cache/munin/www/XXX.png : undefined v name XXXXXXXXXXXXXX"
@@ -801,22 +806,26 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
       else
         return null;
     }
-
-    static string? TranslateFieldDrawAttribute(PluginFieldGraphStyle style)
-      => style switch {
-        PluginFieldGraphStyle.Default => null,
-        PluginFieldGraphStyle.Area => "AREA",
-        PluginFieldGraphStyle.Stack => "STACK",
-        PluginFieldGraphStyle.AreaStack => "AREASTACK",
-        PluginFieldGraphStyle.Line => "LINE",
-        PluginFieldGraphStyle.LineWidth1 => "LINE1",
-        PluginFieldGraphStyle.LineWidth2 => "LINE2",
-        PluginFieldGraphStyle.LineWidth3 => "LINE3",
-        PluginFieldGraphStyle.LineStack => "LINESTACK",
-        PluginFieldGraphStyle.LineStackWidth1 => "LINE1STACK",
-        PluginFieldGraphStyle.LineStackWidth2 => "LINE2STACK",
-        PluginFieldGraphStyle.LineStackWidth3 => "LINE3STACK",
-        _ => throw new InvalidOperationException($"undefined draw attribute value: ({(int)style} {style})"),
-      };
   }
+
+#pragma warning disable SA1124 // Do not use #regions
+  #region cSpell:disable
+  private static string? TranslateFieldDrawAttribute(PluginFieldGraphStyle style)
+    => style switch {
+      PluginFieldGraphStyle.Default => null,
+      PluginFieldGraphStyle.Area => "AREA",
+      PluginFieldGraphStyle.Stack => "STACK",
+      PluginFieldGraphStyle.AreaStack => "AREASTACK",
+      PluginFieldGraphStyle.Line => "LINE",
+      PluginFieldGraphStyle.LineWidth1 => "LINE1",
+      PluginFieldGraphStyle.LineWidth2 => "LINE2",
+      PluginFieldGraphStyle.LineWidth3 => "LINE3",
+      PluginFieldGraphStyle.LineStack => "LINESTACK",
+      PluginFieldGraphStyle.LineStackWidth1 => "LINE1STACK",
+      PluginFieldGraphStyle.LineStackWidth2 => "LINE2STACK",
+      PluginFieldGraphStyle.LineStackWidth3 => "LINE3STACK",
+      _ => throw new InvalidOperationException($"undefined draw attribute value: ({(int)style} {style})"),
+    };
+  #endregion cSpell:enable
+#pragma warning restore SA1124
 }

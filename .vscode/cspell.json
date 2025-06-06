@@ -11,20 +11,30 @@
   "language": "en",
   // words - list of words to be always considered correct
   "words": [
+    "cloneable",
+    "LINQ",
     "memberwise",
     "munin",
     "smdn",
+    "SYSLIB",
   ],
   "ignoreWords": [
     "dirtyconfig",
-    "netstandard",
     "multigraph",
-    "vlabel"
+    "netstandard",
+    "rrdgraph",
+    "vlabel",
+  ],
+  "ignoreRegExpList": [
+    "SYSTEM_[A-Z][A-Z0-9_]+",
   ],
   // flagWords - list of words to be always considered incorrect
   // This is useful for offensive words and common spelling errors.
   // For example "hte" should be "the"
   "flagWords": [],
+  "suggestWords": [
+    "clonable->cloneable",
+  ],
   "ignorePaths": [
     "**/bin",
     "**/obj",

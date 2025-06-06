@@ -321,6 +321,8 @@ public partial class PluginGraphAttributesBuilder {
   public PluginGraphAttributesBuilder WithCategory(WellKnownCategory category)
     => WithCategory(TranslateWellKnownCategory(category));
 
+#pragma warning disable SA1124 // Do not use #regions
+  #region cSpell:disable
   private static string TranslateWellKnownCategory(WellKnownCategory category)
     => category switch {
       WellKnownCategory.OneSec => "1sec",
@@ -368,6 +370,8 @@ public partial class PluginGraphAttributesBuilder {
       WellKnownCategory.Wireless => "wireless",
       _ => throw new ArgumentException("not a well known category", paramName: nameof(category)),
     };
+  #endregion cSpell:enable
+#pragma warning restore SA1124
 
   /// <summary>Sets a value for the <c>graph_width</c> and <c>graph_height</c>.</summary>
   /// <seealso cref="WithWidth"/>

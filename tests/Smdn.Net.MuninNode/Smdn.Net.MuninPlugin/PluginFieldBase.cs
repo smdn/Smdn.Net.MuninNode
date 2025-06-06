@@ -54,7 +54,7 @@ public class PluginFieldBaseTests {
   [TestCase("LABEL_")]
   [TestCase("0LABEL")]
   [TestCase("LABEL0")]
-  public void Lavel_Valid(string label)
+  public void Label_Valid(string label)
     => Assert.DoesNotThrow(() => new ConcretePluginField(name: "field", label: label));
 
   [TestCase("")]
@@ -62,7 +62,7 @@ public class PluginFieldBaseTests {
   [TestCase("LABEL\\")]
   [TestCase("#LABEL")]
   [TestCase("LABEL#")]
-  public void Lavel_Invalid(string label)
+  public void Label_Invalid(string label)
     => Assert.Throws<ArgumentException>(() => new ConcretePluginField(name: "field", label: label));
 
   [TestCase("LABEL", "LABEL")]

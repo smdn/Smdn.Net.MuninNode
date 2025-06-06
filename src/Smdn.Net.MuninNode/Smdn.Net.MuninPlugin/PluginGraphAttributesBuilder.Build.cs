@@ -50,8 +50,8 @@ partial class PluginGraphAttributesBuilder {
     if (width is int w)
       attributes.Add($"graph_width {w}");
 
-    if (updateRate is TimeSpan urate)
-      attributes.Add($"update_rate {(int)urate.TotalSeconds}");
+    if (updateRate is TimeSpan rate)
+      attributes.Add($"update_rate {(int)rate.TotalSeconds}");
 
     attributes.TrimExcess();
 
