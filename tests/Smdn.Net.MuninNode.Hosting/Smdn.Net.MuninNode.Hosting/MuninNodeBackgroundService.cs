@@ -334,8 +334,8 @@ public class MuninNodeBackgroundServiceTests {
       Throws.InstanceOf<OperationCanceledException>()
     );
 
-    Assert.That(numberOfTimesStoppingInvoked, Is.EqualTo(0));
-    Assert.That(numberOfTimesStoppedInvoked, Is.EqualTo(0));
+    Assert.That(numberOfTimesStoppingInvoked, Is.Zero);
+    Assert.That(numberOfTimesStoppedInvoked, Is.Zero);
   }
 
   [Test]

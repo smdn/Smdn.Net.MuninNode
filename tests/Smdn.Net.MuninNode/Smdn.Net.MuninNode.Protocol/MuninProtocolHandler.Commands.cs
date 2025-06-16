@@ -112,7 +112,7 @@ partial class MuninProtocolHandlerTests {
       Throws.Nothing
     );
 
-    Assert.That(client.Responses.Count, Is.EqualTo(0));
+    Assert.That(client.Responses.Count, Is.Zero);
     Assert.That(client.Connected, Is.False);
   }
 

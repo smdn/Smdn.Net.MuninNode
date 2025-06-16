@@ -115,7 +115,7 @@ public partial class MuninProtocolHandlerTests {
         .EqualTo("client")
     );
 
-    Assert.That(client.Responses.Count, Is.EqualTo(0));
+    Assert.That(client.Responses.Count, Is.Zero);
   }
 
   [Test]
@@ -138,7 +138,7 @@ public partial class MuninProtocolHandlerTests {
         .EqualTo(cts.Token)
     );
 
-    Assert.That(client.Responses.Count, Is.EqualTo(0));
+    Assert.That(client.Responses.Count, Is.Zero);
   }
 
   [Test]
@@ -154,7 +154,7 @@ public partial class MuninProtocolHandlerTests {
       async () => await handler.HandleTransactionEndAsync(client),
       Throws.Nothing
     );
-    Assert.That(client.Responses.Count, Is.EqualTo(0), "must receive nothing");
+    Assert.That(client.Responses.Count, Is.Zero, "must receive nothing");
   }
 
   [Test]
@@ -174,7 +174,7 @@ public partial class MuninProtocolHandlerTests {
         .EqualTo("client")
     );
 
-    Assert.That(client.Responses.Count, Is.EqualTo(0));
+    Assert.That(client.Responses.Count, Is.Zero);
   }
 
   [Test]
@@ -197,7 +197,7 @@ public partial class MuninProtocolHandlerTests {
         .EqualTo(cts.Token)
     );
 
-    Assert.That(client.Responses.Count, Is.EqualTo(0));
+    Assert.That(client.Responses.Count, Is.Zero);
   }
 
   [Test]
@@ -217,7 +217,7 @@ public partial class MuninProtocolHandlerTests {
         .EqualTo("client")
     );
 
-    Assert.That(client.Responses.Count, Is.EqualTo(0));
+    Assert.That(client.Responses.Count, Is.Zero);
   }
 
   [Test]
@@ -240,7 +240,7 @@ public partial class MuninProtocolHandlerTests {
         .EqualTo(cts.Token)
     );
 
-    Assert.That(client.Responses.Count, Is.EqualTo(0));
+    Assert.That(client.Responses.Count, Is.Zero);
   }
 
   [Test]

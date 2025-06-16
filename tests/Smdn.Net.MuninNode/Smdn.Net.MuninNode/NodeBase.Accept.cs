@@ -283,8 +283,8 @@ public partial class NodeBaseTests {
 
     var taskAccept = Task.Run(async () => await node.AcceptSingleSessionAsync());
 
-    Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(0), nameof(plugin.StartedSessionIds));
-    Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
+    Assert.That(plugin.StartedSessionIds.Count, Is.Zero, nameof(plugin.StartedSessionIds));
+    Assert.That(plugin.ClosedSessionIds.Count, Is.Zero, nameof(plugin.ClosedSessionIds));
 
     using var client = CreateClient((IPEndPoint)node.EndPoint, out var writer, out var reader);
 
@@ -295,25 +295,25 @@ public partial class NodeBaseTests {
     await Task.Delay(500); // wait for node process completed
 
     if (isPluginProviderSessionCallbackNull) {
-      Assert.That(pluginProvider.StartedSessionIds.Count, Is.EqualTo(0), nameof(pluginProvider.StartedSessionIds));
-      Assert.That(pluginProvider.ClosedSessionIds.Count, Is.EqualTo(0), nameof(pluginProvider.ClosedSessionIds));
+      Assert.That(pluginProvider.StartedSessionIds.Count, Is.Zero, nameof(pluginProvider.StartedSessionIds));
+      Assert.That(pluginProvider.ClosedSessionIds.Count, Is.Zero, nameof(pluginProvider.ClosedSessionIds));
     }
     else {
       Assert.That(pluginProvider.StartedSessionIds.Count, Is.EqualTo(1), nameof(pluginProvider.StartedSessionIds));
       Assert.That(pluginProvider.StartedSessionIds[0], Is.Not.Empty, nameof(pluginProvider.StartedSessionIds));
 
-      Assert.That(pluginProvider.ClosedSessionIds.Count, Is.EqualTo(0), nameof(pluginProvider.ClosedSessionIds));
+      Assert.That(pluginProvider.ClosedSessionIds.Count, Is.Zero, nameof(pluginProvider.ClosedSessionIds));
     }
 
     if (isPluginSessionCallbackNull) {
-      Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(0), nameof(plugin.StartedSessionIds));
-      Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
+      Assert.That(plugin.StartedSessionIds.Count, Is.Zero, nameof(plugin.StartedSessionIds));
+      Assert.That(plugin.ClosedSessionIds.Count, Is.Zero, nameof(plugin.ClosedSessionIds));
     }
     else {
       Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(1), nameof(plugin.StartedSessionIds));
       Assert.That(plugin.StartedSessionIds[0], Is.Not.Empty, nameof(plugin.StartedSessionIds));
 
-      Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
+      Assert.That(plugin.ClosedSessionIds.Count, Is.Zero, nameof(plugin.ClosedSessionIds));
     }
 
     writer.WriteLine(".");
@@ -322,8 +322,8 @@ public partial class NodeBaseTests {
     Assert.DoesNotThrowAsync(async () => await taskAccept);
 
     if (isPluginProviderSessionCallbackNull) {
-      Assert.That(pluginProvider.StartedSessionIds.Count, Is.EqualTo(0), nameof(pluginProvider.StartedSessionIds));
-      Assert.That(pluginProvider.ClosedSessionIds.Count, Is.EqualTo(0), nameof(pluginProvider.ClosedSessionIds));
+      Assert.That(pluginProvider.StartedSessionIds.Count, Is.Zero, nameof(pluginProvider.StartedSessionIds));
+      Assert.That(pluginProvider.ClosedSessionIds.Count, Is.Zero, nameof(pluginProvider.ClosedSessionIds));
     }
     else {
       Assert.That(pluginProvider.StartedSessionIds.Count, Is.EqualTo(1), nameof(pluginProvider.StartedSessionIds));
@@ -333,8 +333,8 @@ public partial class NodeBaseTests {
     }
 
     if (isPluginSessionCallbackNull) {
-      Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(0), nameof(plugin.StartedSessionIds));
-      Assert.That(plugin.ClosedSessionIds.Count, Is.EqualTo(0), nameof(plugin.ClosedSessionIds));
+      Assert.That(plugin.StartedSessionIds.Count, Is.Zero, nameof(plugin.StartedSessionIds));
+      Assert.That(plugin.ClosedSessionIds.Count, Is.Zero, nameof(plugin.ClosedSessionIds));
     }
     else {
       Assert.That(plugin.StartedSessionIds.Count, Is.EqualTo(1), nameof(plugin.StartedSessionIds));
