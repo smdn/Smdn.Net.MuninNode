@@ -67,7 +67,7 @@ public static class IAccessRuleServiceCollectionExtensions {
 #pragma warning restore CA1510
 
     services.TryAdd(
-      ServiceDescriptor.Singleton(typeof(IAccessRule), accessRule)
+      ServiceDescriptor.Singleton<IAccessRule>(accessRule)
     );
 
     return services;
