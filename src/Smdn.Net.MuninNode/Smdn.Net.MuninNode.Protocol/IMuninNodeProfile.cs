@@ -19,7 +19,7 @@ public interface IMuninNodeProfile {
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
   /// Data exchange between master and node - `node` command
   /// </seealso>
-  public string HostName { get; }
+  string HostName { get; }
 
   /// <summary>
   /// Gets the string representing the version information of the node.
@@ -30,7 +30,7 @@ public interface IMuninNodeProfile {
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
   /// Data exchange between master and node - `version` command
   /// </seealso>
-  public string Version { get; }
+  string Version { get; }
 
   /// <summary>
   /// Gets the <see cref="IPluginProvider"/> representing the munin plugins provided by the node.
@@ -41,10 +41,10 @@ public interface IMuninNodeProfile {
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/master/network-protocol.html">
   /// Data exchange between master and node - `list`, `config` and `fetch` command
   /// </seealso>
-  public IPluginProvider PluginProvider { get; }
+  IPluginProvider PluginProvider { get; }
 
   /// <summary>
   /// Gets the <see cref="Encoding"/> used for data exchange with the <c>munin master</c>.
   /// </summary>
-  public Encoding Encoding { get; }
+  Encoding Encoding { get; }
 }
