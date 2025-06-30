@@ -125,17 +125,15 @@ public partial class MuninProtocolHandlerTests {
       profile: new MuninNodeProfile()
     );
     var client = new PseudoMuninNodeClient();
-    using var cts = new CancellationTokenSource();
-
-    cts.Cancel();
+    var cancellationToken = new CancellationToken(canceled: true);
 
     Assert.That(
-      async () => await handler.HandleTransactionStartAsync(client, cts.Token),
+      async () => await handler.HandleTransactionStartAsync(client, cancellationToken),
       Throws
         .InstanceOf<OperationCanceledException>()
         .With
         .Property(nameof(OperationCanceledException.CancellationToken))
-        .EqualTo(cts.Token)
+        .EqualTo(cancellationToken)
     );
 
     Assert.That(client.Responses.Count, Is.Zero);
@@ -184,17 +182,15 @@ public partial class MuninProtocolHandlerTests {
       profile: new MuninNodeProfile()
     );
     var client = new PseudoMuninNodeClient();
-    using var cts = new CancellationTokenSource();
-
-    cts.Cancel();
+    var cancellationToken = new CancellationToken(canceled: true);
 
     Assert.That(
-      async () => await handler.HandleTransactionEndAsync(client, cts.Token),
+      async () => await handler.HandleTransactionEndAsync(client, cancellationToken),
       Throws
         .InstanceOf<OperationCanceledException>()
         .With
         .Property(nameof(OperationCanceledException.CancellationToken))
-        .EqualTo(cts.Token)
+        .EqualTo(cancellationToken)
     );
 
     Assert.That(client.Responses.Count, Is.Zero);
@@ -227,17 +223,15 @@ public partial class MuninProtocolHandlerTests {
       profile: new MuninNodeProfile()
     );
     var client = new PseudoMuninNodeClient();
-    using var cts = new CancellationTokenSource();
-
-    cts.Cancel();
+    var cancellationToken = new CancellationToken(canceled: true);
 
     Assert.That(
-      async () => await handler.HandleCommandAsync(client, CreateCommandLineSequence("."), cts.Token),
+      async () => await handler.HandleCommandAsync(client, CreateCommandLineSequence("."), cancellationToken),
       Throws
         .InstanceOf<OperationCanceledException>()
         .With
         .Property(nameof(OperationCanceledException.CancellationToken))
-        .EqualTo(cts.Token)
+        .EqualTo(cancellationToken)
     );
 
     Assert.That(client.Responses.Count, Is.Zero);

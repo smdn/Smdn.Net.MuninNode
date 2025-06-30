@@ -195,10 +195,8 @@ public class AggregatePluginProviderTests {
 
     INodeSessionCallback sessionCallback = pluginProviderCollections;
 
-    using var cts = new CancellationTokenSource(0);
-
     Assert.That(
-      async () => await sessionCallback.ReportSessionStartedAsync(string.Empty, cts.Token),
+      async () => await sessionCallback.ReportSessionStartedAsync(string.Empty, cancellationToken: new(canceled: true)),
       Throws.InstanceOf<OperationCanceledException>()
     );
 
@@ -221,10 +219,8 @@ public class AggregatePluginProviderTests {
 
     INodeSessionCallback sessionCallback = pluginProviderCollections;
 
-    using var cts = new CancellationTokenSource(0);
-
     Assert.That(
-      async () => await sessionCallback.ReportSessionClosedAsync(string.Empty, cts.Token),
+      async () => await sessionCallback.ReportSessionClosedAsync(string.Empty, cancellationToken: new(canceled: true)),
       Throws.InstanceOf<OperationCanceledException>()
     );
 

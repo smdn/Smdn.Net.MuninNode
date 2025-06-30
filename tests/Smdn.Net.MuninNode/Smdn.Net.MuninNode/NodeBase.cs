@@ -130,9 +130,6 @@ public partial class NodeBaseTests {
   private static NodeBase CreateNode()
     => CreateNode(accessRule: null, plugins: Array.Empty<IPlugin>());
 
-  private static NodeBase CreateNode(IReadOnlyList<IPlugin> plugins)
-    => CreateNode(accessRule: null, plugins: plugins);
-
   private static NodeBase CreateNode(IAccessRule? accessRule, IReadOnlyList<IPlugin> plugins)
     => new TestLocalNode(accessRule, plugins);
 
@@ -358,7 +355,7 @@ public partial class NodeBaseTests {
     await using var node = CreateNode();
 
 #pragma warning disable CS0618
-    Assert.That(() => node.Start(), Throws.Nothing);
+    Assert.That(node.Start, Throws.Nothing);
 #pragma warning restore CS0618
 
     Assert.That(async () => await node.StopAsync(default), Throws.Nothing);

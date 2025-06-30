@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -77,18 +76,6 @@ partial class NodeBaseTests {
     => RunSessionAsync(
       accessRule: null,
       plugins: null,
-      action: action,
-      cancellationToken: cancellationToken
-    );
-
-  private static Task RunSessionAsync(
-    IReadOnlyList<IPlugin>? plugins,
-    Func<PseudoMuninNode, PseudoMuninNodeClient, TextWriter, TextReader, CancellationToken, Task> action,
-    CancellationToken cancellationToken = default
-  )
-    => RunSessionAsync(
-      accessRule: null,
-      plugins: plugins,
       action: action,
       cancellationToken: cancellationToken
     );

@@ -230,7 +230,7 @@ public class MuninNodeBackgroundServiceTests {
     public EndPoint EndPoint { get; } = new IPEndPoint(IPAddress.Any, 0);
 
     public Task RunAsync(CancellationToken cancellationToken)
-      => Task.Run(() => cancellationToken.WaitHandle.WaitOne());
+      => Task.Run(cancellationToken.WaitHandle.WaitOne);
   }
 
   [Test]
