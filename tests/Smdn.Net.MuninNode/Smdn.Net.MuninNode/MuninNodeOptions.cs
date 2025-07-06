@@ -234,21 +234,21 @@ public class MuninNodeOptionsTests {
 
     Assert.That(options.AccessRule, Is.Not.Null);
 
-    Assert.Multiple(() => {
-      foreach (var port in new[] { 0, 1, 6553 }) {
-        foreach (var address in addresses) {
-          var endPoint = new IPEndPoint(address, port);
+    using var scope = Assert.EnterMultipleScope();
 
-          Assert.That(options.AccessRule.IsAcceptable(endPoint), Is.True);
-        }
+    foreach (var port in new[] { 0, 1, 6553 }) {
+      foreach (var address in addresses) {
+        var endPoint = new IPEndPoint(address, port);
 
-        foreach (var address in new[] { IPAddress.Loopback, IPAddress.IPv6Loopback }) {
-          var endPoint = new IPEndPoint(address, port);
-
-          Assert.That(options.AccessRule.IsAcceptable(endPoint), Is.False);
-        }
+        Assert.That(options.AccessRule.IsAcceptable(endPoint), Is.True);
       }
-    });
+
+      foreach (var address in new[] { IPAddress.Loopback, IPAddress.IPv6Loopback }) {
+        var endPoint = new IPEndPoint(address, port);
+
+        Assert.That(options.AccessRule.IsAcceptable(endPoint), Is.False);
+      }
+    }
   }
 
   [Test]
