@@ -1,0 +1,14 @@
+<!--
+SPDX-FileCopyrightText: 2025 smdn <smdn@smdn.jp>
+SPDX-License-Identifier: MIT
+-->
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Smdn.Net.MuninNode.Hosting/Smdn.Net.MuninNode.Hosting.csproj" />
+    <Project Path="src/Smdn.Net.MuninNode/Smdn.Net.MuninNode.csproj" />
+  </Folder>
+  <Folder Name="/tests/Smdn.Net.MuninNode.Hosting/">
+    <Project Path="tests/Smdn.Net.MuninNode.Hosting/Smdn.Net.MuninNode.Hosting.Tests.csproj" />
+    <Project Path="tests/Smdn.Net.MuninNode/Smdn.Net.MuninNode.Tests.csproj" />
+  </Folder>
+</Solution>
