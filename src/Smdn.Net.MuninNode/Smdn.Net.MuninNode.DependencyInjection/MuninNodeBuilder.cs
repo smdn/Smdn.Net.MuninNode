@@ -4,6 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,6 +26,8 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
   private readonly List<Func<IServiceProvider, IPlugin>> pluginFactories = new(capacity: 4);
   private Func<IServiceProvider, IPluginProvider>? buildPluginProvider;
   [Obsolete] private Func<IServiceProvider, INodeSessionCallback>? buildSessionCallback;
+  private Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc;
+  private Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc;
   private Func<IServiceProvider, IMuninNodeListenerFactory>? buildListenerFactory;
 
   /// <summary>
@@ -75,6 +79,15 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
     this.buildSessionCallback = buildSessionCallback;
   }
 
+  internal void SetTransactionCallback(
+    Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc,
+    Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc
+  )
+  {
+    this.onStartTransactionAsyncFunc = onStartTransactionAsyncFunc;
+    this.onEndTransactionAsyncFunc = onEndTransactionAsyncFunc;
+  }
+
   internal void SetListenerFactory(
     Func<IServiceProvider, IMuninNodeListenerFactory> buildListenerFactory
   )
@@ -102,8 +115,10 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
         ? new PluginProvider(
             plugins: pluginFactories.Select(factory => factory(serviceProvider)).ToList(),
 #pragma warning disable CS0612
-            sessionCallback: buildSessionCallback?.Invoke(serviceProvider)
+            sessionCallback: buildSessionCallback?.Invoke(serviceProvider),
 #pragma warning restore CS0612
+            onStartTransactionAsyncFunc: onStartTransactionAsyncFunc,
+            onEndTransactionAsyncFunc: onEndTransactionAsyncFunc
           )
         : buildPluginProvider.Invoke(serviceProvider),
       listenerFactory: buildListenerFactory?.Invoke(serviceProvider),
@@ -111,17 +126,22 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
     );
   }
 
-  private sealed class PluginProvider : IPluginProvider {
+  private sealed class PluginProvider : IPluginProvider, ITransactionCallback {
     public IReadOnlyCollection<IPlugin> Plugins { get; }
 
     [Obsolete]
     public INodeSessionCallback? SessionCallback { get; }
 
+    private readonly Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc;
+    private readonly Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc;
+
     public PluginProvider(
       IReadOnlyCollection<IPlugin> plugins,
 #pragma warning disable CS0618
-      INodeSessionCallback? sessionCallback
+      INodeSessionCallback? sessionCallback,
 #pragma warning restore CS0618
+      Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc,
+      Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc
     )
     {
       Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
@@ -129,7 +149,16 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
 #pragma warning disable CS0612
       SessionCallback = sessionCallback;
 #pragma warning restore CS0612
+
+      this.onStartTransactionAsyncFunc = onStartTransactionAsyncFunc;
+      this.onEndTransactionAsyncFunc = onEndTransactionAsyncFunc;
     }
+
+    public ValueTask StartTransactionAsync(CancellationToken cancellationToken)
+      => onStartTransactionAsyncFunc?.Invoke(cancellationToken) ?? default;
+
+    public ValueTask EndTransactionAsync(CancellationToken cancellationToken)
+      => onEndTransactionAsyncFunc?.Invoke(cancellationToken) ?? default;
   }
 
   protected virtual IMuninNode Build(

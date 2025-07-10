@@ -455,6 +455,83 @@ public class IMuninNodeBuilderExtensionsTests {
 #pragma warning restore CS0618
 
   [Test]
+  [CancelAfter(1000)]
+  public void UseTransactionCallback(
+    [Values] bool setOnStartTransactionAsyncFunc,
+    [Values] bool setOnEndTransactionAsyncFunc,
+    CancellationToken cancellationToken
+  )
+  {
+    var numberOfInvocationOfStartTransactionAsync = 0;
+    var numberOfInvocationOfEndTransactionAsync = 0;
+
+    var services = new ServiceCollection();
+
+    services.AddMunin(
+      builder =>
+        builder
+          .AddNode(option => { })
+          .UseTransactionCallback(
+            onStartTransactionAsyncFunc: setOnStartTransactionAsyncFunc
+              ? StartTransactionAsync
+              : null,
+            onEndTransactionAsyncFunc: setOnEndTransactionAsyncFunc
+              ? EndTransactionAsync
+              : null
+          )
+    );
+
+    ValueTask StartTransactionAsync(CancellationToken ct)
+    {
+      numberOfInvocationOfStartTransactionAsync++;
+
+      Assert.That(ct, Is.EqualTo(cancellationToken));
+
+      return default;
+    }
+
+    ValueTask EndTransactionAsync(CancellationToken ct)
+    {
+      numberOfInvocationOfEndTransactionAsync++;
+
+      Assert.That(ct, Is.EqualTo(cancellationToken));
+
+      return default;
+    }
+
+    var serviceProvider = services.BuildServiceProvider();
+    var node = (NodeBase)serviceProvider.GetRequiredService<IMuninNode>();
+
+    Assert.That(node.PluginProvider, Is.InstanceOf<ITransactionCallback>());
+
+    var transactionCallback = (ITransactionCallback)node.PluginProvider;
+
+    Assert.That(
+      async () => await transactionCallback.StartTransactionAsync(cancellationToken),
+      Throws.Nothing
+    );
+
+    Assert.That(
+      numberOfInvocationOfStartTransactionAsync,
+      setOnStartTransactionAsyncFunc
+        ? Is.EqualTo(1)
+        : Is.Zero
+    );
+
+    Assert.That(
+      async () => await transactionCallback.EndTransactionAsync(cancellationToken),
+      Throws.Nothing
+    );
+
+    Assert.That(
+      numberOfInvocationOfEndTransactionAsync,
+      setOnEndTransactionAsyncFunc
+        ? Is.EqualTo(1)
+        : Is.Zero
+    );
+  }
+
+  [Test]
   public void UseListenerFactory_IMuninNodeListenerFactory_ArgumentNull()
   {
     var services = new ServiceCollection();

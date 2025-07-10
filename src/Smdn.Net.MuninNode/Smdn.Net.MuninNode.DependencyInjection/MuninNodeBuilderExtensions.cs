@@ -100,15 +100,20 @@ public static class MuninNodeBuilderExtensions {
     return builder;
   }
 
+#pragma warning disable CS0618
+  private const string ObsoleteMessageForUseSessionCallback =
+      $"{nameof(INodeSessionCallback)} is deprecated and will be removed in the next major version release. " +
+      $"Use ${nameof(UseTransactionCallback)} instead of {nameof(UseSessionCallback)}.";
+#pragma warning restore CS0618
+
 #pragma warning disable CS0419
   /// <remarks>
   /// If <see cref="UsePluginProvider"/> is called, the configurations made by this method will be overridden.
   /// </remarks>
+  [Obsolete(ObsoleteMessageForUseSessionCallback)]
   public static TMuninNodeBuilder UseSessionCallback<TMuninNodeBuilder>(
     this TMuninNodeBuilder builder,
-#pragma warning disable CS0618
     INodeSessionCallback sessionCallback
-#pragma warning restore CS0618
   )
     where TMuninNodeBuilder : MuninNodeBuilder
 #pragma warning restore CS0419
@@ -128,6 +133,7 @@ public static class MuninNodeBuilderExtensions {
   /// <remarks>
   /// If <see cref="UsePluginProvider"/> is called, the configurations made by this method will be overridden.
   /// </remarks>
+  [Obsolete(ObsoleteMessageForUseSessionCallback)]
   public static TMuninNodeBuilder UseSessionCallback<TMuninNodeBuilder>(
     this TMuninNodeBuilder builder,
     Func<string, CancellationToken, ValueTask>? reportSessionStartedAsyncFunc,
@@ -137,12 +143,10 @@ public static class MuninNodeBuilderExtensions {
 #pragma warning restore CS0419
     => UseSessionCallback(
       builder: builder,
-#pragma warning disable CS0612
       buildSessionCallback: _ => new SessionCallbackFuncWrapper(
         reportSessionStartedAsyncFunc,
         reportSessionClosedAsyncFunc
       )
-#pragma warning restore CS0612
     );
 
   [Obsolete]
@@ -165,11 +169,10 @@ public static class MuninNodeBuilderExtensions {
   /// <remarks>
   /// If <see cref="UsePluginProvider"/> is called, the configurations made by this method will be overridden.
   /// </remarks>
+  [Obsolete(ObsoleteMessageForUseSessionCallback)]
   public static TMuninNodeBuilder UseSessionCallback<TMuninNodeBuilder>(
     this TMuninNodeBuilder builder,
-#pragma warning disable CS0618
     Func<IServiceProvider, INodeSessionCallback> buildSessionCallback
-#pragma warning restore CS0618
   )
     where TMuninNodeBuilder : MuninNodeBuilder
 #pragma warning restore CS0419
@@ -179,9 +182,30 @@ public static class MuninNodeBuilderExtensions {
     if (buildSessionCallback is null)
       throw new ArgumentNullException(nameof(buildSessionCallback));
 
-#pragma warning disable CS0612
     builder.SetSessionCallbackFactory(buildSessionCallback);
-#pragma warning restore CS0612
+
+    return builder;
+  }
+
+#pragma warning disable CS0419
+  /// <remarks>
+  /// If <see cref="UsePluginProvider"/> is called, the configurations made by this method will be overridden.
+  /// </remarks>
+  public static TMuninNodeBuilder UseTransactionCallback<TMuninNodeBuilder>(
+    this TMuninNodeBuilder builder,
+    Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc,
+    Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc
+  )
+    where TMuninNodeBuilder : MuninNodeBuilder
+#pragma warning restore CS0419
+  {
+    if (builder is null)
+      throw new ArgumentNullException(nameof(builder));
+
+    builder.SetTransactionCallback(
+      onStartTransactionAsyncFunc,
+      onEndTransactionAsyncFunc
+    );
 
     return builder;
   }
