@@ -147,17 +147,28 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
   }
 
   /// <remarks>
-  /// In the default implementation, a banner response is sent back to the client.
+  /// In the default implementation, <see cref="ITransactionCallback.StartTransactionAsync"/> is
+  /// called for <see cref="IPluginProvider"/> and <see cref="IPlugin"/>s,
+  /// and then a banner response is sent back to the client.
   /// </remarks>
-  protected virtual ValueTask HandleTransactionStartAsyncCore(
+  protected virtual async ValueTask HandleTransactionStartAsyncCore(
     IMuninNodeClient client,
     CancellationToken cancellationToken
   )
-    => SendResponseAsync(
+  {
+    if (profile.PluginProvider is ITransactionCallback providerTransactionCallback)
+      await providerTransactionCallback.StartTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+    foreach (var pluginTransactionCallback in plugins.Values.OfType<ITransactionCallback>()) {
+      await pluginTransactionCallback.StartTransactionAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    await SendResponseAsync(
       client,
       banner,
       cancellationToken
-    );
+    ).ConfigureAwait(false);
+  }
 
   /// <inheritdoc cref="IMuninProtocolHandler.HandleTransactionEndAsync"/>
   public ValueTask HandleTransactionEndAsync(
@@ -178,11 +189,22 @@ public class MuninProtocolHandler : IMuninProtocolHandler {
     return HandleTransactionEndAsyncCore(client, cancellationToken);
   }
 
-  protected virtual ValueTask HandleTransactionEndAsyncCore(
+  /// <remarks>
+  /// In the default implementation, <see cref="ITransactionCallback.EndTransactionAsync"/> is
+  /// called for <see cref="IPluginProvider"/> and <see cref="IPlugin"/>s.
+  /// </remarks>
+  protected virtual async ValueTask HandleTransactionEndAsyncCore(
     IMuninNodeClient client,
     CancellationToken cancellationToken
   )
-    => default; // do nothing in this class
+  {
+    foreach (var pluginTransactionCallback in plugins.Values.OfType<ITransactionCallback>()) {
+      await pluginTransactionCallback.EndTransactionAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    if (profile.PluginProvider is ITransactionCallback providerTransactionCallback)
+      await providerTransactionCallback.EndTransactionAsync(cancellationToken).ConfigureAwait(false);
+  }
 
   private static bool ExpectCommand(
     ReadOnlySequence<byte> commandLine,
