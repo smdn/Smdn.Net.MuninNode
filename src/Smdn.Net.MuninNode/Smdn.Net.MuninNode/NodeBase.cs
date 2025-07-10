@@ -562,13 +562,14 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
       LogSessionStarted(Logger, null);
 
     try {
-      // TODO: rename INodeSessionCallback to ITransactionCallback
+#pragma warning disable CS0612,CS0618
       if (PluginProvider.SessionCallback is INodeSessionCallback pluginProviderSessionCallback)
         await pluginProviderSessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
 
       foreach (var pluginSessionCallback in EnumerateSessionCallbackForPlugins(PluginProvider)) {
         await pluginSessionCallback.ReportSessionStartedAsync(sessionId, cancellationToken).ConfigureAwait(false);
       }
+#pragma warning restore CS0612,CS0618
 
       // https://docs.microsoft.com/ja-jp/dotnet/standard/io/pipelines
       var pipe = new Pipe();
@@ -582,17 +583,22 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
         LogSessionClosed(Logger, null);
     }
     finally {
+#pragma warning disable CS0612,CS0618
       foreach (var pluginSessionCallback in EnumerateSessionCallbackForPlugins(PluginProvider)) {
         await pluginSessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
       }
 
       if (PluginProvider.SessionCallback is INodeSessionCallback pluginProviderSessionCallback)
         await pluginProviderSessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+#pragma warning restore CS0612,CS0618
 
       await protocolHandler.HandleTransactionEndAsync(client, cancellationToken).ConfigureAwait(false);
     }
 
+    [Obsolete]
+#pragma warning disable CS0618
     static IEnumerable<INodeSessionCallback> EnumerateSessionCallbackForPlugins(IPluginProvider pluginProvider)
+#pragma warning restore CS0618
     {
       foreach (var plugin in pluginProvider.EnumeratePlugins(flattenMultigraphPlugins: true)) {
         if (plugin.SessionCallback is INodeSessionCallback pluginSessionCallback)

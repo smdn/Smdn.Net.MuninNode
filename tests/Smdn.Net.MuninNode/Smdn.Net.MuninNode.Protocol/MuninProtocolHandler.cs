@@ -21,7 +21,7 @@ namespace Smdn.Net.MuninNode.Protocol;
 public partial class MuninProtocolHandlerTests {
   private class PluginProvider(IReadOnlyCollection<IPlugin> plugins) : IPluginProvider {
     public IReadOnlyCollection<IPlugin> Plugins { get; } = plugins;
-    public INodeSessionCallback? SessionCallback => null;
+    [Obsolete] public INodeSessionCallback? SessionCallback => null;
   }
 
   private class EmptyPluginProvider() : PluginProvider(plugins: Array.Empty<IPlugin>()) { }

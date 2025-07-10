@@ -16,12 +16,14 @@ public class AggregatePluginProviderTests {
     public string Name { get; } = name;
     public IPluginGraphAttributes GraphAttributes => throw new NotImplementedException();
     public IPluginDataSource DataSource => throw new NotImplementedException();
-    public INodeSessionCallback? SessionCallback => null;
+    [Obsolete] public INodeSessionCallback? SessionCallback => null;
   }
 
+#pragma warning disable CS0618
   private class PseudoPluginProvider(IReadOnlyCollection<IPlugin> plugins) : IPluginProvider, INodeSessionCallback {
+#pragma warning restore CS0618
     public IReadOnlyCollection<IPlugin> Plugins => plugins;
-    public INodeSessionCallback? SessionCallback => this;
+    [Obsolete] public INodeSessionCallback? SessionCallback => this;
 
     public int NumberOfInvocationOfReportSessionStartedAsync = 0;
     public int NumberOfInvocationOfReportSessionClosedAsync = 0;
@@ -135,6 +137,7 @@ public class AggregatePluginProviderTests {
     Assert.That(pluginProviderCollections.Plugins.Select(static p => p.Name), Is.EquivalentTo(["#1", "#2", "#3"]));
   }
 
+#pragma warning disable CS0618
   [Test]
   public void INodeSessionCallback_ReportSessionStartedAsync()
   {
@@ -158,7 +161,9 @@ public class AggregatePluginProviderTests {
     Assert.That(provider2.NumberOfInvocationOfReportSessionStartedAsync, Is.EqualTo(1));
     Assert.That(provider2.NumberOfInvocationOfReportSessionClosedAsync, Is.Zero);
   }
+#pragma warning restore CS0618
 
+#pragma warning disable CS0618
   [Test]
   public void INodeSessionCallback_ReportSessionClosedAsync()
   {
@@ -182,7 +187,9 @@ public class AggregatePluginProviderTests {
     Assert.That(provider2.NumberOfInvocationOfReportSessionStartedAsync, Is.Zero);
     Assert.That(provider2.NumberOfInvocationOfReportSessionClosedAsync, Is.EqualTo(1));
   }
+#pragma warning restore CS0618
 
+#pragma warning disable CS0618
   [Test]
   public void INodeSessionCallback_ReportSessionStartedAsync_CancellationRequested()
   {
@@ -206,7 +213,9 @@ public class AggregatePluginProviderTests {
     Assert.That(provider2.NumberOfInvocationOfReportSessionStartedAsync, Is.Zero);
     Assert.That(provider2.NumberOfInvocationOfReportSessionClosedAsync, Is.Zero);
   }
+#pragma warning restore CS0618
 
+#pragma warning disable CS0618
   [Test]
   public void INodeSessionCallback_ReportSessionClosedAsync_CancellationRequested()
   {
@@ -230,4 +239,5 @@ public class AggregatePluginProviderTests {
     Assert.That(provider2.NumberOfInvocationOfReportSessionStartedAsync, Is.Zero);
     Assert.That(provider2.NumberOfInvocationOfReportSessionClosedAsync, Is.Zero);
   }
+#pragma warning restore CS0618
 }

@@ -17,8 +17,11 @@ namespace Smdn.Net.MuninPlugin;
 #pragma warning disable IDE0055
 public sealed class AggregatePluginProvider :
   ReadOnlyCollection<IPluginProvider>,
+#pragma warning disable CS0618
   INodeSessionCallback,
-  IPluginProvider
+#pragma warning restore CS0618
+  IPluginProvider,
+  ITransactionCallback
 {
 #pragma warning restore IDE0055
   /*
@@ -26,6 +29,7 @@ public sealed class AggregatePluginProvider :
    */
   public IReadOnlyCollection<IPlugin> Plugins { get; }
 
+  [Obsolete]
   INodeSessionCallback? IPluginProvider.SessionCallback => this;
 
   /*
@@ -37,6 +41,7 @@ public sealed class AggregatePluginProvider :
     Plugins = Items.SelectMany(static provider => provider.Plugins).ToList();
   }
 
+#pragma warning disable CS0618
   /*
    * INodeSessionCallback
    */
@@ -57,6 +62,30 @@ public sealed class AggregatePluginProvider :
 
       if (provider.SessionCallback is INodeSessionCallback sessionCallback)
         await sessionCallback.ReportSessionClosedAsync(sessionId, cancellationToken).ConfigureAwait(false);
+    }
+  }
+#pragma warning restore CS0618
+
+  /*
+   * ITransactionCallback
+   */
+  async ValueTask ITransactionCallback.StartTransactionAsync(CancellationToken cancellationToken)
+  {
+    foreach (var provider in Items) {
+      cancellationToken.ThrowIfCancellationRequested();
+
+      if (provider is ITransactionCallback transactionCallback)
+        await transactionCallback.StartTransactionAsync(cancellationToken).ConfigureAwait(false);
+    }
+  }
+
+  async ValueTask ITransactionCallback.EndTransactionAsync(CancellationToken cancellationToken)
+  {
+    foreach (var provider in Items) {
+      cancellationToken.ThrowIfCancellationRequested();
+
+      if (provider is ITransactionCallback transactionCallback)
+        await transactionCallback.EndTransactionAsync(cancellationToken).ConfigureAwait(false);
     }
   }
 }

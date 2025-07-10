@@ -15,9 +15,11 @@ namespace Smdn.Net.MuninNode.Protocol;
 #pragma warning disable IDE0040
 partial class MuninProtocolHandlerTests {
 #pragma warning restore IDE0040
+  // TODO: Plugin
+  // TODO: AggregatePluginProvider
   private class TransactionCallbackPluginProvider : IPluginProvider, ITransactionCallback {
     public IReadOnlyCollection<IPlugin> Plugins => Array.Empty<IPlugin>();
-    public INodeSessionCallback? SessionCallback => null;
+    [Obsolete]  public INodeSessionCallback? SessionCallback => null;
 
     public Action<CancellationToken>? OnStartTransaction { get; init; }
     public Action<CancellationToken>? OnEndTransaction { get; init; }
@@ -107,7 +109,7 @@ partial class MuninProtocolHandlerTests {
     public string Name => name;
     public IPluginGraphAttributes GraphAttributes => throw new NotImplementedException();
     public IPluginDataSource DataSource => throw new NotImplementedException();
-    public INodeSessionCallback? SessionCallback => throw new NotImplementedException();
+    [Obsolete] public INodeSessionCallback? SessionCallback => throw new NotImplementedException();
 
     public Action<CancellationToken>? OnStartTransaction { get; init; }
     public Action<CancellationToken>? OnEndTransaction { get; init; }
@@ -201,7 +203,7 @@ partial class MuninProtocolHandlerTests {
     public string Name => name;
     public IPluginGraphAttributes GraphAttributes => throw new NotImplementedException();
     public IPluginDataSource DataSource => throw new NotImplementedException();
-    public INodeSessionCallback? SessionCallback => throw new NotImplementedException();
+    [Obsolete] public INodeSessionCallback? SessionCallback => throw new NotImplementedException();
     public IReadOnlyCollection<IPlugin> Plugins { get; } = [plugin];
 
     public Action<CancellationToken>? OnStartTransaction { get; init; }

@@ -106,7 +106,9 @@ public static class MuninNodeBuilderExtensions {
   /// </remarks>
   public static TMuninNodeBuilder UseSessionCallback<TMuninNodeBuilder>(
     this TMuninNodeBuilder builder,
+#pragma warning disable CS0618
     INodeSessionCallback sessionCallback
+#pragma warning restore CS0618
   )
     where TMuninNodeBuilder : MuninNodeBuilder
 #pragma warning restore CS0419
@@ -135,12 +137,15 @@ public static class MuninNodeBuilderExtensions {
 #pragma warning restore CS0419
     => UseSessionCallback(
       builder: builder,
+#pragma warning disable CS0612
       buildSessionCallback: _ => new SessionCallbackFuncWrapper(
         reportSessionStartedAsyncFunc,
         reportSessionClosedAsyncFunc
       )
+#pragma warning restore CS0612
     );
 
+  [Obsolete]
   private sealed class SessionCallbackFuncWrapper(
     Func<string, CancellationToken, ValueTask>? reportSessionStartedAsyncFunc,
     Func<string, CancellationToken, ValueTask>? reportSessionClosedAsyncFunc
@@ -162,7 +167,9 @@ public static class MuninNodeBuilderExtensions {
   /// </remarks>
   public static TMuninNodeBuilder UseSessionCallback<TMuninNodeBuilder>(
     this TMuninNodeBuilder builder,
+#pragma warning disable CS0618
     Func<IServiceProvider, INodeSessionCallback> buildSessionCallback
+#pragma warning restore CS0618
   )
     where TMuninNodeBuilder : MuninNodeBuilder
 #pragma warning restore CS0419
@@ -172,7 +179,9 @@ public static class MuninNodeBuilderExtensions {
     if (buildSessionCallback is null)
       throw new ArgumentNullException(nameof(buildSessionCallback));
 
+#pragma warning disable CS0612
     builder.SetSessionCallbackFactory(buildSessionCallback);
+#pragma warning restore CS0612
 
     return builder;
   }

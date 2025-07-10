@@ -20,6 +20,8 @@ partial class LocalNode {
 #pragma warning restore IDE0040
   private class ReadOnlyCollectionPluginProvider : IPluginProvider {
     public IReadOnlyCollection<IPlugin> Plugins { get; }
+
+    [Obsolete]
     public INodeSessionCallback? SessionCallback => null;
 
     public ReadOnlyCollectionPluginProvider(IReadOnlyCollection<IPlugin> plugins)

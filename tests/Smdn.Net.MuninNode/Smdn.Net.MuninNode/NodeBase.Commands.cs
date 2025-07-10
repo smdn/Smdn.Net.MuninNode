@@ -45,7 +45,7 @@ partial class NodeBaseTests {
 
     private class ReadOnlyCollectionPluginProvider : IPluginProvider {
       public IReadOnlyCollection<IPlugin> Plugins { get; }
-      public INodeSessionCallback? SessionCallback => null;
+      [Obsolete] public INodeSessionCallback? SessionCallback => null;
 
       public ReadOnlyCollectionPluginProvider(IReadOnlyCollection<IPlugin> plugins)
       {

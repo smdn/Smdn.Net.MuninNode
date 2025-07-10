@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2023 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
 
+using System;
 using System.Collections.Generic;
 
 namespace Smdn.Net.MuninPlugin;
@@ -21,5 +22,8 @@ public interface IPluginProvider {
   /// <summary>Gets a <see cref="INodeSessionCallback"/>, which defines the callbacks when a request session from the <c>munin-update</c> starts or ends, such as fetching data or getting configurations.</summary>
   /// <seealso cref="INodeSessionCallback"/>
   /// <seealso cref="MuninNode.NodeBase"/>
+#pragma warning disable CS0618
+  [Obsolete(message: INodeSessionCallback.ObsoleteMessage.SessionCallbackProperty)]
+#pragma warning restore CS0618
   INodeSessionCallback? SessionCallback { get; }
 }

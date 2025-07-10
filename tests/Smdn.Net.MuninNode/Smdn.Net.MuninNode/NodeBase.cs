@@ -22,7 +22,7 @@ public partial class NodeBaseTests {
   private class TestLocalNode : LocalNode {
     private class ReadOnlyCollectionPluginProvider : IPluginProvider {
       public IReadOnlyCollection<IPlugin> Plugins { get; }
-      public INodeSessionCallback? SessionCallback => null;
+      [Obsolete] public INodeSessionCallback? SessionCallback => null;
 
       public ReadOnlyCollectionPluginProvider(IReadOnlyCollection<IPlugin> plugins)
       {
@@ -78,7 +78,7 @@ public partial class NodeBaseTests {
 
     private class NullPluginProvider : IPluginProvider {
       public IReadOnlyCollection<IPlugin> Plugins { get; } = [];
-      public INodeSessionCallback? SessionCallback => null;
+      [Obsolete] public INodeSessionCallback? SessionCallback => null;
     }
 
     public override IPluginProvider PluginProvider { get; } = new NullPluginProvider();

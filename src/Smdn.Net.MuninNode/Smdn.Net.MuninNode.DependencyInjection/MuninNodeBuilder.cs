@@ -23,7 +23,7 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
 #pragma warning restore CS0618
   private readonly List<Func<IServiceProvider, IPlugin>> pluginFactories = new(capacity: 4);
   private Func<IServiceProvider, IPluginProvider>? buildPluginProvider;
-  private Func<IServiceProvider, INodeSessionCallback>? buildSessionCallback;
+  [Obsolete] private Func<IServiceProvider, INodeSessionCallback>? buildSessionCallback;
   private Func<IServiceProvider, IMuninNodeListenerFactory>? buildListenerFactory;
 
   /// <summary>
@@ -64,6 +64,7 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
     this.buildPluginProvider = buildPluginProvider;
   }
 
+  [Obsolete]
   internal void SetSessionCallbackFactory(
     Func<IServiceProvider, INodeSessionCallback> buildSessionCallback
   )
@@ -100,7 +101,9 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
       pluginProvider: buildPluginProvider is null
         ? new PluginProvider(
             plugins: pluginFactories.Select(factory => factory(serviceProvider)).ToList(),
+#pragma warning disable CS0612
             sessionCallback: buildSessionCallback?.Invoke(serviceProvider)
+#pragma warning restore CS0612
           )
         : buildPluginProvider.Invoke(serviceProvider),
       listenerFactory: buildListenerFactory?.Invoke(serviceProvider),
@@ -110,15 +113,22 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
 
   private sealed class PluginProvider : IPluginProvider {
     public IReadOnlyCollection<IPlugin> Plugins { get; }
+
+    [Obsolete]
     public INodeSessionCallback? SessionCallback { get; }
 
     public PluginProvider(
       IReadOnlyCollection<IPlugin> plugins,
+#pragma warning disable CS0618
       INodeSessionCallback? sessionCallback
+#pragma warning restore CS0618
     )
     {
       Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
+
+#pragma warning disable CS0612
       SessionCallback = sessionCallback;
+#pragma warning restore CS0612
     }
   }
 

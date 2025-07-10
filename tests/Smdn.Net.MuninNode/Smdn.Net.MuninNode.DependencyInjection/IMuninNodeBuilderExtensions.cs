@@ -51,7 +51,7 @@ public class IMuninNodeBuilderExtensionsTests {
     public string Name => "pseudo-plugin";
     public IPluginGraphAttributes GraphAttributes => throw new NotImplementedException();
     public IPluginDataSource DataSource => throw new NotImplementedException();
-    public INodeSessionCallback? SessionCallback => null;
+    [Obsolete] public INodeSessionCallback? SessionCallback => null;
   }
 
   [Test]
@@ -161,7 +161,7 @@ public class IMuninNodeBuilderExtensionsTests {
   private class PseudoPluginProvider(IServiceProvider? serviceProvider = null) : IPluginProvider {
     public IServiceProvider? ServiceProvider => serviceProvider;
     public IReadOnlyCollection<IPlugin> Plugins => throw new NotImplementedException();
-    public INodeSessionCallback? SessionCallback => throw new NotImplementedException();
+    [Obsolete] public INodeSessionCallback? SessionCallback => throw new NotImplementedException();
   }
 
   [Test]
@@ -184,10 +184,12 @@ public class IMuninNodeBuilderExtensionsTests {
       () => _ = node.PluginProvider.Plugins,
       Throws.TypeOf<NotImplementedException>()
     );
+#pragma warning disable CS0618
     Assert.That(
       () => _ = node.PluginProvider.SessionCallback,
       Throws.TypeOf<NotImplementedException>()
     );
+#pragma warning restore CS0618
   }
 
   [Test]
@@ -273,6 +275,7 @@ public class IMuninNodeBuilderExtensionsTests {
     );
   }
 
+#pragma warning disable CS0618
   private class SessionCallback(IServiceProvider? serviceProvider = null) : INodeSessionCallback {
     public IServiceProvider? ServiceProvider => serviceProvider;
 
@@ -302,7 +305,9 @@ public class IMuninNodeBuilderExtensionsTests {
     Assert.That(node.PluginProvider.SessionCallback, Is.Not.Null);
     Assert.That(node.PluginProvider.SessionCallback, Is.SameAs(sessionCallback));
   }
+#pragma warning restore CS0618
 
+#pragma warning disable CS0618
   private static System.Collections.IEnumerable YieldTestCases_UseSessionCallback_FuncSessionCallback()
   {
     yield return new object[] {
@@ -391,6 +396,7 @@ public class IMuninNodeBuilderExtensionsTests {
 
     assertBuiltNode(node);
   }
+#pragma warning restore CS0618
 
   [Test]
   public void UseSessionCallback_FuncBuildSessionCallback_ArgumentNull()
@@ -420,6 +426,7 @@ public class IMuninNodeBuilderExtensionsTests {
     );
   }
 
+#pragma warning disable CS0618
   [Test]
   public void UseSessionCallback_FuncBuildSessionCallback()
   {
@@ -445,6 +452,7 @@ public class IMuninNodeBuilderExtensionsTests {
     Assert.That(sessionCallback!.ServiceProvider, Is.Not.Null);
     Assert.That(sessionCallback!.ServiceProvider!.GetRequiredService<IMuninNode>, Throws.Nothing);
   }
+#pragma warning restore CS0618
 
   [Test]
   public void UseListenerFactory_IMuninNodeListenerFactory_ArgumentNull()
