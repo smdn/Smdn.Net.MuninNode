@@ -15,11 +15,9 @@ namespace Smdn.Net.MuninNode.Protocol;
 #pragma warning disable IDE0040
 partial class MuninProtocolHandlerTests {
 #pragma warning restore IDE0040
-  // TODO: Plugin
-  // TODO: AggregatePluginProvider
   private class TransactionCallbackPluginProvider : IPluginProvider, ITransactionCallback {
     public IReadOnlyCollection<IPlugin> Plugins => Array.Empty<IPlugin>();
-    [Obsolete]  public INodeSessionCallback? SessionCallback => null;
+    [Obsolete] public INodeSessionCallback? SessionCallback => null;
 
     public Action<CancellationToken>? OnStartTransaction { get; init; }
     public Action<CancellationToken>? OnEndTransaction { get; init; }
@@ -93,6 +91,76 @@ partial class MuninProtocolHandlerTests {
             numberOfOnEndTransactionInvoked++;
           }
         }
+      }
+    );
+    var client = new PseudoMuninNodeClient();
+
+    Assert.That(
+      async () => await handler.HandleTransactionEndAsync(client, cancellationToken),
+      Throws.Nothing
+    );
+    Assert.That(numberOfOnStartTransactionInvoked, Is.Zero);
+    Assert.That(numberOfOnEndTransactionInvoked, Is.EqualTo(1));
+  }
+
+  [Test]
+  [CancelAfter(1000)]
+  public void HandleTransactionStartAsync_ITransactionCallback_AggregatePluginProvider(CancellationToken cancellationToken)
+  {
+    const string HostName = "munin-node.localhost";
+
+    var numberOfOnStartTransactionInvoked = 0;
+    var numberOfOnEndTransactionInvoked = 0;
+    var handler = new MuninProtocolHandler(
+      profile: new MuninNodeProfile() {
+        HostName = HostName,
+        PluginProvider = new AggregatePluginProvider([
+          new TransactionCallbackPluginProvider() {
+            OnStartTransaction = ct => {
+              Assert.That(ct, Is.EqualTo(cancellationToken));
+              numberOfOnStartTransactionInvoked++;
+            },
+            OnEndTransaction = ct => {
+              Assert.That(ct, Is.EqualTo(cancellationToken));
+              numberOfOnEndTransactionInvoked++;
+            }
+          }
+        ])
+      }
+    );
+    var client = new PseudoMuninNodeClient();
+
+    Assert.That(
+      async () => await handler.HandleTransactionStartAsync(client, cancellationToken),
+      Throws.Nothing
+    );
+    Assert.That(numberOfOnStartTransactionInvoked, Is.EqualTo(1));
+    Assert.That(numberOfOnEndTransactionInvoked, Is.Zero);
+  }
+
+  [Test]
+  [CancelAfter(1000)]
+  public void HandleTransactionEndAsync_ITransactionCallback_AggregatePluginProvider(CancellationToken cancellationToken)
+  {
+    const string HostName = "munin-node.localhost";
+
+    var numberOfOnStartTransactionInvoked = 0;
+    var numberOfOnEndTransactionInvoked = 0;
+    var handler = new MuninProtocolHandler(
+      profile: new MuninNodeProfile() {
+        HostName = HostName,
+        PluginProvider = new AggregatePluginProvider([
+          new TransactionCallbackPluginProvider() {
+            OnStartTransaction = ct => {
+              Assert.That(ct, Is.EqualTo(cancellationToken));
+              numberOfOnStartTransactionInvoked++;
+            },
+            OnEndTransaction = ct => {
+              Assert.That(ct, Is.EqualTo(cancellationToken));
+              numberOfOnEndTransactionInvoked++;
+            }
+          }
+        ])
       }
     );
     var client = new PseudoMuninNodeClient();
@@ -350,5 +418,109 @@ partial class MuninProtocolHandlerTests {
     Assert.That(numberOfMultigraphPluginOnEndTransactionInvoked, multigraph ? Is.EqualTo(1) : Is.Zero);
     Assert.That(numberOfPluginOnStartTransactionInvoked, Is.Zero);
     Assert.That(numberOfPluginOnEndTransactionInvoked, multigraph ? Is.Zero : Is.EqualTo(1));
+  }
+
+  private class TransactionCallbackExtendedPlugin : Plugin {
+    public Action<CancellationToken>? OnStartTransaction { get; init; }
+    public Action<CancellationToken>? OnEndTransaction { get; init; }
+
+    public TransactionCallbackExtendedPlugin()
+      : base(
+        name: "plugin",
+        graphAttributes: new PluginGraphAttributes(
+          title: "title",
+          category: "test",
+          verticalLabel: "test",
+          scale: false,
+          arguments: "--args"
+        ),
+        fields: Array.Empty<IPluginField>()
+      )
+    {
+    }
+
+    protected override ValueTask StartTransactionAsync(CancellationToken cancellationToken)
+    {
+      OnStartTransaction?.Invoke(cancellationToken);
+
+      return default;
+    }
+
+    protected override ValueTask EndTransactionAsync(CancellationToken cancellationToken)
+    {
+      OnEndTransaction?.Invoke(cancellationToken);
+
+      return default;
+    }
+  }
+
+  [Test]
+  [CancelAfter(1000)]
+  public void HandleTransactionStartAsync_ITransactionCallback_Plugin(CancellationToken cancellationToken)
+  {
+    const string HostName = "munin-node.localhost";
+
+    var numberOfOnStartTransactionInvoked = 0;
+    var numberOfOnEndTransactionInvoked = 0;
+    var handler = new MuninProtocolHandler(
+      profile: new MuninNodeProfile() {
+        HostName = HostName,
+        PluginProvider = new PluginProvider([
+          new TransactionCallbackExtendedPlugin() {
+            OnStartTransaction = ct => {
+              Assert.That(ct, Is.EqualTo(cancellationToken));
+              numberOfOnStartTransactionInvoked++;
+            },
+            OnEndTransaction = ct => {
+              Assert.That(ct, Is.EqualTo(cancellationToken));
+              numberOfOnEndTransactionInvoked++;
+            }
+          }
+        ])
+      }
+    );
+    var client = new PseudoMuninNodeClient();
+
+    Assert.That(
+      async () => await handler.HandleTransactionStartAsync(client, cancellationToken),
+      Throws.Nothing
+    );
+    Assert.That(numberOfOnStartTransactionInvoked, Is.EqualTo(1));
+    Assert.That(numberOfOnEndTransactionInvoked, Is.Zero);
+  }
+
+  [Test]
+  [CancelAfter(1000)]
+  public void HandleTransactionEndAsync_ITransactionCallback_Plugin(CancellationToken cancellationToken)
+  {
+    const string HostName = "munin-node.localhost";
+
+    var numberOfOnStartTransactionInvoked = 0;
+    var numberOfOnEndTransactionInvoked = 0;
+    var handler = new MuninProtocolHandler(
+      profile: new MuninNodeProfile() {
+        HostName = HostName,
+        PluginProvider = new PluginProvider([
+          new TransactionCallbackExtendedPlugin() {
+            OnStartTransaction = ct => {
+              Assert.That(ct, Is.EqualTo(cancellationToken));
+              numberOfOnStartTransactionInvoked++;
+            },
+            OnEndTransaction = ct => {
+              Assert.That(ct, Is.EqualTo(cancellationToken));
+              numberOfOnEndTransactionInvoked++;
+            }
+          }
+        ])
+      }
+    );
+    var client = new PseudoMuninNodeClient();
+
+    Assert.That(
+      async () => await handler.HandleTransactionEndAsync(client, cancellationToken),
+      Throws.Nothing
+    );
+    Assert.That(numberOfOnStartTransactionInvoked, Is.Zero);
+    Assert.That(numberOfOnEndTransactionInvoked, Is.EqualTo(1));
   }
 }
