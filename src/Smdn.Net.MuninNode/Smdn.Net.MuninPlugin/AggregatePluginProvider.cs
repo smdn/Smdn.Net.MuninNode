@@ -71,21 +71,19 @@ public sealed class AggregatePluginProvider :
    */
   async ValueTask ITransactionCallback.StartTransactionAsync(CancellationToken cancellationToken)
   {
-    foreach (var provider in Items) {
+    foreach (var transactionCallback in Items.OfType<ITransactionCallback>()) {
       cancellationToken.ThrowIfCancellationRequested();
 
-      if (provider is ITransactionCallback transactionCallback)
-        await transactionCallback.StartTransactionAsync(cancellationToken).ConfigureAwait(false);
+      await transactionCallback.StartTransactionAsync(cancellationToken).ConfigureAwait(false);
     }
   }
 
   async ValueTask ITransactionCallback.EndTransactionAsync(CancellationToken cancellationToken)
   {
-    foreach (var provider in Items) {
+    foreach (var transactionCallback in Items.OfType<ITransactionCallback>()) {
       cancellationToken.ThrowIfCancellationRequested();
 
-      if (provider is ITransactionCallback transactionCallback)
-        await transactionCallback.EndTransactionAsync(cancellationToken).ConfigureAwait(false);
+      await transactionCallback.EndTransactionAsync(cancellationToken).ConfigureAwait(false);
     }
   }
 }
