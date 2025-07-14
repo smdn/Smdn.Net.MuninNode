@@ -9,7 +9,7 @@ using Smdn.Net.MuninNode.Protocol;
 namespace Smdn.Net.MuninPlugin;
 
 /// <summary>
-/// Defines the callbacks when a request session from the <c>munin-update</c> starts or ends.
+/// Defines the callbacks when a transaction with the <c>munin master</c> starts and ends.
 /// </summary>
 public interface ITransactionCallback {
   /// <summary>
