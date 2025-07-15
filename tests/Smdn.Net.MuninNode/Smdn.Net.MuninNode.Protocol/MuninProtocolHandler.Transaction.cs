@@ -15,6 +15,73 @@ namespace Smdn.Net.MuninNode.Protocol;
 #pragma warning disable IDE0040
 partial class MuninProtocolHandlerTests {
 #pragma warning restore IDE0040
+  private void HandleTransactionStartAsync_ITransactionCallback(
+    Func<Action<CancellationToken>, Action<CancellationToken>, IPluginProvider> createPluginProvider,
+    CancellationToken cancellationToken
+  )
+    => HandleTransactionAsync_ITransactionCallback(
+      createPluginProvider,
+      testStartTransaction: true,
+      cancellationToken
+    );
+
+  private void HandleTransactionEndAsync_ITransactionCallback(
+    Func<Action<CancellationToken>, Action<CancellationToken>, IPluginProvider> createPluginProvider,
+    CancellationToken cancellationToken
+  )
+    => HandleTransactionAsync_ITransactionCallback(
+      createPluginProvider,
+      testStartTransaction: false,
+      cancellationToken
+    );
+
+  private void HandleTransactionAsync_ITransactionCallback(
+    Func<Action<CancellationToken>, Action<CancellationToken>, IPluginProvider> createPluginProvider,
+    bool testStartTransaction,
+    CancellationToken cancellationToken
+  )
+  {
+    const string HostName = "munin-node.localhost";
+
+    var numberOfOnStartTransactionInvoked = 0;
+    var numberOfOnEndTransactionInvoked = 0;
+
+    void OnStartTransaction(CancellationToken ct)
+    {
+      Assert.That(ct, Is.EqualTo(cancellationToken));
+      numberOfOnStartTransactionInvoked++;
+    }
+
+    void OnEndTransaction(CancellationToken ct)
+    {
+      Assert.That(ct, Is.EqualTo(cancellationToken));
+      numberOfOnEndTransactionInvoked++;
+    }
+
+    var handler = new MuninProtocolHandler(
+      profile: new MuninNodeProfile() {
+        HostName = HostName,
+        PluginProvider = createPluginProvider(
+          OnStartTransaction,
+          OnEndTransaction
+        )
+      }
+    );
+    var client = new PseudoMuninNodeClient();
+
+    Assert.That(
+      async () => {
+        if (testStartTransaction)
+          await handler.HandleTransactionStartAsync(client, cancellationToken);
+        else
+          await handler.HandleTransactionEndAsync(client, cancellationToken);
+      },
+      Throws.Nothing
+    );
+    Assert.That(numberOfOnStartTransactionInvoked, testStartTransaction ? Is.EqualTo(1) : Is.Zero);
+    Assert.That(numberOfOnEndTransactionInvoked, testStartTransaction ? Is.Zero : Is.EqualTo(1));
+  }
+
   private class TransactionCallbackPluginProvider : IPluginProvider, ITransactionCallback {
     public IReadOnlyCollection<IPlugin> Plugins => Array.Empty<IPlugin>();
     [Obsolete] public INodeSessionCallback? SessionCallback => null;
@@ -40,138 +107,50 @@ partial class MuninProtocolHandlerTests {
   [Test]
   [CancelAfter(1000)]
   public void HandleTransactionStartAsync_ITransactionCallback_IPluginProvider(CancellationToken cancellationToken)
-  {
-    const string HostName = "munin-node.localhost";
-
-    var numberOfOnStartTransactionInvoked = 0;
-    var numberOfOnEndTransactionInvoked = 0;
-    var handler = new MuninProtocolHandler(
-      profile: new MuninNodeProfile() {
-        HostName = HostName,
-        PluginProvider = new TransactionCallbackPluginProvider() {
-          OnStartTransaction = ct => {
-            Assert.That(ct, Is.EqualTo(cancellationToken));
-            numberOfOnStartTransactionInvoked++;
-          },
-          OnEndTransaction = ct => {
-            Assert.That(ct, Is.EqualTo(cancellationToken));
-            numberOfOnEndTransactionInvoked++;
-          }
-        }
-      }
+    => HandleTransactionStartAsync_ITransactionCallback(
+      createPluginProvider: static (onStartTransaction, _) => new TransactionCallbackPluginProvider() {
+        OnStartTransaction = onStartTransaction,
+        OnEndTransaction = static _ => throw new InvalidOperationException("callback was called unexpectedly")
+      },
+      cancellationToken
     );
-    var client = new PseudoMuninNodeClient();
-
-    Assert.That(
-      async () => await handler.HandleTransactionStartAsync(client, cancellationToken),
-      Throws.Nothing
-    );
-    Assert.That(numberOfOnStartTransactionInvoked, Is.EqualTo(1));
-    Assert.That(numberOfOnEndTransactionInvoked, Is.Zero);
-  }
 
   [Test]
   [CancelAfter(1000)]
   public void HandleTransactionEndAsync_ITransactionCallback_IPluginProvider(CancellationToken cancellationToken)
-  {
-    const string HostName = "munin-node.localhost";
-
-    var numberOfOnStartTransactionInvoked = 0;
-    var numberOfOnEndTransactionInvoked = 0;
-    var handler = new MuninProtocolHandler(
-      profile: new MuninNodeProfile() {
-        HostName = HostName,
-        PluginProvider = new TransactionCallbackPluginProvider() {
-          OnStartTransaction = ct => {
-            Assert.That(ct, Is.EqualTo(cancellationToken));
-            numberOfOnStartTransactionInvoked++;
-          },
-          OnEndTransaction = ct => {
-            Assert.That(ct, Is.EqualTo(cancellationToken));
-            numberOfOnEndTransactionInvoked++;
-          }
-        }
-      }
+    => HandleTransactionEndAsync_ITransactionCallback(
+      createPluginProvider: static (_, onEndTransaction) => new TransactionCallbackPluginProvider() {
+        OnStartTransaction = static _ => throw new InvalidOperationException("callback was called unexpectedly"),
+        OnEndTransaction = onEndTransaction
+      },
+      cancellationToken
     );
-    var client = new PseudoMuninNodeClient();
-
-    Assert.That(
-      async () => await handler.HandleTransactionEndAsync(client, cancellationToken),
-      Throws.Nothing
-    );
-    Assert.That(numberOfOnStartTransactionInvoked, Is.Zero);
-    Assert.That(numberOfOnEndTransactionInvoked, Is.EqualTo(1));
-  }
 
   [Test]
   [CancelAfter(1000)]
   public void HandleTransactionStartAsync_ITransactionCallback_AggregatePluginProvider(CancellationToken cancellationToken)
-  {
-    const string HostName = "munin-node.localhost";
-
-    var numberOfOnStartTransactionInvoked = 0;
-    var numberOfOnEndTransactionInvoked = 0;
-    var handler = new MuninProtocolHandler(
-      profile: new MuninNodeProfile() {
-        HostName = HostName,
-        PluginProvider = new AggregatePluginProvider([
-          new TransactionCallbackPluginProvider() {
-            OnStartTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnStartTransactionInvoked++;
-            },
-            OnEndTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnEndTransactionInvoked++;
-            }
-          }
-        ])
-      }
+    => HandleTransactionStartAsync_ITransactionCallback(
+      createPluginProvider: static (onStartTransaction, _) => new AggregatePluginProvider([
+        new TransactionCallbackPluginProvider() {
+          OnStartTransaction = onStartTransaction,
+          OnEndTransaction = static _ => throw new InvalidOperationException("callback was called unexpectedly")
+        }
+      ]),
+      cancellationToken
     );
-    var client = new PseudoMuninNodeClient();
-
-    Assert.That(
-      async () => await handler.HandleTransactionStartAsync(client, cancellationToken),
-      Throws.Nothing
-    );
-    Assert.That(numberOfOnStartTransactionInvoked, Is.EqualTo(1));
-    Assert.That(numberOfOnEndTransactionInvoked, Is.Zero);
-  }
 
   [Test]
   [CancelAfter(1000)]
   public void HandleTransactionEndAsync_ITransactionCallback_AggregatePluginProvider(CancellationToken cancellationToken)
-  {
-    const string HostName = "munin-node.localhost";
-
-    var numberOfOnStartTransactionInvoked = 0;
-    var numberOfOnEndTransactionInvoked = 0;
-    var handler = new MuninProtocolHandler(
-      profile: new MuninNodeProfile() {
-        HostName = HostName,
-        PluginProvider = new AggregatePluginProvider([
-          new TransactionCallbackPluginProvider() {
-            OnStartTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnStartTransactionInvoked++;
-            },
-            OnEndTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnEndTransactionInvoked++;
-            }
-          }
-        ])
-      }
+    => HandleTransactionEndAsync_ITransactionCallback(
+      createPluginProvider: static (_, onEndTransaction) => new AggregatePluginProvider([
+        new TransactionCallbackPluginProvider() {
+          OnStartTransaction = static _ => throw new InvalidOperationException("callback was called unexpectedly"),
+          OnEndTransaction = onEndTransaction
+        }
+      ]),
+      cancellationToken
     );
-    var client = new PseudoMuninNodeClient();
-
-    Assert.That(
-      async () => await handler.HandleTransactionEndAsync(client, cancellationToken),
-      Throws.Nothing
-    );
-    Assert.That(numberOfOnStartTransactionInvoked, Is.Zero);
-    Assert.That(numberOfOnEndTransactionInvoked, Is.EqualTo(1));
-  }
 
   private class TransactionCallbackPlugin(string name) : IPlugin, ITransactionCallback {
     public string Name => name;
@@ -200,72 +179,28 @@ partial class MuninProtocolHandlerTests {
   [Test]
   [CancelAfter(1000)]
   public void HandleTransactionStartAsync_ITransactionCallback_IPlugin(CancellationToken cancellationToken)
-  {
-    const string HostName = "munin-node.localhost";
-
-    var numberOfOnStartTransactionInvoked = 0;
-    var numberOfOnEndTransactionInvoked = 0;
-    var handler = new MuninProtocolHandler(
-      profile: new MuninNodeProfile() {
-        HostName = HostName,
-        PluginProvider = new PluginProvider([
-          new TransactionCallbackPlugin("plugin") {
-            OnStartTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnStartTransactionInvoked++;
-            },
-            OnEndTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnEndTransactionInvoked++;
-            }
-          }
-        ])
-      }
+    => HandleTransactionStartAsync_ITransactionCallback(
+      createPluginProvider: static (onStartTransaction, _) => new PluginProvider([
+        new TransactionCallbackPlugin("plugin") {
+          OnStartTransaction = onStartTransaction,
+          OnEndTransaction = static _ => throw new InvalidOperationException("callback was called unexpectedly")
+        }
+      ]),
+      cancellationToken
     );
-    var client = new PseudoMuninNodeClient();
-
-    Assert.That(
-      async () => await handler.HandleTransactionStartAsync(client, cancellationToken),
-      Throws.Nothing
-    );
-    Assert.That(numberOfOnStartTransactionInvoked, Is.EqualTo(1));
-    Assert.That(numberOfOnEndTransactionInvoked, Is.Zero);
-  }
 
   [Test]
   [CancelAfter(1000)]
   public void HandleTransactionEndAsync_ITransactionCallback_IPlugin(CancellationToken cancellationToken)
-  {
-    const string HostName = "munin-node.localhost";
-
-    var numberOfOnStartTransactionInvoked = 0;
-    var numberOfOnEndTransactionInvoked = 0;
-    var handler = new MuninProtocolHandler(
-      profile: new MuninNodeProfile() {
-        HostName = HostName,
-        PluginProvider = new PluginProvider([
-          new TransactionCallbackPlugin("plugin") {
-            OnStartTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnStartTransactionInvoked++;
-            },
-            OnEndTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnEndTransactionInvoked++;
-            }
-          }
-        ])
-      }
+    => HandleTransactionEndAsync_ITransactionCallback(
+      createPluginProvider: static (_, onEndTransaction) => new PluginProvider([
+        new TransactionCallbackPlugin("plugin") {
+          OnStartTransaction = static _ => throw new InvalidOperationException("callback was called unexpectedly"),
+          OnEndTransaction = onEndTransaction
+        }
+      ]),
+      cancellationToken
     );
-    var client = new PseudoMuninNodeClient();
-
-    Assert.That(
-      async () => await handler.HandleTransactionEndAsync(client, cancellationToken),
-      Throws.Nothing
-    );
-    Assert.That(numberOfOnStartTransactionInvoked, Is.Zero);
-    Assert.That(numberOfOnEndTransactionInvoked, Is.EqualTo(1));
-  }
 
   private class TransactionCallbackMultigraphPlugin(string name, IPlugin plugin) : IMultigraphPlugin, ITransactionCallback {
     public string Name => name;
@@ -457,70 +392,26 @@ partial class MuninProtocolHandlerTests {
   [Test]
   [CancelAfter(1000)]
   public void HandleTransactionStartAsync_ITransactionCallback_Plugin(CancellationToken cancellationToken)
-  {
-    const string HostName = "munin-node.localhost";
-
-    var numberOfOnStartTransactionInvoked = 0;
-    var numberOfOnEndTransactionInvoked = 0;
-    var handler = new MuninProtocolHandler(
-      profile: new MuninNodeProfile() {
-        HostName = HostName,
-        PluginProvider = new PluginProvider([
-          new TransactionCallbackExtendedPlugin() {
-            OnStartTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnStartTransactionInvoked++;
-            },
-            OnEndTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnEndTransactionInvoked++;
-            }
-          }
-        ])
-      }
+    => HandleTransactionStartAsync_ITransactionCallback(
+      createPluginProvider: static (onStartTransaction, _) => new PluginProvider([
+        new TransactionCallbackExtendedPlugin() {
+          OnStartTransaction = onStartTransaction,
+          OnEndTransaction = static _ => throw new InvalidOperationException("callback was called unexpectedly")
+        }
+      ]),
+      cancellationToken
     );
-    var client = new PseudoMuninNodeClient();
-
-    Assert.That(
-      async () => await handler.HandleTransactionStartAsync(client, cancellationToken),
-      Throws.Nothing
-    );
-    Assert.That(numberOfOnStartTransactionInvoked, Is.EqualTo(1));
-    Assert.That(numberOfOnEndTransactionInvoked, Is.Zero);
-  }
 
   [Test]
   [CancelAfter(1000)]
   public void HandleTransactionEndAsync_ITransactionCallback_Plugin(CancellationToken cancellationToken)
-  {
-    const string HostName = "munin-node.localhost";
-
-    var numberOfOnStartTransactionInvoked = 0;
-    var numberOfOnEndTransactionInvoked = 0;
-    var handler = new MuninProtocolHandler(
-      profile: new MuninNodeProfile() {
-        HostName = HostName,
-        PluginProvider = new PluginProvider([
-          new TransactionCallbackExtendedPlugin() {
-            OnStartTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnStartTransactionInvoked++;
-            },
-            OnEndTransaction = ct => {
-              Assert.That(ct, Is.EqualTo(cancellationToken));
-              numberOfOnEndTransactionInvoked++;
-            }
-          }
-        ])
-      }
+    => HandleTransactionEndAsync_ITransactionCallback(
+      createPluginProvider: static (_, onEndTransaction) => new PluginProvider([
+        new TransactionCallbackExtendedPlugin() {
+          OnStartTransaction = static _ => throw new InvalidOperationException("callback was called unexpectedly"),
+          OnEndTransaction = onEndTransaction
+        }
+      ]),
+      cancellationToken
     );
-    var client = new PseudoMuninNodeClient();
-
-    Assert.That(
-      async () => await handler.HandleTransactionEndAsync(client, cancellationToken),
-      Throws.Nothing
-    );
-    Assert.That(numberOfOnStartTransactionInvoked, Is.Zero);
-    Assert.That(numberOfOnEndTransactionInvoked, Is.EqualTo(1));
-  }
 }
