@@ -123,6 +123,22 @@ public static class IMuninNodeBuilderExtensions {
       buildSessionCallback: buildSessionCallback ?? throw new ArgumentNullException(nameof(buildSessionCallback))
     );
 
+#pragma warning disable CS0419
+  /// <remarks>
+  /// If <see cref="UsePluginProvider"/> is called, the configurations made by this method will be overridden.
+  /// </remarks>
+  public static IMuninNodeBuilder UseTransactionCallback(
+    this IMuninNodeBuilder builder,
+    Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc,
+    Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc
+  )
+#pragma warning restore CS0419
+    => MuninNodeBuilderExtensions.UseTransactionCallback(
+      builder: ThrowIfBuilderTypeIsNotSupported(builder ?? throw new ArgumentNullException(nameof(builder))),
+      onStartTransactionAsyncFunc: onStartTransactionAsyncFunc,
+      onEndTransactionAsyncFunc: onEndTransactionAsyncFunc
+    );
+
   public static IMuninNodeBuilder UseListenerFactory(
     this IMuninNodeBuilder builder,
     IMuninNodeListenerFactory listenerFactory

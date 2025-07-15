@@ -134,7 +134,7 @@ public class MuninNodeBackgroundServiceTests {
 
   private class EmptyPluginProvider : IPluginProvider {
     public IReadOnlyCollection<IPlugin> Plugins { get; } = [];
-    public INodeSessionCallback? SessionCallback => null;
+    [Obsolete] public INodeSessionCallback? SessionCallback => null;
   }
 
   private class EmptyNode : LocalNode {

@@ -4,6 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,7 +25,9 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
 #pragma warning restore CS0618
   private readonly List<Func<IServiceProvider, IPlugin>> pluginFactories = new(capacity: 4);
   private Func<IServiceProvider, IPluginProvider>? buildPluginProvider;
-  private Func<IServiceProvider, INodeSessionCallback>? buildSessionCallback;
+  [Obsolete] private Func<IServiceProvider, INodeSessionCallback>? buildSessionCallback;
+  private Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc;
+  private Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc;
   private Func<IServiceProvider, IMuninNodeListenerFactory>? buildListenerFactory;
 
   /// <summary>
@@ -64,6 +68,7 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
     this.buildPluginProvider = buildPluginProvider;
   }
 
+  [Obsolete]
   internal void SetSessionCallbackFactory(
     Func<IServiceProvider, INodeSessionCallback> buildSessionCallback
   )
@@ -72,6 +77,15 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
       throw new ArgumentNullException(nameof(buildSessionCallback));
 
     this.buildSessionCallback = buildSessionCallback;
+  }
+
+  internal void SetTransactionCallback(
+    Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc,
+    Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc
+  )
+  {
+    this.onStartTransactionAsyncFunc = onStartTransactionAsyncFunc;
+    this.onEndTransactionAsyncFunc = onEndTransactionAsyncFunc;
   }
 
   internal void SetListenerFactory(
@@ -100,7 +114,11 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
       pluginProvider: buildPluginProvider is null
         ? new PluginProvider(
             plugins: pluginFactories.Select(factory => factory(serviceProvider)).ToList(),
-            sessionCallback: buildSessionCallback?.Invoke(serviceProvider)
+#pragma warning disable CS0612
+            sessionCallback: buildSessionCallback?.Invoke(serviceProvider),
+#pragma warning restore CS0612
+            onStartTransactionAsyncFunc: onStartTransactionAsyncFunc,
+            onEndTransactionAsyncFunc: onEndTransactionAsyncFunc
           )
         : buildPluginProvider.Invoke(serviceProvider),
       listenerFactory: buildListenerFactory?.Invoke(serviceProvider),
@@ -108,18 +126,39 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
     );
   }
 
-  private sealed class PluginProvider : IPluginProvider {
+  private sealed class PluginProvider : IPluginProvider, ITransactionCallback {
     public IReadOnlyCollection<IPlugin> Plugins { get; }
+
+    [Obsolete]
     public INodeSessionCallback? SessionCallback { get; }
+
+    private readonly Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc;
+    private readonly Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc;
 
     public PluginProvider(
       IReadOnlyCollection<IPlugin> plugins,
-      INodeSessionCallback? sessionCallback
+#pragma warning disable CS0618
+      INodeSessionCallback? sessionCallback,
+#pragma warning restore CS0618
+      Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc,
+      Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc
     )
     {
       Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
+
+#pragma warning disable CS0612
       SessionCallback = sessionCallback;
+#pragma warning restore CS0612
+
+      this.onStartTransactionAsyncFunc = onStartTransactionAsyncFunc;
+      this.onEndTransactionAsyncFunc = onEndTransactionAsyncFunc;
     }
+
+    public ValueTask StartTransactionAsync(CancellationToken cancellationToken)
+      => onStartTransactionAsyncFunc?.Invoke(cancellationToken) ?? default;
+
+    public ValueTask EndTransactionAsync(CancellationToken cancellationToken)
+      => onEndTransactionAsyncFunc?.Invoke(cancellationToken) ?? default;
   }
 
   protected virtual IMuninNode Build(

@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2023 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
 
+using System;
+
 namespace Smdn.Net.MuninPlugin;
 
 /// <summary>
@@ -25,5 +27,8 @@ public interface IPlugin {
   /// <remarks>Callbacks of this interface can be used to initiate bulk collection of field values.</remarks>
   /// <seealso cref="INodeSessionCallback"/>
   /// <seealso cref="MuninNode.NodeBase"/>
+#pragma warning disable CS0618
+  [Obsolete(message: INodeSessionCallback.ObsoleteMessage.SessionCallbackProperty)]
+#pragma warning restore CS0618
   INodeSessionCallback? SessionCallback { get; }
 }

@@ -198,11 +198,12 @@ public partial class NodeBaseTests {
     });
   }
 
+#pragma warning disable CS0618
   private class PseudoPluginProviderWithSessionCallback : IPluginProvider, INodeSessionCallback {
     public IReadOnlyCollection<IPlugin> Plugins { get; }
 
     private readonly bool setSessionCallbackNull;
-    public INodeSessionCallback? SessionCallback => setSessionCallbackNull ? null : this;
+    [Obsolete] public INodeSessionCallback? SessionCallback => setSessionCallbackNull ? null : this;
     public List<string> StartedSessionIds { get; } = new();
     public List<string> ClosedSessionIds { get; } = new();
 
@@ -233,7 +234,7 @@ public partial class NodeBaseTests {
     public IPluginDataSource DataSource => throw new NotImplementedException();
 
     private readonly bool setSessionCallbackNull;
-    public INodeSessionCallback? SessionCallback => setSessionCallbackNull ? null : this;
+    [Obsolete] public INodeSessionCallback? SessionCallback => setSessionCallbackNull ? null : this;
     public List<string> StartedSessionIds { get; } = new();
     public List<string> ClosedSessionIds { get; } = new();
 
@@ -256,7 +257,9 @@ public partial class NodeBaseTests {
       return default;
     }
   }
+#pragma warning restore CS0618
 
+#pragma warning disable CS0612
   [Test]
   public async Task AcceptSingleSessionAsync_INodeSessionCallback(
     [Values] bool setPluginProviderSessionCallbackNull,
@@ -343,6 +346,7 @@ public partial class NodeBaseTests {
       Assert.That(plugin.ClosedSessionIds[0], Is.Not.Empty, nameof(plugin.ClosedSessionIds));
     }
   }
+#pragma warning restore CS0612
 
   [TestCase(true)]
   [TestCase(false)]

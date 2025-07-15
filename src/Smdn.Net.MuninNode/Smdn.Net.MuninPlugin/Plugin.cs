@@ -8,7 +8,16 @@ using System.Threading.Tasks;
 
 namespace Smdn.Net.MuninPlugin;
 
-public class Plugin : IPlugin, IPluginDataSource, INodeSessionCallback {
+#pragma warning disable IDE0055
+public class Plugin :
+  IPlugin,
+  IPluginDataSource,
+#pragma warning disable CS0618
+  INodeSessionCallback,
+#pragma warning restore CS0618
+  ITransactionCallback
+{
+#pragma warning restore IDE0055
   public string Name { get; }
 
   public PluginGraphAttributes GraphAttributes { get; }
@@ -21,6 +30,9 @@ public class Plugin : IPlugin, IPluginDataSource, INodeSessionCallback {
 
   IReadOnlyCollection<IPluginField> IPluginDataSource.Fields => Fields;
 
+#pragma warning disable CS0618
+  [Obsolete(message: INodeSessionCallback.ObsoleteMessage.SessionCallbackProperty)]
+#pragma warning restore CS0618
   INodeSessionCallback? IPlugin.SessionCallback => this;
 #pragma warning restore CA1033
 
@@ -37,15 +49,31 @@ public class Plugin : IPlugin, IPluginDataSource, INodeSessionCallback {
     Fields = fields ?? throw new ArgumentNullException(nameof(fields));
   }
 
+  [Obsolete]
   ValueTask INodeSessionCallback.ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken)
     => ReportSessionStartedAsync(sessionId, cancellationToken);
 
+  [Obsolete($"This method will be removed in the next major version release. Override {nameof(StartTransactionAsync)} instead.")]
   protected virtual ValueTask ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken)
     => default; // do nothing in this class
 
+  [Obsolete]
   ValueTask INodeSessionCallback.ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken)
     => ReportSessionClosedAsync(sessionId, cancellationToken);
 
+  [Obsolete($"This method will be removed in the next major version release. Override {nameof(EndTransactionAsync)} instead.")]
   protected virtual ValueTask ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken)
+    => default; // do nothing in this class
+
+  ValueTask ITransactionCallback.StartTransactionAsync(CancellationToken cancellationToken)
+    => StartTransactionAsync(cancellationToken);
+
+  protected virtual ValueTask StartTransactionAsync(CancellationToken cancellationToken)
+    => default; // do nothing in this class
+
+  ValueTask ITransactionCallback.EndTransactionAsync(CancellationToken cancellationToken)
+    => EndTransactionAsync(cancellationToken);
+
+  protected virtual ValueTask EndTransactionAsync(CancellationToken cancellationToken)
     => default; // do nothing in this class
 }

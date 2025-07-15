@@ -19,6 +19,9 @@ public class MultigraphPlugin : IMultigraphPlugin {
   public IPluginGraphAttributes GraphAttributes => throw new NotSupportedException();
 
   /// <inheritdoc cref="IPlugin.SessionCallback"/>
+#pragma warning disable CS0618
+  [Obsolete(message: INodeSessionCallback.ObsoleteMessage.SessionCallbackProperty)]
+#pragma warning restore CS0618
   public INodeSessionCallback? SessionCallback => throw new NotSupportedException();
 
   public MultigraphPlugin(string name, IReadOnlyCollection<IPlugin> plugins)

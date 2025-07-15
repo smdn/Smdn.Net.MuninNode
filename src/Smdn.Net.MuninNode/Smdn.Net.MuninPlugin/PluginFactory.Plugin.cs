@@ -16,6 +16,8 @@ partial class PluginFactory {
     public IReadOnlyCollection<IPluginField> Fields { get; }
 
     public IPluginDataSource DataSource => this;
+
+    [Obsolete]
     public INodeSessionCallback? SessionCallback => null;
 
     public DefaultPlugin(
