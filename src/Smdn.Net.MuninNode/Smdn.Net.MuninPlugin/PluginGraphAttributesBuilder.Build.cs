@@ -53,6 +53,9 @@ partial class PluginGraphAttributesBuilder {
     if (updateRate is TimeSpan rate)
       attributes.Add($"update_rate {(int)rate.TotalSeconds}");
 
+    if (!string.IsNullOrEmpty(graphDataSize))
+      attributes.Add($"graph_data_size {graphDataSize}");
+
     attributes.TrimExcess();
 
     return new PluginGraphAttributes(attributes);

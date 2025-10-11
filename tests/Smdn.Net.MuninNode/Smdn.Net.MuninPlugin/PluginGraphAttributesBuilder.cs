@@ -405,6 +405,38 @@ public partial class PluginGraphAttributesBuilderTests {
       ["graph_title title", $"update_rate {updateRateInSeconds}"]
     );
 
+  [TestCase(null!, typeof(ArgumentNullException))]
+  [TestCase("", typeof(ArgumentException))]
+  [TestCase(" ", typeof(ArgumentException))]
+  [TestCase("undefined", typeof(ArgumentException))]
+  [TestCase("NORMAL", typeof(ArgumentException))]
+  [TestCase("HUGE", typeof(ArgumentException))]
+  [TestCase("custom", typeof(ArgumentException))]
+  [TestCase("CUSTOM", typeof(ArgumentException))]
+  public void WithGraphDataSize_ArgumentOutOfRangeException(string graphDataSize, Type expectedTypeOfException)
+    => Assert.That(
+      () => new PluginGraphAttributesBuilder("title")
+        .WithGraphDataSize(graphDataSize: graphDataSize),
+      Throws
+        .TypeOf(expectedTypeOfException)
+        .With
+        .Property(nameof(ArgumentException.ParamName))
+        .EqualTo("graphDataSize")
+    );
+
+  [TestCase("normal")]
+  [TestCase("huge")]
+  [TestCase("custom 576, 6 432, 24 540, 288 450")] // normal, in computer-readable format
+  [TestCase("custom 115200")] // huge, in computer-readable format
+  [TestCase("custom 2d, 30m for 9d, 2h for 45d, 1d for 450d")] // normal, in human-readable format
+  [TestCase("custom 400d")] // huge, in human-readable format
+  [TestCase("custom ?")]
+  public void WithGraphDataSize(string graphDataSize)
+    => AssertBuiltGraphAttributes(
+      new PluginGraphAttributesBuilder("title").WithGraphDataSize(graphDataSize: graphDataSize),
+      ["graph_title title", $"graph_data_size {graphDataSize}"]
+    );
+
   [Test]
   public void WithCategoryOther()
     => AssertBuiltGraphAttributes(

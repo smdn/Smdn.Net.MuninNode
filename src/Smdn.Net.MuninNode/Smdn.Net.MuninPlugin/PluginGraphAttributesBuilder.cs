@@ -56,6 +56,7 @@ public partial class PluginGraphAttributesBuilder {
   private string? verticalLabel;
   private int? width;
   private TimeSpan? updateRate;
+  private string? graphDataSize;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="PluginGraphAttributesBuilder"/> class by
@@ -302,6 +303,32 @@ public partial class PluginGraphAttributesBuilder {
     ArgumentOutOfRangeExceptionShim.ThrowIfLessThan(updateRate, UpdateRateMinValue, nameof(updateRate));
 
     this.updateRate = updateRate;
+
+    return this;
+  }
+
+  /// <summary>Sets a value for the <c>graph_data_size</c>.</summary>
+  /// <exception cref="ArgumentException">
+  /// <paramref name="graphDataSize"/> is empty, or,
+  /// <paramref name="graphDataSize"/> is a value other than <c>normal</c>, <c>huge</c>, or <c>custom &lt;computer-readable|human-readable&gt;</c>.
+  /// </exception>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/munin.conf.html#cmdoption-munin-conf-arg-graph-data-size">
+  /// munin.conf - GLOBAL DIRECTIVES - graph_data_size &lt;normal|huge|custom&gt;
+  /// </seealso>
+  /// <seealso href="https://guide.munin-monitoring.org/en/latest/advanced/custom-rrd-sizing.html">
+  /// Per plugin custom rrd sizing
+  /// </seealso>
+  public PluginGraphAttributesBuilder WithGraphDataSize(string graphDataSize)
+  {
+    ArgumentExceptionShim.ThrowIfNullOrWhiteSpace(graphDataSize, nameof(graphDataSize));
+
+    this.graphDataSize = graphDataSize.StartsWith("custom ", StringComparison.Ordinal)
+      ? graphDataSize // custom
+      : graphDataSize switch {
+        "normal" => graphDataSize,
+        "huge" => graphDataSize,
+        _ => throw new ArgumentException(message: $"The value '{graphDataSize}' is invalid for 'graph_data_size'", paramName: nameof(graphDataSize)),
+      };
 
     return this;
   }
