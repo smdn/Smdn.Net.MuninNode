@@ -18,6 +18,7 @@
     "munin",
     "smdn",
     "SYSLIB",
+    "trimmable",
   ],
   "ignoreWords": [
     "dirtyconfig",
