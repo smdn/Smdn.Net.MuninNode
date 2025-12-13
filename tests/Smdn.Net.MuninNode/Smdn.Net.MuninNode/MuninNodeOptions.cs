@@ -240,13 +240,13 @@ public class MuninNodeOptionsTests {
       foreach (var address in addresses) {
         var endPoint = new IPEndPoint(address, port);
 
-        Assert.That(options.AccessRule.IsAcceptable(endPoint), Is.True);
+        Assert.That(options.AccessRule!.IsAcceptable(endPoint), Is.True);
       }
 
       foreach (var address in new[] { IPAddress.Loopback, IPAddress.IPv6Loopback }) {
         var endPoint = new IPEndPoint(address, port);
 
-        Assert.That(options.AccessRule.IsAcceptable(endPoint), Is.False);
+        Assert.That(options.AccessRule!.IsAcceptable(endPoint), Is.False);
       }
     }
   }
