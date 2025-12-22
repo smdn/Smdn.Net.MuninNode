@@ -1,9 +1,13 @@
-// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-2.5.0)
+// Smdn.Net.MuninNode.dll (Smdn.Net.MuninNode-2.6.0)
 //   Name: Smdn.Net.MuninNode
-//   AssemblyVersion: 2.5.0.0
-//   InformationalVersion: 2.5.0+41ff114bf69b864033a05a389896010d3eefe4d5
+//   AssemblyVersion: 2.6.0.0
+//   InformationalVersion: 2.6.0+e0dd656596dd5517e6360ee27212b5a87aa0228c
 //   TargetFramework: .NETCoreApp,Version=v8.0
 //   Configuration: Release
+//   Metadata: IsTrimmable=True
+//   Metadata: RepositoryUrl=https://github.com/smdn/Smdn.Net.MuninNode
+//   Metadata: RepositoryBranch=main
+//   Metadata: RepositoryCommit=e0dd656596dd5517e6360ee27212b5a87aa0228c
 //   Referenced assemblies:
 //     Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60
 //     Microsoft.Extensions.Logging.Abstractions, Version=6.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60
@@ -164,6 +168,7 @@ namespace Smdn.Net.MuninNode.DependencyInjection {
     public static IMuninNodeBuilder UseSessionCallback(this IMuninNodeBuilder builder, Func<IServiceProvider, INodeSessionCallback> buildSessionCallback) {}
     public static IMuninNodeBuilder UseSessionCallback(this IMuninNodeBuilder builder, Func<string, CancellationToken, ValueTask>? reportSessionStartedAsyncFunc, Func<string, CancellationToken, ValueTask>? reportSessionClosedAsyncFunc) {}
     public static IMuninNodeBuilder UseSessionCallback(this IMuninNodeBuilder builder, INodeSessionCallback sessionCallback) {}
+    public static IMuninNodeBuilder UseTransactionCallback(this IMuninNodeBuilder builder, Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc, Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc) {}
   }
 
   public static class IMuninServiceBuilderExtensions {
@@ -186,7 +191,7 @@ namespace Smdn.Net.MuninNode.DependencyInjection {
 
     protected virtual IMuninNode Build(IPluginProvider pluginProvider, IMuninNodeListenerFactory? listenerFactory, IServiceProvider serviceProvider) {}
     public IMuninNode Build(IServiceProvider serviceProvider) {}
-    protected TMuninNodeOptions GetConfiguredOptions<TMuninNodeOptions>(IServiceProvider serviceProvider) where TMuninNodeOptions : MuninNodeOptions {}
+    protected TMuninNodeOptions GetConfiguredOptions<TMuninNodeOptions>(IServiceProvider serviceProvider) where TMuninNodeOptions : MuninNodeOptions, new() {}
   }
 
   public static class MuninNodeBuilderExtensions {
@@ -198,9 +203,13 @@ namespace Smdn.Net.MuninNode.DependencyInjection {
     public static TMuninNodeBuilder UseListenerFactory<TMuninNodeBuilder>(this TMuninNodeBuilder builder, IMuninNodeListenerFactory listenerFactory) where TMuninNodeBuilder : MuninNodeBuilder {}
     public static TMuninNodeBuilder UsePluginProvider<TMuninNodeBuilder>(this TMuninNodeBuilder builder, Func<IServiceProvider, IPluginProvider> buildPluginProvider) where TMuninNodeBuilder : MuninNodeBuilder {}
     public static TMuninNodeBuilder UsePluginProvider<TMuninNodeBuilder>(this TMuninNodeBuilder builder, IPluginProvider pluginProvider) where TMuninNodeBuilder : MuninNodeBuilder {}
+    [Obsolete("INodeSessionCallback is deprecated and will be removed in the next major version release. Use UseTransactionCallback instead of UseSessionCallback.")]
     public static TMuninNodeBuilder UseSessionCallback<TMuninNodeBuilder>(this TMuninNodeBuilder builder, Func<IServiceProvider, INodeSessionCallback> buildSessionCallback) where TMuninNodeBuilder : MuninNodeBuilder {}
+    [Obsolete("INodeSessionCallback is deprecated and will be removed in the next major version release. Use UseTransactionCallback instead of UseSessionCallback.")]
     public static TMuninNodeBuilder UseSessionCallback<TMuninNodeBuilder>(this TMuninNodeBuilder builder, Func<string, CancellationToken, ValueTask>? reportSessionStartedAsyncFunc, Func<string, CancellationToken, ValueTask>? reportSessionClosedAsyncFunc) where TMuninNodeBuilder : MuninNodeBuilder {}
+    [Obsolete("INodeSessionCallback is deprecated and will be removed in the next major version release. Use UseTransactionCallback instead of UseSessionCallback.")]
     public static TMuninNodeBuilder UseSessionCallback<TMuninNodeBuilder>(this TMuninNodeBuilder builder, INodeSessionCallback sessionCallback) where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static TMuninNodeBuilder UseTransactionCallback<TMuninNodeBuilder>(this TMuninNodeBuilder builder, Func<CancellationToken, ValueTask>? onStartTransactionAsyncFunc, Func<CancellationToken, ValueTask>? onEndTransactionAsyncFunc) where TMuninNodeBuilder : MuninNodeBuilder {}
   }
 }
 
@@ -237,9 +246,9 @@ namespace Smdn.Net.MuninNode.Protocol {
     protected virtual ValueTask HandleNodesCommandAsync(IMuninNodeClient client, CancellationToken cancellationToken) {}
     protected virtual ValueTask HandleQuitCommandAsync(IMuninNodeClient client, CancellationToken cancellationToken) {}
     public ValueTask HandleTransactionEndAsync(IMuninNodeClient client, CancellationToken cancellationToken = default) {}
-    protected virtual ValueTask HandleTransactionEndAsyncCore(IMuninNodeClient client, CancellationToken cancellationToken) {}
+    protected virtual async ValueTask HandleTransactionEndAsyncCore(IMuninNodeClient client, CancellationToken cancellationToken) {}
     public ValueTask HandleTransactionStartAsync(IMuninNodeClient client, CancellationToken cancellationToken = default) {}
-    protected virtual ValueTask HandleTransactionStartAsyncCore(IMuninNodeClient client, CancellationToken cancellationToken) {}
+    protected virtual async ValueTask HandleTransactionStartAsyncCore(IMuninNodeClient client, CancellationToken cancellationToken) {}
     protected virtual ValueTask HandleVersionCommandAsync(IMuninNodeClient client, CancellationToken cancellationToken) {}
     protected ValueTask SendResponseAsync(IMuninNodeClient client, IEnumerable<string> responseLines, CancellationToken cancellationToken) {}
   }
@@ -287,6 +296,7 @@ namespace Smdn.Net.MuninPlugin {
     IReadOnlyCollection<IPlugin> Plugins { get; }
   }
 
+  [Obsolete("INodeSessionCallback is deprecated and will be removed in the next major version release. Use ITransactionCallback interface instead.")]
   public interface INodeSessionCallback {
     ValueTask ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken);
     ValueTask ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken);
@@ -296,6 +306,7 @@ namespace Smdn.Net.MuninPlugin {
     IPluginDataSource DataSource { get; }
     IPluginGraphAttributes GraphAttributes { get; }
     string Name { get; }
+    [Obsolete("INodeSessionCallback is deprecated and will be removed in the next major version release. Instead of setting an object that implements $INodeSessionCallback to the property, implement the ITransactionCallback interface to the type itself.")]
     INodeSessionCallback? SessionCallback { get; }
   }
 
@@ -316,7 +327,13 @@ namespace Smdn.Net.MuninPlugin {
 
   public interface IPluginProvider {
     IReadOnlyCollection<IPlugin> Plugins { get; }
+    [Obsolete("INodeSessionCallback is deprecated and will be removed in the next major version release. Instead of setting an object that implements $INodeSessionCallback to the property, implement the ITransactionCallback interface to the type itself.")]
     INodeSessionCallback? SessionCallback { get; }
+  }
+
+  public interface ITransactionCallback {
+    ValueTask EndTransactionAsync(CancellationToken cancellationToken);
+    ValueTask StartTransactionAsync(CancellationToken cancellationToken);
   }
 
   public enum PluginFieldGraphStyle : int {
@@ -383,15 +400,19 @@ namespace Smdn.Net.MuninPlugin {
   public sealed class AggregatePluginProvider :
     ReadOnlyCollection<IPluginProvider>,
     INodeSessionCallback,
-    IPluginProvider
+    IPluginProvider,
+    ITransactionCallback
   {
     public AggregatePluginProvider(IList<IPluginProvider> pluginProviders) {}
 
     public IReadOnlyCollection<IPlugin> Plugins { get; }
+    [Obsolete]
     INodeSessionCallback? IPluginProvider.SessionCallback { get; }
 
     async ValueTask INodeSessionCallback.ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken) {}
     async ValueTask INodeSessionCallback.ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken) {}
+    async ValueTask ITransactionCallback.EndTransactionAsync(CancellationToken cancellationToken) {}
+    async ValueTask ITransactionCallback.StartTransactionAsync(CancellationToken cancellationToken) {}
   }
 
   public class MultigraphPlugin : IMultigraphPlugin {
@@ -401,13 +422,15 @@ namespace Smdn.Net.MuninPlugin {
     public IPluginGraphAttributes GraphAttributes { get; }
     public string Name { get; }
     public IReadOnlyCollection<IPlugin> Plugins { get; }
+    [Obsolete("INodeSessionCallback is deprecated and will be removed in the next major version release. Instead of setting an object that implements $INodeSessionCallback to the property, implement the ITransactionCallback interface to the type itself.")]
     public INodeSessionCallback? SessionCallback { get; }
   }
 
   public class Plugin :
     INodeSessionCallback,
     IPlugin,
-    IPluginDataSource
+    IPluginDataSource,
+    ITransactionCallback
   {
     public Plugin(string name, PluginGraphAttributes graphAttributes, IReadOnlyCollection<IPluginField> fields) {}
 
@@ -416,13 +439,22 @@ namespace Smdn.Net.MuninPlugin {
     public string Name { get; }
     IPluginDataSource IPlugin.DataSource { get; }
     IPluginGraphAttributes IPlugin.GraphAttributes { get; }
+    [Obsolete("INodeSessionCallback is deprecated and will be removed in the next major version release. Instead of setting an object that implements $INodeSessionCallback to the property, implement the ITransactionCallback interface to the type itself.")]
     INodeSessionCallback? IPlugin.SessionCallback { get; }
     IReadOnlyCollection<IPluginField> IPluginDataSource.Fields { get; }
 
+    protected virtual ValueTask EndTransactionAsync(CancellationToken cancellationToken) {}
+    [Obsolete("This method will be removed in the next major version release. Override EndTransactionAsync instead.")]
     protected virtual ValueTask ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken) {}
+    [Obsolete("This method will be removed in the next major version release. Override StartTransactionAsync instead.")]
     protected virtual ValueTask ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken) {}
+    [Obsolete]
     ValueTask INodeSessionCallback.ReportSessionClosedAsync(string sessionId, CancellationToken cancellationToken) {}
+    [Obsolete]
     ValueTask INodeSessionCallback.ReportSessionStartedAsync(string sessionId, CancellationToken cancellationToken) {}
+    ValueTask ITransactionCallback.EndTransactionAsync(CancellationToken cancellationToken) {}
+    ValueTask ITransactionCallback.StartTransactionAsync(CancellationToken cancellationToken) {}
+    protected virtual ValueTask StartTransactionAsync(CancellationToken cancellationToken) {}
   }
 
   public static class PluginFactory {
@@ -502,6 +534,7 @@ namespace Smdn.Net.MuninPlugin {
     public PluginGraphAttributesBuilder WithFieldOrder(IEnumerable<string> order) {}
     public PluginGraphAttributesBuilder WithFormatString(string printf) {}
     public PluginGraphAttributesBuilder WithGraphBinaryBase() {}
+    public PluginGraphAttributesBuilder WithGraphDataSize(string graphDataSize) {}
     public PluginGraphAttributesBuilder WithGraphDecimalBase() {}
     public PluginGraphAttributesBuilder WithGraphLimit(double lowerLimitValue, double upperLimitValue) {}
     public PluginGraphAttributesBuilder WithGraphLogarithmic() {}
@@ -541,5 +574,5 @@ namespace Smdn.Net.MuninPlugin {
     public double? Min { get; }
   }
 }
-// API list generated by Smdn.Reflection.ReverseGenerating.ListApi.MSBuild.Tasks v1.6.0.0.
-// Smdn.Reflection.ReverseGenerating.ListApi.Core v1.4.0.0 (https://github.com/smdn/Smdn.Reflection.ReverseGenerating)
+// API list generated by Smdn.Reflection.ReverseGenerating.ListApi.MSBuild.Tasks v1.7.1.0.
+// Smdn.Reflection.ReverseGenerating.ListApi.Core v1.5.0.0 (https://github.com/smdn/Smdn.Reflection.ReverseGenerating)
