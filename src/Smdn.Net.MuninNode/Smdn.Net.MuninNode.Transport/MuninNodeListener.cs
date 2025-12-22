@@ -98,7 +98,7 @@ internal sealed partial class MuninNodeListener : IMuninNodeListener {
 
     listener?.Close();
     listener?.Dispose();
-    listener = null!;
+    listener = null;
   }
 
   public ValueTask StartAsync(CancellationToken cancellationToken)

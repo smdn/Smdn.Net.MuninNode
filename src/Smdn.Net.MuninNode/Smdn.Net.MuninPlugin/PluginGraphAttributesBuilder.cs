@@ -100,7 +100,7 @@ public partial class PluginGraphAttributesBuilder {
     this.width = baseBuilder.width;
     this.updateRate = baseBuilder.updateRate;
 
-    this.graphArgs = new(baseBuilder.graphArgs);
+    this.graphArgs = [.. baseBuilder.graphArgs];
   }
 
   /// <summary>
