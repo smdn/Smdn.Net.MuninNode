@@ -40,12 +40,12 @@ public class MuninNodeOptions {
   /// </summary>
   /// <seealso cref="DefaultAddress"/>
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/munin-node.conf.html#cmdoption-arg-host">munin-node.conf - DIRECTIVES - Native - host</seealso>
+#pragma warning disable SA1513
   public IPAddress Address {
-    get => address;
-    set => address = value ?? throw new ArgumentNullException(nameof(Address));
-  }
-
-  private IPAddress address = DefaultAddress;
+    get;
+    set => field = value ?? throw new ArgumentNullException(nameof(Address));
+  } = DefaultAddress;
+#pragma warning restore SA1513
 
   /// <summary>
   /// Gets or sets a value for the <c>port</c>.
@@ -55,12 +55,12 @@ public class MuninNodeOptions {
   /// The default value is <c>4949</c>.
   /// </remarks>
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/munin-node.conf.html#cmdoption-arg-port">munin-node.conf - DIRECTIVES - Inherited - port</seealso>
+#pragma warning disable SA1513
   public int Port {
-    get => port;
-    set => port = ValidatePort(value, nameof(Port));
-  }
-
-  private int port = DefaultPort;
+    get;
+    set => field = ValidatePort(value, nameof(Port));
+  } = DefaultPort;
+#pragma warning restore SA1513
 
   /// <summary>
   /// Gets or sets a value for the <c>host_name</c>.
@@ -73,16 +73,16 @@ public class MuninNodeOptions {
   /// The hostname used by <c>Munin-Node</c>. The length of the string must be at least 1.
   /// </value>
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/munin-node.conf.html#cmdoption-arg-host-name">munin-node.conf - DIRECTIVES - Native - host_name</seealso>
+#pragma warning disable SA1513
   public string HostName {
-    get => hostName;
+    get;
     set {
       ArgumentExceptionShim.ThrowIfNullOrEmpty(value, nameof(HostName));
 
-      hostName = value;
+      field = value;
     }
-  }
-
-  private string hostName = DefaultHostName;
+  } = DefaultHostName;
+#pragma warning restore SA1513
 
   /// <summary>
   /// Gets or sets an <see cref="IAccessRule"/> that determines whether to accept or reject a remote host connecting to munin-node.
