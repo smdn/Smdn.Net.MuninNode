@@ -2,8 +2,9 @@
 //   Name: Smdn.Net.MuninNode
 //   AssemblyVersion: 2.6.0.0
 //   InformationalVersion: 2.6.0+e0dd656596dd5517e6360ee27212b5a87aa0228c
-//   TargetFramework: .NETStandard,Version=v2.1
+//   TargetFramework: .NETCoreApp,Version=v10.0
 //   Configuration: Release
+//   Metadata: IsTrimmable=True
 //   Metadata: RepositoryUrl=https://github.com/smdn/Smdn.Net.MuninNode
 //   Metadata: RepositoryBranch=main
 //   Metadata: RepositoryCommit=e0dd656596dd5517e6360ee27212b5a87aa0228c
@@ -11,10 +12,18 @@
 //     Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60
 //     Microsoft.Extensions.Logging.Abstractions, Version=6.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60
 //     Microsoft.Extensions.Options, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60
-//     Smdn.Fundamental.Encoding.Buffer, Version=3.0.0.0, Culture=neutral
-//     Smdn.Fundamental.Exception, Version=3.0.0.0, Culture=neutral
-//     System.IO.Pipelines, Version=6.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51
-//     netstandard, Version=2.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51
+//     System.Collections, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+//     System.Collections.Concurrent, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+//     System.ComponentModel, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+//     System.IO.Pipelines, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51
+//     System.Linq, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+//     System.Memory, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51
+//     System.Net.Primitives, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+//     System.Net.Sockets, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+//     System.Runtime, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+//     System.Security.Cryptography, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+//     System.Text.RegularExpressions, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+//     System.Threading, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
 #nullable enable annotations
 
 using System;
@@ -506,7 +515,11 @@ namespace Smdn.Net.MuninPlugin {
   }
 
   public class PluginGraphAttributesBuilder {
+    [GeneratedCode("System.Text.RegularExpressions.Generator", "10.0.13.7005")]
+    [GeneratedRegex("^[a-z0-9-.]+\z", (RegexOptions)536)]
     public static Regex RegexCategory { get; }
+    [GeneratedCode("System.Text.RegularExpressions.Generator", "10.0.13.7005")]
+    [GeneratedRegex("^\P{C}+\z", (RegexOptions)536)]
     public static Regex RegexTitle { get; }
 
     public PluginGraphAttributesBuilder(string title) {}
