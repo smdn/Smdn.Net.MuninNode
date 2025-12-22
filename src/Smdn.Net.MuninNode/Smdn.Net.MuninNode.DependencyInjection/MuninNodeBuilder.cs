@@ -179,7 +179,7 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
   }
 
   protected TMuninNodeOptions GetConfiguredOptions<TMuninNodeOptions>(IServiceProvider serviceProvider)
-    where TMuninNodeOptions : MuninNodeOptions
+    where TMuninNodeOptions : MuninNodeOptions, new()
   {
     if (serviceProvider is null)
       throw new ArgumentNullException(nameof(serviceProvider));

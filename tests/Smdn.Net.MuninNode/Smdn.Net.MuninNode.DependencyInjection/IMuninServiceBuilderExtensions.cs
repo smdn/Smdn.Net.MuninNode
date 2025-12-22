@@ -167,7 +167,7 @@ public class IMuninServiceBuilderExtensionsTests {
   }
 
   private class CustomMuninNodeBuilder<TMuninNodeOptions> : MuninNodeBuilder
-    where TMuninNodeOptions : MuninNodeOptions {
+    where TMuninNodeOptions : MuninNodeOptions, new() {
     private readonly Func<TMuninNodeOptions, IPluginProvider, IMuninNodeListenerFactory?, IServiceProvider, IMuninNode> nodeFactory;
 
     public CustomMuninNodeBuilder(
