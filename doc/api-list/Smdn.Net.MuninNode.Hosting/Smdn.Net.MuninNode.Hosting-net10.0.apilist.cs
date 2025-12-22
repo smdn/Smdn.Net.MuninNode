@@ -2,8 +2,9 @@
 //   Name: Smdn.Net.MuninNode.Hosting
 //   AssemblyVersion: 3.2.0.0
 //   InformationalVersion: 3.2.0+e0dd656596dd5517e6360ee27212b5a87aa0228c
-//   TargetFramework: .NETStandard,Version=v2.1
+//   TargetFramework: .NETCoreApp,Version=v10.0
 //   Configuration: Release
+//   Metadata: IsTrimmable=True
 //   Metadata: RepositoryUrl=https://github.com/smdn/Smdn.Net.MuninNode
 //   Metadata: RepositoryBranch=main
 //   Metadata: RepositoryCommit=e0dd656596dd5517e6360ee27212b5a87aa0228c
@@ -12,10 +13,12 @@
 //     Microsoft.Extensions.Hosting.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60
 //     Microsoft.Extensions.Logging.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60
 //     Smdn.Net.MuninNode, Version=2.5.0.0, Culture=neutral
-//     netstandard, Version=2.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51
+//     System.Net.Primitives, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+//     System.Runtime, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
 #nullable enable annotations
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,9 +32,9 @@ using Smdn.Net.MuninNode.Hosting;
 namespace Smdn.Net.MuninNode.Hosting {
   public static class IServiceCollectionExtensions {
     public static IServiceCollection AddHostedMuninNodeService(this IServiceCollection services, Action<MuninNodeOptions> configureNode, Action<IMuninNodeBuilder> buildNode) {}
-    public static IServiceCollection AddHostedMuninNodeService<TMuninNodeBackgroundService, TMuninNode, TMuninNodeOptions, TMuninNodeBuilder>(this IServiceCollection services, Action<TMuninNodeOptions> configureNode, Func<IMuninServiceBuilder, string, TMuninNodeBuilder> createNodeBuilder, Action<TMuninNodeBuilder> buildNode) where TMuninNodeBackgroundService : MuninNodeBackgroundService where TMuninNode : class, IMuninNode where TMuninNodeOptions : MuninNodeOptions, new() where TMuninNodeBuilder : MuninNodeBuilder {}
-    public static IServiceCollection AddHostedMuninNodeService<TMuninNodeBackgroundService, TMuninNodeBuilder>(this IServiceCollection services, Func<IMuninServiceBuilder, TMuninNodeBuilder> buildMunin) where TMuninNodeBackgroundService : MuninNodeBackgroundService where TMuninNodeBuilder : MuninNodeBuilder {}
-    public static IServiceCollection AddHostedMuninNodeService<TMuninNodeBackgroundService, TMuninNodeService, TMuninNodeImplementation, TMuninNodeOptions, TMuninNodeBuilder>(this IServiceCollection services, Action<TMuninNodeOptions> configureNode, Func<IMuninServiceBuilder, string, TMuninNodeBuilder> createNodeBuilder, Action<TMuninNodeBuilder> buildNode) where TMuninNodeBackgroundService : MuninNodeBackgroundService where TMuninNodeService : class, IMuninNode where TMuninNodeImplementation : class, TMuninNodeService where TMuninNodeOptions : MuninNodeOptions, new() where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static IServiceCollection AddHostedMuninNodeService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMuninNodeBackgroundService, TMuninNode, TMuninNodeOptions, TMuninNodeBuilder>(this IServiceCollection services, Action<TMuninNodeOptions> configureNode, Func<IMuninServiceBuilder, string, TMuninNodeBuilder> createNodeBuilder, Action<TMuninNodeBuilder> buildNode) where TMuninNodeBackgroundService : MuninNodeBackgroundService where TMuninNode : class, IMuninNode where TMuninNodeOptions : MuninNodeOptions, new() where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static IServiceCollection AddHostedMuninNodeService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMuninNodeBackgroundService, TMuninNodeBuilder>(this IServiceCollection services, Func<IMuninServiceBuilder, TMuninNodeBuilder> buildMunin) where TMuninNodeBackgroundService : MuninNodeBackgroundService where TMuninNodeBuilder : MuninNodeBuilder {}
+    public static IServiceCollection AddHostedMuninNodeService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMuninNodeBackgroundService, TMuninNodeService, TMuninNodeImplementation, TMuninNodeOptions, TMuninNodeBuilder>(this IServiceCollection services, Action<TMuninNodeOptions> configureNode, Func<IMuninServiceBuilder, string, TMuninNodeBuilder> createNodeBuilder, Action<TMuninNodeBuilder> buildNode) where TMuninNodeBackgroundService : MuninNodeBackgroundService where TMuninNodeService : class, IMuninNode where TMuninNodeImplementation : class, TMuninNodeService where TMuninNodeOptions : MuninNodeOptions, new() where TMuninNodeBuilder : MuninNodeBuilder {}
   }
 
   public class MuninNodeBackgroundService : BackgroundService {
