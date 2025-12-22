@@ -31,11 +31,11 @@ public interface INodeSessionCallback {
   internal static class ObsoleteMessage {
     public const string TypeReference =
       $"{nameof(INodeSessionCallback)} is deprecated and will be removed in the next major version release. " +
-      $"Use ${nameof(ITransactionCallback)} interface instead.";
+      $"Use {nameof(ITransactionCallback)} interface instead.";
 
     public const string SessionCallbackProperty =
       $"{nameof(INodeSessionCallback)} is deprecated and will be removed in the next major version release. " +
       $"Instead of setting an object that implements ${nameof(INodeSessionCallback)} to the property, " +
-      $"implement the ${nameof(ITransactionCallback)} interface to the type itself.";
+      $"implement the {nameof(ITransactionCallback)} interface to the type itself.";
   }
 }

@@ -103,7 +103,7 @@ public static class MuninNodeBuilderExtensions {
 #pragma warning disable CS0618
   private const string ObsoleteMessageForUseSessionCallback =
       $"{nameof(INodeSessionCallback)} is deprecated and will be removed in the next major version release. " +
-      $"Use ${nameof(UseTransactionCallback)} instead of {nameof(UseSessionCallback)}.";
+      $"Use {nameof(UseTransactionCallback)} instead of {nameof(UseSessionCallback)}.";
 #pragma warning restore CS0618
 
 #pragma warning disable CS0419
