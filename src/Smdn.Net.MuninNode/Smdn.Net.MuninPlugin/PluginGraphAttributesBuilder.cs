@@ -20,14 +20,20 @@ public partial class PluginGraphAttributesBuilder {
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-title">Plugin reference - Global attributes - graph_title</seealso>
   private const string RegexTitlePattern = @"^\P{C}+\z"; // except Unicode category 'C' (all other characters)
 
-#if SYSTEM_TEXT_REGULAREXPRESSIONS_GENERATEDREGEXATTRIBUTE
+#if NET9_0_OR_GREATER
+  [GeneratedRegex(
+    pattern: RegexTitlePattern,
+    options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
+  )]
+  public static partial Regex RegexTitle { get; }
+#elif SYSTEM_TEXT_REGULAREXPRESSIONS_GENERATEDREGEXATTRIBUTE
   public static Regex RegexTitle => GetRegexTitle();
 
   [GeneratedRegex(
     pattern: RegexTitlePattern,
     options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
   )]
-  private static partial Regex GetRegexTitle(); // TODO: use C# 13 partial property
+  private static partial Regex GetRegexTitle();
 #else
   public static Regex RegexTitle { get; } = new(
     pattern: RegexTitlePattern,
@@ -139,14 +145,20 @@ public partial class PluginGraphAttributesBuilder {
   /// <seealso href="https://guide.munin-monitoring.org/en/latest/reference/plugin.html#graph-category">Plugin reference - Global attributes - graph_category</seealso>
   private const string RegexCategoryPattern = @"^[a-z0-9-.]+\z";
 
-#if SYSTEM_TEXT_REGULAREXPRESSIONS_GENERATEDREGEXATTRIBUTE
+#if NET9_0_OR_GREATER
+  [GeneratedRegex(
+    pattern: RegexCategoryPattern,
+    options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
+  )]
+  public static partial Regex RegexCategory { get; }
+#elif SYSTEM_TEXT_REGULAREXPRESSIONS_GENERATEDREGEXATTRIBUTE
   public static Regex RegexCategory => GetRegexCategory();
 
   [GeneratedRegex(
     pattern: RegexCategoryPattern,
     options: RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant
   )]
-  private static partial Regex GetRegexCategory(); // TODO: use C# 13 partial property
+  private static partial Regex GetRegexCategory();
 #else
   public static Regex RegexCategory { get; } = new(
     pattern: RegexCategoryPattern,
