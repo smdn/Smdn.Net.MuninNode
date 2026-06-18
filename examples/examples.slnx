@@ -1,0 +1,23 @@
+﻿<!--
+SPDX-FileCopyrightText: 2026 smdn <smdn@smdn.jp>
+SPDX-License-Identifier: MIT
+-->
+<Solution>
+  <Folder Name="/Smdn.Net.MuninNode.Hosting/" />
+  <Folder Name="/Smdn.Net.MuninNode.Hosting/getting-started/">
+    <Project Path="Smdn.Net.MuninNode.Hosting/getting-started/Program.csproj" />
+  </Folder>
+  <Folder Name="/Smdn.Net.MuninNode/" />
+  <Folder Name="/Smdn.Net.MuninNode/getting-started/">
+    <Project Path="Smdn.Net.MuninNode/getting-started/Program.csproj" />
+  </Folder>
+  <Folder Name="/Smdn.Net.MuninNode/local-node-uptime/">
+    <Project Path="Smdn.Net.MuninNode/local-node-uptime/Program.csproj" />
+  </Folder>
+  <Folder Name="/Smdn.Net.MuninNode/multigraph/">
+    <Project Path="Smdn.Net.MuninNode/multigraph/Program.csproj" />
+  </Folder>
+  <Folder Name="/Smdn.Net.MuninNode/multiple-fields/">
+    <Project Path="Smdn.Net.MuninNode/multiple-fields/Program.csproj" />
+  </Folder>
+</Solution>
