@@ -17,106 +17,146 @@ partial class NodeBase {
   private readonly ILogger logger;
 #pragma warning restore IDE0032
 
-  private static readonly Action<ILogger, Exception?> LogStartingNode = LoggerMessage.Define(
-    LogLevel.Debug,
-    eventId: default, // TODO
-    formatString: "Starting munin-node listener."
-  );
-  private static readonly Action<ILogger, string, EndPoint?, Exception?> LogStartedNode = LoggerMessage.Define<string, EndPoint?>(
-    LogLevel.Information,
-    eventId: default, // TODO
-    formatString: "Started munin-node '{HostName}' on '{EndPoint}'."
-  );
-  private static readonly Action<ILogger, string, Exception?> LogStoppingNode = LoggerMessage.Define<string>(
-    LogLevel.Debug,
-    eventId: default, // TODO
-    formatString: "Stopping munin-node '{HostName}'."
-  );
-  private static readonly Action<ILogger, string, Exception?> LogStoppedNode = LoggerMessage.Define<string>(
-    LogLevel.Information,
-    eventId: default, // TODO
-    formatString: "Stopped munin-node '{HostName}'."
-  );
-  private static readonly Action<ILogger, Exception?> LogStartedAcceptingConnections = LoggerMessage.Define(
-    LogLevel.Information,
-    eventId: default, // TODO
-    formatString: "Started accepting connections."
-  );
-  private static readonly Action<ILogger, Exception?> LogStoppedAcceptingConnections = LoggerMessage.Define(
-    LogLevel.Debug,
-    eventId: default, // TODO
-    formatString: "Stopped accepting connections."
-  );
-  private static readonly Action<ILogger, Exception?> LogAcceptingConnection = LoggerMessage.Define(
-    LogLevel.Debug,
-    eventId: default, // TODO
-    formatString: "Accepting a connection..."
-  );
-  private static readonly Action<ILogger, Exception?> LogAcceptedConnectionClosed = LoggerMessage.Define(
-    LogLevel.Debug,
-    eventId: default, // TODO
-    formatString: "Accepted connection closed."
-  );
-  private static readonly Action<ILogger, EndPoint?, AddressFamily?, Exception?> LogConnectionCanNotAccept = LoggerMessage.Define<EndPoint?, AddressFamily?>(
-    LogLevel.Information,
-    eventId: default, // TODO
-    formatString: "Can not accept connection from {RemoteEndPoint} ({RemoteEndPointAddressFamily})."
-  );
-  private static readonly Action<ILogger, Exception?> LogAccessRefused = LoggerMessage.Define(
-    LogLevel.Warning,
-    eventId: default, // TODO
-    formatString: "Access refused."
-  );
-  private static readonly Action<ILogger, Exception?> LogStartingTransaction = LoggerMessage.Define(
-    LogLevel.Debug,
-    eventId: default, // TODO
-    formatString: "Starting transaction."
-  );
-  private static readonly Action<ILogger, Exception?> LogUnexpectedExceptionWhileStartingTransaction = LoggerMessage.Define(
-    LogLevel.Error,
-    eventId: default, // TODO
-    formatString: "Unexpected exception occurred while starting transaction."
-  );
-  private static readonly Action<ILogger, Exception?> LogSessionStarted = LoggerMessage.Define(
-    LogLevel.Information,
-    eventId: default, // TODO
-    formatString: "Session started."
-  );
-  private static readonly Action<ILogger, Exception?> LogSessionClosed = LoggerMessage.Define(
-    LogLevel.Information,
-    eventId: default, // TODO
-    formatString: "Session closed."
-  );
-  private static readonly Action<ILogger, Exception?> LogSessionOperationCanceledWhileReceiving = LoggerMessage.Define(
-    LogLevel.Warning,
-    eventId: default, // TODO
-    formatString: "Operation canceled while receiving."
-  );
-  private static readonly Action<ILogger, Exception?> LogSessionUnexpectedExceptionWhileReceiving = LoggerMessage.Define(
-    LogLevel.Error,
-    eventId: default, // TODO
-    formatString: "Unexpected exception occurred while receiving."
-  );
-  private static readonly Action<ILogger, Exception?> LogSessionClientDisconnectedWhileSending = LoggerMessage.Define(
-    LogLevel.Information,
-    eventId: default, // TODO
-    formatString: "Client disconnected while sending."
-  );
-  private static readonly Action<ILogger, Exception?> LogSessionOperationCanceledWhileProcessingCommand = LoggerMessage.Define(
-    LogLevel.Warning,
-    eventId: default, // TODO
-    formatString: "Operation canceled while processing command."
-  );
-  private static readonly Action<ILogger, Exception?> LogSessionUnexpectedExceptionWhileProcessingCommand = LoggerMessage.Define(
-    LogLevel.Error,
-    eventId: default, // TODO
-    formatString: "Unexpected exception occurred while processing command."
-  );
+  [LoggerMessage(
+    Level = LogLevel.Debug,
+    EventId = 1,
+    Message = "Starting munin-node listener."
+  )]
+  private partial void LogDebugStartingNode();
+
+  [LoggerMessage(
+    Level = LogLevel.Information,
+    EventId = 2,
+    Message = "Started munin-node '{HostName}' on '{EndPoint}'."
+  )]
+  private partial void LogInformationStartedNode(string hostName, EndPoint? endPoint);
+
+  [LoggerMessage(
+    Level = LogLevel.Debug,
+    EventId = 3,
+    Message = "Stopping munin-node '{HostName}'."
+  )]
+  private partial void LogDebugStoppingNode(string hostName);
+
+  [LoggerMessage(
+    Level = LogLevel.Information,
+    EventId = 4,
+    Message = "Stopped munin-node '{HostName}'."
+  )]
+  private partial void LogInformationStoppedNode(string hostName);
+
+  [LoggerMessage(
+    Level = LogLevel.Information,
+    EventId = 5,
+    Message = "Started accepting connections."
+  )]
+  private partial void LogInformationStartedAcceptingConnections();
+
+  [LoggerMessage(
+    Level = LogLevel.Debug,
+    EventId = 6,
+    Message = "Stopped accepting connections."
+  )]
+  private partial void LogDebugStoppedAcceptingConnections();
+
+  [LoggerMessage(
+    Level = LogLevel.Debug,
+    EventId = 7,
+    Message = "Accepting a connection..."
+  )]
+  private partial void LogDebugAcceptingConnection();
+
+  [LoggerMessage(
+    Level = LogLevel.Debug,
+    EventId = 8,
+    Message = "Accepted connection closed."
+  )]
+  private partial void LogDebugAcceptedConnectionClosed();
+
+  [LoggerMessage(
+    Level = LogLevel.Information,
+    EventId = 9,
+    Message = "Can not accept connection from {RemoteEndPoint} ({RemoteEndPointAddressFamily})."
+  )]
+  private partial void LogInformationConnectionCanNotAccept(EndPoint? remoteEndPoint, AddressFamily? remoteEndPointAddressFamily);
+
+  [LoggerMessage(
+    Level = LogLevel.Warning,
+    EventId = 10,
+    Message = "Access refused."
+  )]
+  private partial void LogWarningAccessRefused();
+
+  [LoggerMessage(
+    Level = LogLevel.Debug,
+    EventId = 50,
+    Message = "Starting transaction."
+  )]
+  private partial void LogDebugStartingTransaction();
+
+  [LoggerMessage(
+    Level = LogLevel.Error,
+    EventId = 51,
+    Message = "Unexpected exception occurred while starting transaction."
+  )]
+  private partial void LogErrorUnexpectedExceptionWhileStartingTransaction(Exception ex);
+
+  [LoggerMessage(
+    Level = LogLevel.Information,
+    EventId = 61,
+    Message = "Session started."
+  )]
+  private partial void LogInformationSessionStarted();
+
+  [LoggerMessage(
+    Level = LogLevel.Information,
+    EventId = 62,
+    Message = "Session closed."
+  )]
+  private partial void LogInformationSessionClosed();
+
+  [LoggerMessage(
+    Level = LogLevel.Warning,
+    EventId = 63,
+    Message = "Operation canceled while receiving."
+  )]
+  private partial void LogWarningSessionOperationCanceledWhileReceiving();
+
+  [LoggerMessage(
+    Level = LogLevel.Error,
+    EventId = 64,
+    Message = "Unexpected exception occurred while receiving."
+  )]
+  private partial void LogErrorSessionUnexpectedExceptionWhileReceiving(Exception ex);
+
+  [LoggerMessage(
+    Level = LogLevel.Information,
+    EventId = 65,
+    Message = "Client disconnected while sending."
+  )]
+  private partial void LogInformationSessionClientDisconnectedWhileSending();
+
+  [LoggerMessage(
+    Level = LogLevel.Warning,
+    EventId = 66,
+    Message = "Operation canceled while processing command."
+  )]
+  private partial void LogWarningSessionOperationCanceledWhileProcessingCommand();
+
+  [LoggerMessage(
+    Level = LogLevel.Error,
+    EventId = 67,
+    Message = "Unexpected exception occurred while processing command."
+  )]
+  private partial void LogErrorSessionUnexpectedExceptionWhileProcessingCommand(Exception ex);
 
   private static readonly Func<ILogger, string, IDisposable?> LoggerScopeForSession = LoggerMessage.DefineScope<string>(
     formatString: "[{SessionId}]"
   );
 
+  /*
+   * Logger messages for obsolete members
+   */
   [LoggerMessage(
     EventId = 200,
     Level = LogLevel.Information,

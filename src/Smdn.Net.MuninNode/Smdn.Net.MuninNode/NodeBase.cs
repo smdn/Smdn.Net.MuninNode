@@ -230,8 +230,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
     {
       cancellationToken.ThrowIfCancellationRequested();
 
-      if (Logger is not null)
-        LogStartingNode(Logger, null);
+      LogDebugStartingNode();
 
       await StartingAsync(cancellationToken).ConfigureAwait(false);
 
@@ -259,8 +258,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
 
       await StartedAsync(cancellationToken).ConfigureAwait(false);
 
-      if (Logger is not null)
-        LogStartedNode(Logger, HostName, listener.EndPoint, null);
+      LogInformationStartedNode(HostName, listener.EndPoint);
     }
   }
 
@@ -322,8 +320,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
     {
       cancellationToken.ThrowIfCancellationRequested();
 
-      if (Logger is not null)
-        LogStoppingNode(Logger, HostName, null);
+      LogDebugStoppingNode(HostName);
 
       await StoppingAsync(cancellationToken).ConfigureAwait(false);
 
@@ -358,8 +355,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
 
       await StoppedAsync(cancellationToken).ConfigureAwait(false);
 
-      if (Logger is not null)
-        LogStoppedNode(Logger, HostName, null);
+      LogInformationStoppedNode(HostName);
     }
   }
 
@@ -434,8 +430,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
   {
     ThrowIfDisposed();
 
-    if (Logger is not null)
-      LogStartedAcceptingConnections(Logger, null);
+    LogInformationStartedAcceptingConnections();
 
     try {
       for (; ; ) {
@@ -454,8 +449,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
         throw;
     }
 
-    if (Logger is not null)
-      LogStoppedAcceptingConnections(Logger, null);
+    LogDebugStoppedAcceptingConnections();
   }
 
   /// <summary>
@@ -476,8 +470,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
 
     ThrowIfPluginProviderIsNull();
 
-    if (Logger is not null)
-      LogAcceptingConnection(Logger, null);
+    LogDebugAcceptingConnection();
 
     var client = await listener.AcceptAsync(
       cancellationToken: cancellationToken
@@ -504,21 +497,18 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
 
       sessionCountdownEvent.Signal();
 
-      if (Logger is not null)
-        LogAcceptedConnectionClosed(Logger, null);
+      LogDebugAcceptedConnectionClosed();
     }
 
     bool CanAccept(IMuninNodeClient client)
     {
       if (client.EndPoint is not IPEndPoint remoteIPEndPoint) {
-        if (Logger is not null)
-          LogConnectionCanNotAccept(Logger, client.EndPoint, client.EndPoint?.AddressFamily, null);
+        LogInformationConnectionCanNotAccept(client.EndPoint, client.EndPoint?.AddressFamily);
         return false;
       }
 
       if (accessRule is not null && !accessRule.IsAcceptable(remoteIPEndPoint)) {
-        if (Logger is not null)
-          LogAccessRefused(Logger, null);
+        LogWarningAccessRefused();
         return false;
       }
 
@@ -539,8 +529,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
     cancellationToken.ThrowIfCancellationRequested();
 
     try {
-      if (Logger is not null)
-        LogStartingTransaction(Logger, null);
+      LogDebugStartingTransaction();
 
 #if !DEBUG
 #pragma warning disable CS8602
@@ -549,8 +538,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
 #pragma warning restore CS8602
     }
     catch (Exception ex) when (ex is not OperationCanceledException) {
-      if (Logger is not null)
-        LogUnexpectedExceptionWhileStartingTransaction(Logger, ex);
+      LogErrorUnexpectedExceptionWhileStartingTransaction(ex);
       return;
     }
 
@@ -563,8 +551,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
       ? null
       : LoggerScopeForSession(Logger, sessionId);
 
-    if (Logger is not null)
-      LogSessionStarted(Logger, null);
+    LogInformationSessionStarted();
 
     try {
 #pragma warning disable CS0612,CS0618
@@ -584,8 +571,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
         ProcessCommandAsync(client, pipe.Reader, cancellationToken)
       ).ConfigureAwait(false);
 
-      if (Logger is not null)
-        LogSessionClosed(Logger, null);
+      LogInformationSessionClosed();
     }
     finally {
 #pragma warning disable CS0612,CS0618
@@ -653,8 +639,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
           break;
       }
       catch (OperationCanceledException) {
-        if (Logger is not null)
-          LogSessionOperationCanceledWhileReceiving(Logger, null);
+        LogWarningSessionOperationCanceledWhileReceiving();
         throw;
       }
       catch (ObjectDisposedException) {
@@ -662,8 +647,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
       }
 #pragma warning disable CA1031
       catch (Exception ex) {
-        if (Logger is not null)
-          LogSessionUnexpectedExceptionWhileReceiving(Logger, ex);
+        LogErrorSessionUnexpectedExceptionWhileReceiving(ex);
         break; // swallow
       }
 #pragma warning restore CA1031
@@ -713,19 +697,16 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
         }
       }
       catch (MuninNodeClientDisconnectedException) {
-        if (Logger is not null)
-          LogSessionClientDisconnectedWhileSending(Logger, null);
+        LogInformationSessionClientDisconnectedWhileSending();
         break; // expected exception
       }
       catch (OperationCanceledException) {
-        if (Logger is not null)
-          LogSessionOperationCanceledWhileProcessingCommand(Logger, null);
+        LogWarningSessionOperationCanceledWhileProcessingCommand();
         throw;
       }
 #pragma warning disable CA1031
       catch (Exception ex) {
-        if (Logger is not null)
-          LogSessionUnexpectedExceptionWhileProcessingCommand(Logger, ex);
+        LogErrorSessionUnexpectedExceptionWhileProcessingCommand(ex);
 
         await client.DisconnectAsync(cancellationToken).ConfigureAwait(false);
 

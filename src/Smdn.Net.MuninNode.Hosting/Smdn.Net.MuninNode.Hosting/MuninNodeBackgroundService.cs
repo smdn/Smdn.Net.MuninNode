@@ -7,37 +7,21 @@ using System.Threading.Tasks;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Smdn.Net.MuninNode.Hosting;
 
-public class MuninNodeBackgroundService : BackgroundService {
-  private static readonly Action<ILogger, string, Exception?> LogStarting = LoggerMessage.Define<string>(
-    LogLevel.Information,
-    eventId: default, // TODO
-    formatString: "Munin node '{HostName}' starting."
-  );
-  private static readonly Action<ILogger, string, Exception?> LogStarted = LoggerMessage.Define<string>(
-    LogLevel.Information,
-    eventId: default, // TODO
-    formatString: "Munin node '{HostName}' started."
-  );
-  private static readonly Action<ILogger, string, Exception?> LogStopping = LoggerMessage.Define<string>(
-    LogLevel.Information,
-    eventId: default, // TODO
-    formatString: "Munin node '{HostName}' stopping."
-  );
-  private static readonly Action<ILogger, string, Exception?> LogStopped = LoggerMessage.Define<string>(
-    LogLevel.Information,
-    eventId: default, // TODO
-    formatString: "Munin node '{HostName}' stopped."
-  );
-
+public partial class MuninNodeBackgroundService : BackgroundService {
   private IMuninNode node;
 
   /// <inheritdoc cref="IMuninNode.EndPoint"/>
   public EndPoint EndPoint => (node ?? throw new ObjectDisposedException(GetType().FullName)).EndPoint;
 
   protected ILogger? Logger { get; }
+
+  // In addition to the Logger property exposed outside the class, provide an
+  // ILogger field that is referenced by the LoggerMessage source generator.
+  private readonly ILogger logger;
 
 #if false
   // TODO: support ServiceKey
@@ -70,6 +54,10 @@ public class MuninNodeBackgroundService : BackgroundService {
   {
     this.node = node ?? throw new ArgumentNullException(nameof(node));
     Logger = logger;
+
+    // In addition to the Logger property, set a non-null ILogger field.
+    // This field is used by the LoggerMessage source generator.
+    this.logger = (ILogger?)logger ?? NullLogger.Instance;
   }
 
   public override void Dispose()
@@ -91,13 +79,11 @@ public class MuninNodeBackgroundService : BackgroundService {
 
     cancellationToken.ThrowIfCancellationRequested();
 
-    if (Logger is not null)
-      LogStarting(Logger, node.HostName, null);
+    LogInformationStarting(logger, node.HostName);
 
     await base.StartAsync(cancellationToken).ConfigureAwait(false);
 
-    if (Logger is not null)
-      LogStarted(Logger, node.HostName, null);
+    LogInformationStarted(logger, node.HostName);
   }
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -113,8 +99,7 @@ public class MuninNodeBackgroundService : BackgroundService {
     if (node is null)
       throw new ObjectDisposedException(GetType().FullName);
 
-    if (Logger is not null)
-      LogStopping(Logger, node.HostName, null);
+    LogInformationStopping(logger, node.HostName);
 
     await base.StopAsync(cancellationToken).ConfigureAwait(false);
 
@@ -124,8 +109,7 @@ public class MuninNodeBackgroundService : BackgroundService {
     if (node is NodeBase stoppableNode)
       await stoppableNode.StopAsync(cancellationToken).ConfigureAwait(false);
 
-    if (Logger is not null)
-      LogStopped(Logger, node.HostName, null);
+    LogInformationStopped(logger, node.HostName);
 
     if (node is IDisposable disposableNode)
       disposableNode.Dispose();
