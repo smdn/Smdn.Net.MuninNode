@@ -101,7 +101,7 @@ partial class NodeBaseTests {
 
     try {
       Assert.That(
-        async () => await responseReader.ReadLineAsync(cancellationToken), // receive banner
+        await responseReader.ReadLineAsync(cancellationToken), // receive banner
         Contains.Substring(node.HostName)
       );
 
