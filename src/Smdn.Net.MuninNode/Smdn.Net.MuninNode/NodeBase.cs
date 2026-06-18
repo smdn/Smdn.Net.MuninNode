@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Smdn.Net.MuninNode.Protocol;
 using Smdn.Net.MuninNode.Transport;
@@ -107,6 +108,10 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
     this.listenerFactory = listenerFactory ?? throw new ArgumentNullException(nameof(listenerFactory));
     this.accessRule = accessRule;
     Logger = logger;
+
+    // In addition to the Logger property, set a non-null ILogger field.
+    // This is used as a reference by the LoggerMessage source generator.
+    this.logger = logger ?? NullLogger.Instance;
   }
 
   public void Dispose()

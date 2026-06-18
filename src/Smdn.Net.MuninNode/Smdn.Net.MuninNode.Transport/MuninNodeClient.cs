@@ -1,9 +1,5 @@
 // SPDX-FileCopyrightText: 2025 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
-
-// TODO: use LoggerMessage.Define
-#pragma warning disable CA1848 // For improved performance, use the LoggerMessage delegates instead of calling 'LoggerExtensions.LogInformation(ILogger, string?, params object?[])'
-
 using System;
 using System.Buffers;
 using System.Net;
@@ -12,14 +8,15 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Smdn.Net.MuninNode.Transport;
 
-internal sealed class MuninNodeClient : IMuninNodeClient {
+internal sealed partial class MuninNodeClient : IMuninNodeClient {
   public EndPoint EndPoint => client?.RemoteEndPoint ?? throw new ObjectDisposedException(GetType().FullName);
 
   private Socket client;
-  private readonly ILogger? logger;
+  private readonly ILogger logger;
 
   internal MuninNodeClient(
     Socket client,
@@ -27,7 +24,7 @@ internal sealed class MuninNodeClient : IMuninNodeClient {
   )
   {
     this.client = client ?? throw new ArgumentNullException(nameof(client));
-    this.logger = logger;
+    this.logger = logger ?? NullLogger.Instance;
   }
 
   public void Dispose()
@@ -110,16 +107,12 @@ internal sealed class MuninNodeClient : IMuninNodeClient {
           SocketError.OperationAborted or // ECANCELED (125)
           SocketError.ConnectionReset // ECONNRESET (104)
       ) {
-        logger?.LogDebug(
-          "expected socket exception ({NumericSocketErrorCode} {SocketErrorCode})",
-          (int)ex.SocketErrorCode,
-          ex.SocketErrorCode
-        );
+        LogDebugExpectedSocketException((int)ex.SocketErrorCode, ex.SocketErrorCode);
 
         break; // expected exception
       }
       catch (ObjectDisposedException) {
-        logger?.LogDebug("socket has been disposed");
+        LogDebugSocketDisposedException();
 
         break; // expected exception
       }
@@ -127,6 +120,23 @@ internal sealed class MuninNodeClient : IMuninNodeClient {
 
     return totalByteCount;
   }
+
+  [LoggerMessage(
+    EventId = 500,
+    Level = LogLevel.Debug,
+    Message = "Expected socket exception ({NumericSocketErrorCode} {SocketErrorCode})"
+  )]
+  private partial void LogDebugExpectedSocketException(
+    int numericSocketErrorCode,
+    SocketError socketErrorCode
+  );
+
+  [LoggerMessage(
+    EventId = 501,
+    Level = LogLevel.Debug,
+    Message = "Socket has been disposed."
+  )]
+  private partial void LogDebugSocketDisposedException();
 
   public async ValueTask SendAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
   {

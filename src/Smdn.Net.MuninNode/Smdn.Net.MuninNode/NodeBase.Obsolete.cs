@@ -1,9 +1,5 @@
 // SPDX-FileCopyrightText: 2021 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
-
-// TODO: use LoggerMessage.Define
-#pragma warning disable CA1848 // For improved performance, use the LoggerMessage delegates instead of calling 'LoggerExtensions.LogInformation(ILogger, string?, params object?[])'
-
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -84,7 +80,7 @@ partial class NodeBase {
     if (listener is not null)
       throw new InvalidOperationException("already started");
 
-    Logger?.LogInformation("starting");
+    LogInformationStartStarting();
 
     var createListenerValueTask = listenerFactory.CreateAsync(
       endPoint: GetLocalEndPointToBind(),
@@ -114,6 +110,6 @@ partial class NodeBase {
 
     sessionCountdownEvent.Reset();
 
-    Logger?.LogInformation("started (end point: {EndPoint})", listener.EndPoint);
+    LogInformationStartStarted(listener.EndPoint);
   }
 }

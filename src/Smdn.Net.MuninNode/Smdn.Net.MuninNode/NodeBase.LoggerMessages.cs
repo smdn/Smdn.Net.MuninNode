@@ -11,6 +11,12 @@ namespace Smdn.Net.MuninNode;
 #pragma warning disable IDE0040
 partial class NodeBase {
 #pragma warning restore IDE0040
+#pragma warning disable IDE0032
+  // In addition to the Logger property exposed outside the class, provide an
+  // ILogger field that is referenced by the LoggerMessage source generator.
+  private readonly ILogger logger;
+#pragma warning restore IDE0032
+
   private static readonly Action<ILogger, Exception?> LogStartingNode = LoggerMessage.Define(
     LogLevel.Debug,
     eventId: default, // TODO
@@ -110,4 +116,18 @@ partial class NodeBase {
   private static readonly Func<ILogger, string, IDisposable?> LoggerScopeForSession = LoggerMessage.DefineScope<string>(
     formatString: "[{SessionId}]"
   );
+
+  [LoggerMessage(
+    EventId = 200,
+    Level = LogLevel.Information,
+    Message = "Starting."
+  )]
+  private partial void LogInformationStartStarting();
+
+  [LoggerMessage(
+    EventId = 201,
+    Level = LogLevel.Information,
+    Message = "Started. (End point: {EndPoint})"
+  )]
+  private partial void LogInformationStartStarted(EndPoint? endPoint);
 }
