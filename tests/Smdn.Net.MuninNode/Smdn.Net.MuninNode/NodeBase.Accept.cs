@@ -188,6 +188,13 @@ public partial class NodeBaseTests {
       ) {
         // ignore
       }
+      catch (IOException ex) when (
+        RuntimeInformation.IsOSPlatform(OSPlatform.OSX) &&
+        ex.InnerException is SocketException exSocket &&
+        exSocket.SocketErrorCode == SocketError.ConnectionReset
+      ) {
+        // ignore
+      }
 
       var connected = !(
         client.Client.Poll(1 /*microseconds*/, SelectMode.SelectRead) &&
