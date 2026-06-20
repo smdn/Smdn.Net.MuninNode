@@ -85,13 +85,11 @@ public partial class NodeBaseTests {
     public override string HostName => "test.munin-node.localhost";
 
     public TestLifecycleLocalNode()
-#pragma warning disable CS0618
       : base(
         listenerFactory: new PseudoMuninNodeListenerFactory(),
         accessRule: null,
         logger: null
       )
-#pragma warning restore CS0618
     {
     }
 
@@ -259,17 +257,13 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-#pragma warning disable CS0618
     Assert.That(async () => await node.StartAsync(default), Throws.Nothing);
     Assert.That(async () => await node.StartAsync(default), Throws.InvalidOperationException, "already started");
-#pragma warning restore CS0618
 
     Assert.That(async () => await node.StopAsync(default), Throws.Nothing);
 
-#pragma warning disable CS0618
     Assert.That(async () => await node.StartAsync(default), Throws.Nothing, "restart");
     Assert.That(async () => await node.StartAsync(default), Throws.InvalidOperationException, "already restarted");
-#pragma warning restore CS0618
   }
 
   [Test]
