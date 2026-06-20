@@ -1,5 +1,9 @@
 // SPDX-FileCopyrightText: 2021 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
+// cspell:ignore IMUNINNODELIFECYCLE
+#if SYSTEM_THREADING_TASKS_TASK_WAITASYNC
+#define IMUNINNODELIFECYCLE
+#endif
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -24,7 +28,17 @@ namespace Smdn.Net.MuninNode;
 /// Provides an extensible base class with basic Munin-Node functionality.
 /// </summary>
 /// <seealso href="https://guide.munin-monitoring.org/en/latest/node/index.html">The Munin node</seealso>
-public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposable, IAsyncDisposable {
+#pragma warning disable IDE0055
+public abstract partial class NodeBase :
+  IMuninNode,
+#if IMUNINNODELIFECYCLE
+  IMuninNodeLifecycle,
+#endif
+  IMuninNodeProfile,
+  IDisposable,
+  IAsyncDisposable
+{
+#pragma warning restore IDE0055
   private static readonly Version DefaultNodeVersion = new(1, 0, 0, 0);
 
   public abstract IPluginProvider PluginProvider { get; }
@@ -81,6 +95,20 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
   }
 
   private CountdownEvent sessionCountdownEvent = new(initialCount: 1);
+
+#if IMUNINNODELIFECYCLE
+  private readonly
+#if SYSTEM_THREADING_LOCK
+  Lock
+#else
+  object
+#endif
+  lifecycleLockObject = new();
+
+  private TaskCompletionSource tcsStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+  private TaskCompletionSource tcsStopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
+#endif
+
   private bool disposed;
 
   protected NodeBase(
@@ -203,6 +231,24 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
   protected virtual IMuninNodeProfile GetNodeProfile()
     => this;
 
+#if IMUNINNODELIFECYCLE // TODO: use polyfill for Task.WaitAsync
+  /// <inheritdoc cref="IMuninNodeLifecycle.WaitForStartedAsync(CancellationToken)"/>
+  public Task WaitForStartedAsync(CancellationToken cancellationToken = default)
+  {
+    ThrowIfDisposed();
+
+    return tcsStarted.Task.WaitAsync(cancellationToken);
+  }
+
+  /// <inheritdoc cref="IMuninNodeLifecycle.WaitForStoppedAsync(CancellationToken)"/>
+  public Task WaitForStoppedAsync(CancellationToken cancellationToken = default)
+  {
+    ThrowIfDisposed();
+
+    return tcsStopped.Task.WaitAsync(cancellationToken);
+  }
+#endif
+
   /// <summary>
   /// Starts the <c>Munin-Node</c> and prepares to accept connections from clients.
   /// </summary>
@@ -224,41 +270,65 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
     if (listener is not null)
       throw new InvalidOperationException("already started");
 
+#if IMUNINNODELIFECYCLE
+    lock (lifecycleLockObject) {
+      if (tcsStarted.Task.IsCompleted)
+        tcsStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+#endif
+
     return StartAsyncCore();
 
     async ValueTask StartAsyncCore()
     {
-      cancellationToken.ThrowIfCancellationRequested();
+      try {
+        cancellationToken.ThrowIfCancellationRequested();
 
-      LogDebugStartingNode();
+        LogDebugStartingNode();
 
-      await StartingAsync(cancellationToken).ConfigureAwait(false);
+        await StartingAsync(cancellationToken).ConfigureAwait(false);
 
-      cancellationToken.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
-      listener = await listenerFactory.CreateAsync(
-        endPoint: GetLocalEndPointToBind(),
-        node: this,
-        cancellationToken: cancellationToken
-      ).ConfigureAwait(false);
+        listener = await listenerFactory.CreateAsync(
+          endPoint: GetLocalEndPointToBind(),
+          node: this,
+          cancellationToken: cancellationToken
+        ).ConfigureAwait(false);
 
-      if (listener is null)
-        throw new InvalidOperationException("cannot start listener");
+        if (listener is null)
+          throw new InvalidOperationException("cannot start listener");
 
-      await listener.StartAsync(cancellationToken).ConfigureAwait(false);
+        await listener.StartAsync(cancellationToken).ConfigureAwait(false);
 
-      ThrowIfPluginProviderIsNull();
+        ThrowIfPluginProviderIsNull();
 
-      protocolHandler = await protocolHandlerFactory.CreateAsync(
-        profile: GetNodeProfile(),
-        cancellationToken: cancellationToken
-      ).ConfigureAwait(false);
+        protocolHandler = await protocolHandlerFactory.CreateAsync(
+          profile: GetNodeProfile(),
+          cancellationToken: cancellationToken
+        ).ConfigureAwait(false);
 
-      sessionCountdownEvent.Reset();
+        sessionCountdownEvent.Reset();
 
-      await StartedAsync(cancellationToken).ConfigureAwait(false);
+        await StartedAsync(cancellationToken).ConfigureAwait(false);
 
-      LogInformationStartedNode(HostName, listener.EndPoint);
+        LogInformationStartedNode(HostName, listener.EndPoint);
+#if IMUNINNODELIFECYCLE
+        _ = tcsStarted.TrySetResult();
+      }
+      catch (OperationCanceledException ex) {
+        _ = tcsStarted.TrySetCanceled(ex.CancellationToken);
+        throw;
+      }
+      catch (Exception ex) {
+        _ = tcsStarted.TrySetException(ex);
+        throw;
+      }
+#else
+      }
+      finally {
+      }
+#endif
     }
   }
 
@@ -314,48 +384,73 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
     if (listener is null)
       return default; // already stopped
 
+#if IMUNINNODELIFECYCLE
+    lock (lifecycleLockObject) {
+      if (tcsStopped.Task.IsCompleted)
+        tcsStopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+#endif
+
     return StopAsyncCore();
 
     async ValueTask StopAsyncCore()
     {
-      cancellationToken.ThrowIfCancellationRequested();
-
-      LogDebugStoppingNode(HostName);
-
-      await StoppingAsync(cancellationToken).ConfigureAwait(false);
-
-      cancellationToken.ThrowIfCancellationRequested();
-
-      // decrement by the initial value of 1 (re)set in Start()/StartAsync()
-      sessionCountdownEvent.Signal();
-
       try {
-        // wait for all sessions to complete
-        sessionCountdownEvent.Wait(cancellationToken);
-      }
-      catch (OperationCanceledException ex) when (cancellationToken.Equals(ex.CancellationToken)) {
-        // revert decremented counter value
-        sessionCountdownEvent.AddCount();
+        cancellationToken.ThrowIfCancellationRequested();
 
+        LogDebugStoppingNode(HostName);
+
+        await StoppingAsync(cancellationToken).ConfigureAwait(false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // decrement by the initial value of 1 (re)set in Start()/StartAsync()
+        sessionCountdownEvent.Signal();
+
+        try {
+          // wait for all sessions to complete
+          sessionCountdownEvent.Wait(cancellationToken);
+        }
+        catch (OperationCanceledException ex) when (cancellationToken.Equals(ex.CancellationToken)) {
+          // revert decremented counter value
+          sessionCountdownEvent.AddCount();
+
+          throw;
+        }
+
+        await listener.DisposeAsync().ConfigureAwait(false);
+
+        listener = null;
+
+        if (protocolHandler is not null) {
+          if (protocolHandler is IAsyncDisposable asyncDisposableProtocolHandler)
+            await asyncDisposableProtocolHandler.DisposeAsync().ConfigureAwait(false);
+          else if (protocolHandler is IDisposable disposableProtocolHandler)
+            disposableProtocolHandler.Dispose();
+
+          protocolHandler = null;
+        }
+
+        await StoppedAsync(cancellationToken).ConfigureAwait(false);
+
+        LogInformationStoppedNode(HostName);
+
+#if IMUNINNODELIFECYCLE
+        _ = tcsStopped.TrySetResult();
+      }
+      catch (OperationCanceledException ex) {
+        _ = tcsStopped.TrySetCanceled(ex.CancellationToken);
         throw;
       }
-
-      await listener.DisposeAsync().ConfigureAwait(false);
-
-      listener = null;
-
-      if (protocolHandler is not null) {
-        if (protocolHandler is IAsyncDisposable asyncDisposableProtocolHandler)
-          await asyncDisposableProtocolHandler.DisposeAsync().ConfigureAwait(false);
-        else if (protocolHandler is IDisposable disposableProtocolHandler)
-          disposableProtocolHandler.Dispose();
-
-        protocolHandler = null;
+      catch (Exception ex) {
+        _ = tcsStopped.TrySetException(ex);
+        throw;
       }
-
-      await StoppedAsync(cancellationToken).ConfigureAwait(false);
-
-      LogInformationStoppedNode(HostName);
+#else
+      }
+      finally {
+      }
+#endif
     }
   }
 

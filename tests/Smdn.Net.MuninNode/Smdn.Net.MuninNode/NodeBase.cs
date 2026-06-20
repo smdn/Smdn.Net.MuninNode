@@ -189,6 +189,10 @@ public partial class NodeBaseTests {
     Assert.That(async () => await node.StartAsync(default), Throws.TypeOf<ObjectDisposedException>());
     Assert.That(async () => await node.AcceptAsync(false, default), Throws.TypeOf<ObjectDisposedException>());
     Assert.That(async () => await node.AcceptSingleSessionAsync(default), Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(() => node.WaitForStartedAsync(default), Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(async () => await node.WaitForStartedAsync(default), Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(() => node.WaitForStoppedAsync(default), Throws.TypeOf<ObjectDisposedException>());
+    Assert.That(async () => await node.WaitForStoppedAsync(default), Throws.TypeOf<ObjectDisposedException>());
 
     Assert.That(node.DisposeAsync, Throws.Nothing, "DisposeAsync() #2");
     Assert.That(node.Dispose, Throws.Nothing, "Dispose() after DisposeAsync()");
@@ -487,5 +491,260 @@ public partial class NodeBaseTests {
     Assert.That(numberOfInvocationOfStoppedAsync, Is.EqualTo(1));
 
     Assert.That(() => _ = node.EndPoint, Throws.InvalidOperationException, "must be stopped");
+  }
+
+  [Test]
+  [CancelAfter(1000)]
+  public async Task WaitForStartedAsync(CancellationToken cancellationToken)
+  {
+    await using var node = new TestLifecycleLocalNode();
+
+    var numberOfInvocationOfStartingAsync = 0;
+    var numberOfInvocationOfStartedAsync = 0;
+
+    node.NodeStarting += (_, _) => numberOfInvocationOfStartingAsync++;
+    node.NodeStarted += (_, _) => numberOfInvocationOfStartedAsync++;
+
+    var taskStart = node.StartAsync(cancellationToken).AsTask();
+    var taskWaitForStarted = node.WaitForStartedAsync(cancellationToken);
+
+    Assert.That(
+      async () => await Task.WhenAll(taskStart, taskWaitForStarted),
+      Throws.Nothing
+    );
+    Assert.That(taskWaitForStarted.Status, Is.EqualTo(TaskStatus.RanToCompletion));
+
+    Assert.That(numberOfInvocationOfStartingAsync, Is.EqualTo(1));
+    Assert.That(numberOfInvocationOfStartedAsync, Is.EqualTo(1));
+  }
+
+  [Test]
+  [CancelAfter(1000)]
+  public async Task WaitForStartedAsync_BeforeStart(CancellationToken cancellationToken)
+  {
+    await using var node = new TestLifecycleLocalNode();
+
+    var numberOfInvocationOfStartingAsync = 0;
+    var numberOfInvocationOfStartedAsync = 0;
+
+    node.NodeStarting += (_, _) => numberOfInvocationOfStartingAsync++;
+    node.NodeStarted += (_, _) => numberOfInvocationOfStartedAsync++;
+
+    var taskWaitForStarted = node.WaitForStartedAsync(cancellationToken);
+
+    Assert.That(taskWaitForStarted.IsCompleted, Is.False);
+
+    var taskStart = node.StartAsync(cancellationToken).AsTask();
+
+    Assert.That(
+      async () => await Task.WhenAll(taskStart, taskWaitForStarted),
+      Throws.Nothing
+    );
+    Assert.That(taskWaitForStarted.Status, Is.EqualTo(TaskStatus.RanToCompletion));
+
+    Assert.That(numberOfInvocationOfStartingAsync, Is.EqualTo(1));
+    Assert.That(numberOfInvocationOfStartedAsync, Is.EqualTo(1));
+  }
+
+  [Test]
+  public async Task WaitForStartedAsync_CancellationRequested()
+  {
+    await using var node = new TestLifecycleLocalNode();
+
+    var numberOfInvocationOfStartedAsync = 0;
+
+    node.NodeStarted += (_, _) => numberOfInvocationOfStartedAsync++;
+
+    using var cts = new CancellationTokenSource();
+
+    cts.Cancel();
+
+    Assert.That(
+      async () => await node.StartAsync(cts.Token),
+      Throws
+        .InstanceOf<OperationCanceledException>()
+        .With
+        .Property(nameof(OperationCanceledException.CancellationToken))
+        .EqualTo(cts.Token)
+    );
+    Assert.That(
+      async () => await node.WaitForStartedAsync(default),
+      Throws
+        .InstanceOf<OperationCanceledException>()
+        .With
+        .Property(nameof(OperationCanceledException.CancellationToken))
+        .EqualTo(cts.Token)
+    );
+
+    Assert.That(numberOfInvocationOfStartedAsync, Is.Zero);
+  }
+
+  [Test]
+  [CancelAfter(1000)]
+  public async Task WaitForStartedAsync_ExceptionWhileStarting(CancellationToken cancellationToken)
+  {
+    const string ExpectedExceptionMessage = nameof(ExpectedExceptionMessage);
+    await using var node = new TestLifecycleLocalNode();
+
+    var numberOfInvocationOfStartingAsync = 0;
+    var numberOfInvocationOfStartedAsync = 0;
+
+    node.NodeStarting += (_, _) => {
+      numberOfInvocationOfStartingAsync++;
+      throw new NotImplementedException(message: ExpectedExceptionMessage);
+    };
+    node.NodeStarted += (_, _) => numberOfInvocationOfStartedAsync++;
+
+    Assert.That(
+      async () => await node.StartAsync(cancellationToken),
+      Throws
+        .InstanceOf<NotImplementedException>()
+        .With
+        .Property(nameof(NotImplementedException.Message))
+        .EqualTo(ExpectedExceptionMessage)
+    );
+    Assert.That(
+      async () => await node.WaitForStartedAsync(default),
+      Throws
+        .InstanceOf<NotImplementedException>()
+        .With
+        .Property(nameof(NotImplementedException.Message))
+        .EqualTo(ExpectedExceptionMessage)
+    );
+
+    Assert.That(numberOfInvocationOfStartingAsync, Is.EqualTo(1));
+    Assert.That(numberOfInvocationOfStartedAsync, Is.Zero);
+  }
+
+  [Test]
+  [CancelAfter(1000)]
+  public async Task WaitForStoppedAsync(CancellationToken cancellationToken)
+  {
+    await using var node = new TestLifecycleLocalNode();
+
+    await node.StartAsync(cancellationToken);
+
+    var numberOfInvocationOfStoppingAsync = 0;
+    var numberOfInvocationOfStoppedAsync = 0;
+
+    node.NodeStopping += (_, _) => numberOfInvocationOfStoppingAsync++;
+    node.NodeStopped += (_, _) => numberOfInvocationOfStoppedAsync++;
+
+    var taskStop = node.StopAsync(cancellationToken).AsTask();
+    var taskWaitForStopped = node.WaitForStoppedAsync(cancellationToken);
+
+    Assert.That(
+      async () => await Task.WhenAll(taskStop, taskWaitForStopped),
+      Throws.Nothing
+    );
+    Assert.That(taskWaitForStopped.Status, Is.EqualTo(TaskStatus.RanToCompletion));
+
+    Assert.That(numberOfInvocationOfStoppingAsync, Is.EqualTo(1));
+    Assert.That(numberOfInvocationOfStoppedAsync, Is.EqualTo(1));
+  }
+
+  [Test]
+  [CancelAfter(1000)]
+  public async Task WaitForStoppedAsync_BeforeStopped(CancellationToken cancellationToken)
+  {
+    await using var node = new TestLifecycleLocalNode();
+
+    await node.StartAsync(cancellationToken);
+
+    var numberOfInvocationOfStoppingAsync = 0;
+    var numberOfInvocationOfStoppedAsync = 0;
+
+    node.NodeStopping += (_, _) => numberOfInvocationOfStoppingAsync++;
+    node.NodeStopped += (_, _) => numberOfInvocationOfStoppedAsync++;
+
+    var taskWaitForStopped = node.WaitForStoppedAsync(cancellationToken);
+
+    Assert.That(taskWaitForStopped.IsCompleted, Is.False);
+
+    var taskStop = node.StopAsync(cancellationToken).AsTask();
+
+    Assert.That(
+      async () => await Task.WhenAll(taskStop, taskWaitForStopped),
+      Throws.Nothing
+    );
+    Assert.That(taskWaitForStopped.Status, Is.EqualTo(TaskStatus.RanToCompletion));
+
+    Assert.That(numberOfInvocationOfStoppingAsync, Is.EqualTo(1));
+    Assert.That(numberOfInvocationOfStoppedAsync, Is.EqualTo(1));
+  }
+
+  [Test]
+  [CancelAfter(1000)]
+  public async Task WaitForStoppedAsync_CancellationRequested(CancellationToken cancellationToken)
+  {
+    await using var node = new TestLifecycleLocalNode();
+
+    await node.StartAsync(cancellationToken);
+
+    var numberOfInvocationOfStoppedAsync = 0;
+
+    node.NodeStopped += (_, _) => numberOfInvocationOfStoppedAsync++;
+
+    using var cts = new CancellationTokenSource();
+
+    cts.Cancel();
+
+    Assert.That(
+      async () => await node.StopAsync(cts.Token),
+      Throws
+        .InstanceOf<OperationCanceledException>()
+        .With
+        .Property(nameof(OperationCanceledException.CancellationToken))
+        .EqualTo(cts.Token)
+    );
+    Assert.That(
+      async () => await node.WaitForStoppedAsync(default),
+      Throws
+        .InstanceOf<OperationCanceledException>()
+        .With
+        .Property(nameof(OperationCanceledException.CancellationToken))
+        .EqualTo(cts.Token)
+    );
+
+    Assert.That(numberOfInvocationOfStoppedAsync, Is.Zero);
+  }
+
+  [Test]
+  [CancelAfter(1000)]
+  public async Task WaitForStoppedAsync_ExceptionWhileStopping(CancellationToken cancellationToken)
+  {
+    const string ExpectedExceptionMessage = nameof(ExpectedExceptionMessage);
+    await using var node = new TestLifecycleLocalNode();
+
+    await node.StartAsync(cancellationToken);
+
+    var numberOfInvocationOfStoppingAsync = 0;
+    var numberOfInvocationOfStoppedAsync = 0;
+
+    node.NodeStopping += (_, _) => {
+      numberOfInvocationOfStoppingAsync++;
+      throw new NotImplementedException(message: ExpectedExceptionMessage);
+    };
+    node.NodeStopped += (_, _) => numberOfInvocationOfStoppedAsync++;
+
+    Assert.That(
+      async () => await node.StopAsync(cancellationToken),
+      Throws
+        .InstanceOf<NotImplementedException>()
+        .With
+        .Property(nameof(NotImplementedException.Message))
+        .EqualTo(ExpectedExceptionMessage)
+    );
+    Assert.That(
+      async () => await node.WaitForStoppedAsync(default),
+      Throws
+        .InstanceOf<NotImplementedException>()
+        .With
+        .Property(nameof(NotImplementedException.Message))
+        .EqualTo(ExpectedExceptionMessage)
+    );
+
+    Assert.That(numberOfInvocationOfStoppingAsync, Is.EqualTo(1));
+    Assert.That(numberOfInvocationOfStoppedAsync, Is.Zero);
   }
 }
