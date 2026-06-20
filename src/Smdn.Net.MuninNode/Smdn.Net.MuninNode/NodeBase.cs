@@ -477,7 +477,7 @@ public abstract partial class NodeBase : IMuninNode, IMuninNodeProfile, IDisposa
     ).ConfigureAwait(false);
 
     // begin logger scope with this client's endpoint
-    using var scope = Logger?.BeginScope(client.EndPoint);
+    using var scope = Logger?.BeginScope(client.EndPoint ?? NullEndPoint.Instance);
 
     try {
       sessionCountdownEvent.AddCount();

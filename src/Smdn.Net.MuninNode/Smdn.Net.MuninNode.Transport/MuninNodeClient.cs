@@ -75,7 +75,7 @@ internal sealed partial class MuninNodeClient : IMuninNodeClient {
       throw new ObjectDisposedException(GetType().FullName);
 
     // begin logger scope with this client's endpoint
-    using var scope = logger?.BeginScope(client.RemoteEndPoint);
+    using var scope = logger?.BeginScope(client.RemoteEndPoint ?? NullEndPoint.Instance);
 
     const int ReceiveChunkSize = 256;
     var totalByteCount = 0;
