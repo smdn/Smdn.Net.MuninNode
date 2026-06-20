@@ -9,8 +9,6 @@ SPDX-License-Identifier: MIT
     <VersionSuffix></VersionSuffix>
     <PackageValidationBaselineVersion>2.0.0</PackageValidationBaselineVersion>
     <NoWarn>CS1591;$(NoWarn)</NoWarn> <!-- CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member' -->
-    <IsAotCompatible>false</IsAotCompatible>
-    <VerifyReferenceAotCompatibility>false</VerifyReferenceAotCompatibility>
   </PropertyGroup>
 
   <PropertyGroup Label="assembly attributes">
@@ -31,10 +29,10 @@ This library also provides abstraction APIs for implementing Munin-Plugin. By us
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.IO.Pipelines" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+    <PackageReference Include="System.IO.Pipelines" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
     <PackageReference Include="Smdn.Fundamental.Encoding.Buffer" Version="[3.0.0,4.0.0)" Condition="$(TargetFramework.StartsWith('net4')) or $(TargetFramework.StartsWith('netstandard'))" />
     <PackageReference Include="Smdn.Fundamental.Exception" Version="[3.0.0,4.0.0)" Condition="$(TargetFramework.StartsWith('netstandard'))" />
   </ItemGroup>

@@ -9,8 +9,6 @@ SPDX-License-Identifier: MIT
     <VersionSuffix></VersionSuffix>
     <PackageValidationBaselineVersion>3.0.0</PackageValidationBaselineVersion>
     <NoWarn>CS1591;$(NoWarn)</NoWarn> <!-- CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member' -->
-    <IsAotCompatible>false</IsAotCompatible>
-    <VerifyReferenceAotCompatibility>false</VerifyReferenceAotCompatibility>
   </PropertyGroup>
 
   <PropertyGroup Label="assembly attributes">
@@ -33,8 +31,8 @@ This library uses [Smdn.Net.MuninNode](https://www.nuget.org/packages/Smdn.Net.M
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
-    <ProjectOrPackageReference ReferencePackageVersion="[2.5.0,4.0.0)" Include="..\Smdn.Net.MuninNode\Smdn.Net.MuninNode.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+    <ProjectOrPackageReference ReferencePackageVersion="[2.7.0,4.0.0)" Include="..\Smdn.Net.MuninNode\Smdn.Net.MuninNode.csproj" />
   </ItemGroup>
 
   <Target Name="GenerateReadmeFileContent">
