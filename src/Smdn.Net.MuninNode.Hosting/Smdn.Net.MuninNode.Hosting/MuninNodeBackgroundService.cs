@@ -1,5 +1,9 @@
 // SPDX-FileCopyrightText: 2025 smdn <smdn@smdn.jp>
 // SPDX-License-Identifier: MIT
+// cspell:ignore IMUNINNODELIFECYCLE
+#if SYSTEM_THREADING_TASKS_TASK_WAITASYNC
+#define IMUNINNODELIFECYCLE
+#endif
 using System;
 using System.Net;
 using System.Threading;
@@ -83,6 +87,11 @@ public partial class MuninNodeBackgroundService : BackgroundService {
 
     await base.StartAsync(cancellationToken).ConfigureAwait(false);
 
+#if IMUNINNODELIFECYCLE
+    if (node is IMuninNodeLifecycle nodeLifecycle)
+      await nodeLifecycle.WaitForStartedAsync(cancellationToken).ConfigureAwait(false);
+#endif
+
     LogInformationStarted(logger, node.HostName);
   }
 
@@ -108,6 +117,10 @@ public partial class MuninNodeBackgroundService : BackgroundService {
     // attempt graceful shutdown if possible
     if (node is NodeBase stoppableNode)
       await stoppableNode.StopAsync(cancellationToken).ConfigureAwait(false);
+#if IMUNINNODELIFECYCLE
+    else if (node is IMuninNodeLifecycle nodeLifecycle)
+      await nodeLifecycle.WaitForStoppedAsync(cancellationToken).ConfigureAwait(false);
+#endif
 
     LogInformationStopped(logger, node.HostName);
 
