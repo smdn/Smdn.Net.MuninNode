@@ -294,10 +294,7 @@ public abstract partial class NodeBase :
           endPoint: GetLocalEndPointToBind(),
           node: this,
           cancellationToken: cancellationToken
-        ).ConfigureAwait(false);
-
-        if (listener is null)
-          throw new InvalidOperationException("cannot start listener");
+        ).ConfigureAwait(false) ?? throw new InvalidOperationException("cannot start listener");
 
         await listener.StartAsync(cancellationToken).ConfigureAwait(false);
 
