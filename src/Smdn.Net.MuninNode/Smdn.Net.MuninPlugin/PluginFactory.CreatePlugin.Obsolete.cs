@@ -6,9 +6,7 @@ using System.Collections.Generic;
 
 namespace Smdn.Net.MuninPlugin;
 
-#pragma warning disable IDE0040
 partial class PluginFactory {
-#pragma warning restore IDE0040
   private const string ObsoleteMessageUseOverloadWithIPluginGraphAttributes = "Use overloads that accept IPluginGraphAttributes instead.";
 
   /// <summary>Create a plugin with one field which fetches the value from a delegate.</summary>

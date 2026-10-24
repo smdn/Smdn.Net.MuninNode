@@ -8,9 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Smdn.Net.MuninNode;
 
-#pragma warning disable IDE0040
 partial class NodeBase {
-#pragma warning restore IDE0040
 #pragma warning disable IDE0032
   // In addition to the Logger property exposed outside the class, provide an
   // ILogger field that is referenced by the LoggerMessage source generator.

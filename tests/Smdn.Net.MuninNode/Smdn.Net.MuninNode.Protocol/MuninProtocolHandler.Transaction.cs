@@ -12,9 +12,7 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode.Protocol;
 
-#pragma warning disable IDE0040
 partial class MuninProtocolHandlerTests {
-#pragma warning restore IDE0040
   private void HandleTransactionStartAsync_ITransactionCallback(
     Func<Action<CancellationToken>, Action<CancellationToken>, IPluginProvider> createPluginProvider,
     CancellationToken cancellationToken

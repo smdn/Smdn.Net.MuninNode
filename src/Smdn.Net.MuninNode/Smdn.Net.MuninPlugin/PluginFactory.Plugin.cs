@@ -6,9 +6,7 @@ using System.Collections.Generic;
 
 namespace Smdn.Net.MuninPlugin;
 
-#pragma warning disable IDE0040
 partial class PluginFactory {
-#pragma warning restore IDE0040
   private sealed class DefaultPlugin : IPlugin, IPluginDataSource {
     public string Name { get; }
 

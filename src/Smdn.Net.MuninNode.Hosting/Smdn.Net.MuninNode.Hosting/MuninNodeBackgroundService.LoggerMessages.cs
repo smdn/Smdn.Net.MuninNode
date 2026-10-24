@@ -4,9 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Smdn.Net.MuninNode.Hosting;
 
-#pragma warning disable IDE0040
 partial class MuninNodeBackgroundService {
-#pragma warning restore IDE0040
   [LoggerMessage(
     Level = LogLevel.Information,
     EventId = 1,

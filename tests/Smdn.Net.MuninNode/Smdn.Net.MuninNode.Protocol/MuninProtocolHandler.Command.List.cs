@@ -6,9 +6,7 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode.Protocol;
 
-#pragma warning disable IDE0040
 partial class MuninProtocolHandlerTests {
-#pragma warning restore IDE0040
   [TestCaseSource(nameof(YieldTestCases_HandleCommandAsync_ListCommand))]
   public void HandleCommandAsync_ListCommand(
     MuninNodeProfile profile,

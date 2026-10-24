@@ -15,9 +15,7 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode;
 
-#pragma warning disable IDE0040
 partial class NodeBaseTests {
-#pragma warning restore IDE0040
   private class PseudoMuninNode : NodeBase {
     public override string HostName => nameof(PseudoMuninNode);
     public override IPluginProvider PluginProvider { get; }

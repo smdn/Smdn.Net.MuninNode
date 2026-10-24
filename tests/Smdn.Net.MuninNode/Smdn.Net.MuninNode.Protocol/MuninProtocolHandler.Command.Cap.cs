@@ -4,9 +4,7 @@ using NUnit.Framework;
 
 namespace Smdn.Net.MuninNode.Protocol;
 
-#pragma warning disable IDE0040
 partial class MuninProtocolHandlerTests {
-#pragma warning restore IDE0040
   [Test]
   public void HandleCommandAsync_CapCommand()
   {

@@ -6,9 +6,7 @@ using NUnit.Framework;
 
 namespace Smdn.Net.MuninPlugin;
 
-#pragma warning disable IDE0040
 partial class PluginGraphAttributesBuilderTests {
-#pragma warning restore IDE0040
   [TestCase(null, typeof(ArgumentNullException))]
   [TestCase("", typeof(ArgumentException))]
   [TestCase(" ", typeof(ArgumentException))]

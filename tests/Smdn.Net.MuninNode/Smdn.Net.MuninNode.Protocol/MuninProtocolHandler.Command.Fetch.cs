@@ -10,9 +10,7 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode.Protocol;
 
-#pragma warning disable IDE0040
 partial class MuninProtocolHandlerTests {
-#pragma warning restore IDE0040
   private static System.Collections.IEnumerable YieldTestCases_HandleCommandAsync_FetchCommand()
   {
     var graphAttrs = new PluginGraphAttributesBuilder(title: "title").Build();

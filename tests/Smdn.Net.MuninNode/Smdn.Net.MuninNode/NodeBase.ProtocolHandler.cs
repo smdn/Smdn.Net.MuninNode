@@ -12,9 +12,7 @@ using Smdn.Net.MuninNode.Transport;
 
 namespace Smdn.Net.MuninNode;
 
-#pragma warning disable IDE0040
 partial class NodeBaseTests {
-#pragma warning restore IDE0040
   private class DisposeFreeProtocolHandler : IMuninProtocolHandler {
     public ValueTask HandleTransactionStartAsync(
       IMuninNodeClient client,

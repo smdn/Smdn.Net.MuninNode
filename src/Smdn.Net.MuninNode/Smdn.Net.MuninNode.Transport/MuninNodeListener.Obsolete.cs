@@ -8,9 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Smdn.Net.MuninNode.Transport;
 
-#pragma warning disable IDE0040
 partial class MuninNodeListener {
-#pragma warning disable IDE0040
   /// <remarks>
   /// This constructor is used to maintain the functionality of the old API of
   /// creating server sockets with the <see cref="NodeBase.CreateServerSocket"/>.

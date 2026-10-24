@@ -12,9 +12,7 @@ using Smdn.Net.MuninNode.Transport;
 
 namespace Smdn.Net.MuninNode;
 
-#pragma warning disable IDE0040
 partial class NodeBase {
-#pragma warning restore IDE0040
   [Obsolete($"Use a constructor overload that takes {nameof(IMuninNodeListenerFactory)} as an argument.")]
   protected NodeBase(
     IAccessRule? accessRule,

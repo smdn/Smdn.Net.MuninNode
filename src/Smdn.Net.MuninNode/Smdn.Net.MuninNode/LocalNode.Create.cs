@@ -15,9 +15,7 @@ using Smdn.Net.MuninPlugin;
 
 namespace Smdn.Net.MuninNode;
 
-#pragma warning disable IDE0040
 partial class LocalNode {
-#pragma warning restore IDE0040
   private class ReadOnlyCollectionPluginProvider : IPluginProvider {
     public IReadOnlyCollection<IPlugin> Plugins { get; }
 

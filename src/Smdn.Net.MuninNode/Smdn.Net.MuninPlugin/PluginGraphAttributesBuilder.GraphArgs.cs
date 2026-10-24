@@ -5,9 +5,7 @@ using System.Collections.Generic;
 
 namespace Smdn.Net.MuninPlugin;
 
-#pragma warning disable IDE0040
 partial class PluginGraphAttributesBuilder {
-#pragma warning restore IDE0040
   private readonly List<string> graphArgs = new(capacity: 0);
 
   /// <summary>Adds an argument to the internal list for the <c>graph_args</c>.</summary>
