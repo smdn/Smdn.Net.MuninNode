@@ -111,6 +111,7 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
       throw new ArgumentNullException(nameof(serviceProvider));
 
     return Build(
+#pragma warning disable SA1143
       pluginProvider: buildPluginProvider is null
         ? new PluginProvider(
             plugins: pluginFactories.Select(factory => factory(serviceProvider)).ToList(),
@@ -121,6 +122,7 @@ public class MuninNodeBuilder : IMuninNodeBuilder {
             onEndTransactionAsyncFunc: onEndTransactionAsyncFunc
           )
         : buildPluginProvider.Invoke(serviceProvider),
+#pragma warning restore SA1143
       listenerFactory: buildListenerFactory?.Invoke(serviceProvider),
       serviceProvider: serviceProvider
     );
