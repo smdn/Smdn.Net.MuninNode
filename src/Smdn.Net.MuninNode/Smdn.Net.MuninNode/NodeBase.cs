@@ -295,6 +295,7 @@ public abstract partial class NodeBase :
           node: this,
           cancellationToken: cancellationToken
         ).ConfigureAwait(false) ?? throw new InvalidOperationException("cannot start listener");
+
         await listener.StartAsync(cancellationToken).ConfigureAwait(false);
 
         ThrowIfPluginProviderIsNull();
