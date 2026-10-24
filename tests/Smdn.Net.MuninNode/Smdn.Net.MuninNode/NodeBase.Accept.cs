@@ -71,7 +71,10 @@ public partial class NodeBaseTests {
     writer.WriteLine(".");
     writer.Close();
 
-    Assert.DoesNotThrowAsync(async () => await taskAccept);
+    Assert.That(
+      async () => await taskAccept,
+      Throws.Nothing
+    );
   }
 
   [Test]
@@ -79,7 +82,10 @@ public partial class NodeBaseTests {
   {
     await using var node = CreateNode();
 
-    Assert.ThrowsAsync<InvalidOperationException>(async () => await node.AcceptSingleSessionAsync());
+    Assert.That(
+      async () => await node.AcceptSingleSessionAsync(),
+      Throws.InvalidOperationException
+    );
   }
 
   [TestCase(0)]
@@ -93,9 +99,10 @@ public partial class NodeBaseTests {
 
     using var cts = new CancellationTokenSource(millisecondsDelay: delayMilliseconds);
 
-    var ex = Assert.CatchAsync(async () => await node.AcceptSingleSessionAsync(cts.Token));
-
-    Assert.That(ex, Is.InstanceOf<OperationCanceledException>().Or.InstanceOf<TaskCanceledException>());
+    Assert.That(
+      async () => await node.AcceptSingleSessionAsync(cts.Token),
+      Throws.InstanceOf<OperationCanceledException>()
+    );
   }
 
   [Test]
@@ -111,7 +118,10 @@ public partial class NodeBaseTests {
 
     client.Close();
 
-    Assert.DoesNotThrowAsync(async () => await taskAccept);
+    Assert.That(
+      async () => await taskAccept,
+      Throws.Nothing
+    );
   }
 
   [Test]
@@ -129,7 +139,10 @@ public partial class NodeBaseTests {
 
     client.Close();
 
-    Assert.DoesNotThrowAsync(async () => await taskAccept);
+    Assert.That(
+      async () => await taskAccept,
+      Throws.Nothing
+    );
   }
 
   private sealed class AcceptAllAccessRule : IAccessRule {
@@ -329,7 +342,10 @@ public partial class NodeBaseTests {
     writer.WriteLine(".");
     writer.Close();
 
-    Assert.DoesNotThrowAsync(async () => await taskAccept);
+    Assert.That(
+      async () => await taskAccept,
+      Throws.Nothing
+    );
 
     if (isPluginProviderSessionCallbackNull) {
       Assert.That(pluginProvider.StartedSessionIds.Count, Is.Zero, nameof(pluginProvider.StartedSessionIds));
@@ -385,10 +401,12 @@ public partial class NodeBaseTests {
 
     cts.Cancel();
 
-    if (throwIfCancellationRequested)
-      Assert.ThrowsAsync<OperationCanceledException>(async () => await taskAccept);
-    else
-      Assert.DoesNotThrowAsync(async () => await taskAccept);
+    Assert.That(
+      async () => await taskAccept,
+      throwIfCancellationRequested
+        ? Throws.InstanceOf<OperationCanceledException>()
+        : Throws.Nothing
+    );
   }
 
   [Test]

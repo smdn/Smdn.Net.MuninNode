@@ -407,7 +407,10 @@ public partial class NodeBaseTests {
     // stop accepting task
     cts.Cancel();
 
-    Assert.DoesNotThrowAsync(async () => await taskAccept);
+    Assert.That(
+      async () => await taskAccept,
+      Throws.Nothing
+    );
 
     // attempt stop after processing client
     using var ctsStopTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
