@@ -25,8 +25,7 @@ public class IMuninServiceBuilderExtensionsTests {
         () => builder.AddNode(configure: null!),
         Throws
           .ArgumentNullException
-          .With
-          .Property(nameof(ArgumentNullException.ParamName))
+          .ParamName
           .EqualTo("configure")
       );
     });

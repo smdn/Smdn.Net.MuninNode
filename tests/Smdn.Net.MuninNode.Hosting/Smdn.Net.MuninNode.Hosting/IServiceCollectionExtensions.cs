@@ -28,8 +28,7 @@ public class IServiceCollectionExtensionsTests {
       ),
       Throws
         .ArgumentNullException
-        .With
-        .Property(nameof(ArgumentNullException.ParamName))
+        .ParamName
         .EqualTo("configureNode")
     );
 
@@ -40,8 +39,7 @@ public class IServiceCollectionExtensionsTests {
       ),
       Throws
         .ArgumentNullException
-        .With
-        .Property(nameof(ArgumentNullException.ParamName))
+        .ParamName
         .EqualTo("buildNode")
     );
   }

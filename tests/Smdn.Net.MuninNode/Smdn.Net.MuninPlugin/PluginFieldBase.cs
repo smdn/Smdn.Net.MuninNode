@@ -35,7 +35,7 @@ public class PluginFieldBaseTests {
   [TestCase("F0")]
   [TestCase("f0")]
   public void Name_Valid(string name)
-    => Assert.DoesNotThrow(() => new ConcretePluginField(name: name, label: "label"));
+    => Assert.That(() => new ConcretePluginField(name: name, label: "label"), Throws.Nothing);
 
   [TestCase("")]
   [TestCase("0")]
@@ -44,7 +44,7 @@ public class PluginFieldBaseTests {
   [TestCase("9abc")]
   [TestCase("あ")]
   public void Name_Invalid(string name)
-    => Assert.Throws<ArgumentException>(() => new ConcretePluginField(name: name, label: "label"));
+    => Assert.That(() => new ConcretePluginField(name: name, label: "label"), Throws.ArgumentException);
 
   [TestCase("LABEL")]
   [TestCase("label")]
@@ -55,7 +55,7 @@ public class PluginFieldBaseTests {
   [TestCase("0LABEL")]
   [TestCase("LABEL0")]
   public void Label_Valid(string label)
-    => Assert.DoesNotThrow(() => new ConcretePluginField(name: "field", label: label));
+    => Assert.That(() => new ConcretePluginField(name: "field", label: label), Throws.Nothing);
 
   [TestCase("")]
   [TestCase("\\LABEL")]
@@ -63,7 +63,7 @@ public class PluginFieldBaseTests {
   [TestCase("#LABEL")]
   [TestCase("LABEL#")]
   public void Label_Invalid(string label)
-    => Assert.Throws<ArgumentException>(() => new ConcretePluginField(name: "field", label: label));
+    => Assert.That(() => new ConcretePluginField(name: "field", label: label), Throws.ArgumentException);
 
   [TestCase("LABEL", "LABEL")]
   [TestCase("_LABEL", "LABEL")]
@@ -78,7 +78,7 @@ public class PluginFieldBaseTests {
   {
     ConcretePluginField? f = default;
 
-    Assert.DoesNotThrow(() => f = new ConcretePluginField(label: label));
+    Assert.That(() => f = new ConcretePluginField(label: label), Throws.Nothing);
 
     Assert.That(f!.Name, Is.EqualTo(expectedDefaultName), nameof(f.Name));
   }
@@ -92,7 +92,7 @@ public class PluginFieldBaseTests {
   [TestCase("#LABEL")]
   [TestCase("LABEL#")]
   public void DefaultNameFromLabel_Invalid(string label)
-    => Assert.Throws<ArgumentException>(() => new ConcretePluginField(label: label));
+    => Assert.That(() => new ConcretePluginField(label: label), Throws.ArgumentException);
 
   private class FloatingPointValuePluginField : PluginFieldBase {
     private readonly double value;

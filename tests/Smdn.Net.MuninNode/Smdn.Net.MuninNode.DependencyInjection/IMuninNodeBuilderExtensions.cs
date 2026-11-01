@@ -31,8 +31,7 @@ public class IMuninNodeBuilderExtensionsTests {
           () => nodeBuilder.AddPlugin(plugin: null!),
           Throws
             .ArgumentNullException
-            .With
-            .Property(nameof(ArgumentNullException.ParamName))
+            .ParamName
             .EqualTo("plugin")
         );
       }
@@ -87,8 +86,7 @@ public class IMuninNodeBuilderExtensionsTests {
           () => nodeBuilder.AddPlugin(buildPlugin: null!),
           Throws
             .ArgumentNullException
-            .With
-            .Property(nameof(ArgumentNullException.ParamName))
+            .ParamName
             .EqualTo("buildPlugin")
         );
       }
@@ -143,8 +141,7 @@ public class IMuninNodeBuilderExtensionsTests {
           () => nodeBuilder.UsePluginProvider(pluginProvider: null!),
           Throws
             .ArgumentNullException
-            .With
-            .Property(nameof(ArgumentNullException.ParamName))
+            .ParamName
             .EqualTo("pluginProvider")
         );
       }
@@ -205,8 +202,7 @@ public class IMuninNodeBuilderExtensionsTests {
           () => nodeBuilder.UsePluginProvider(buildPluginProvider: null!),
           Throws
             .ArgumentNullException
-            .With
-            .Property(nameof(ArgumentNullException.ParamName))
+            .ParamName
             .EqualTo("buildPluginProvider")
         );
       }
@@ -260,8 +256,7 @@ public class IMuninNodeBuilderExtensionsTests {
           () => nodeBuilder.UseSessionCallback(sessionCallback: null!),
           Throws
             .ArgumentNullException
-            .With
-            .Property(nameof(ArgumentNullException.ParamName))
+            .ParamName
             .EqualTo("sessionCallback")
         );
       }
@@ -344,7 +339,7 @@ public class IMuninNodeBuilderExtensionsTests {
           Throws
             .TypeOf<NotImplementedException>()
             .With
-            .Property(nameof(NotImplementedException.Message))
+            .Message
             .EqualTo("sessionId=session-started")
         );
         Assert.That(
@@ -372,7 +367,7 @@ public class IMuninNodeBuilderExtensionsTests {
           Throws
             .TypeOf<NotImplementedException>()
             .With
-            .Property(nameof(NotImplementedException.Message))
+            .Message
             .EqualTo("sessionId=session-closed")
         );
       }
@@ -411,8 +406,7 @@ public class IMuninNodeBuilderExtensionsTests {
           () => nodeBuilder.UseSessionCallback(buildSessionCallback: null!),
           Throws
             .ArgumentNullException
-            .With
-            .Property(nameof(ArgumentNullException.ParamName))
+            .ParamName
             .EqualTo("buildSessionCallback")
         );
       }
@@ -544,8 +538,7 @@ public class IMuninNodeBuilderExtensionsTests {
           () => nodeBuilder.UseListenerFactory(listenerFactory: null!),
           Throws
             .ArgumentNullException
-            .With
-            .Property(nameof(ArgumentNullException.ParamName))
+            .ParamName
             .EqualTo("listenerFactory")
         );
       }
@@ -608,8 +601,7 @@ public class IMuninNodeBuilderExtensionsTests {
           () => nodeBuilder.UseListenerFactory(buildListenerFactory: null!),
           Throws
             .ArgumentNullException
-            .With
-            .Property(nameof(ArgumentNullException.ParamName))
+            .ParamName
             .EqualTo("buildListenerFactory")
         );
       }
@@ -666,8 +658,7 @@ public class IMuninNodeBuilderExtensionsTests {
           () => nodeBuilder.UseListenerFactory(createListenerAsyncFunc: null!),
           Throws
             .ArgumentNullException
-            .With
-            .Property(nameof(ArgumentNullException.ParamName))
+            .ParamName
             .EqualTo("createListenerAsyncFunc")
         );
       }
@@ -703,7 +694,7 @@ public class IMuninNodeBuilderExtensionsTests {
       Throws
         .TypeOf<NotSupportedException>()
         .With
-        .Property(nameof(NotSupportedException.Message))
+        .Message
         .EqualTo(Message)
     );
   }

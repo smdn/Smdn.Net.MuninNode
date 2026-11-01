@@ -35,8 +35,9 @@ public class IAccessRuleServiceCollectionExtensionsTests {
   {
     var services = new ServiceCollection();
 
-    Assert.Throws<ArgumentNullException>(
-      () => services.AddMuninNodeAccessRule((IReadOnlyList<IPAddress>)null!)
+    Assert.That(
+      () => services.AddMuninNodeAccessRule((IReadOnlyList<IPAddress>)null!),
+      Throws.ArgumentNullException
     );
   }
 
@@ -45,8 +46,9 @@ public class IAccessRuleServiceCollectionExtensionsTests {
   {
     var services = new ServiceCollection();
 
-    Assert.Throws<ArgumentNullException>(
-      () => services.AddMuninNodeAccessRule((IAccessRule)null!)
+    Assert.That(
+      () => services.AddMuninNodeAccessRule((IAccessRule)null!),
+      Throws.ArgumentNullException
     );
   }
 

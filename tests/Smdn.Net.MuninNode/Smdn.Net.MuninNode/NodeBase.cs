@@ -209,8 +209,8 @@ public partial class NodeBaseTests {
 #pragma warning restore CS0618
 
 #pragma warning disable CS0618
-    Assert.DoesNotThrow(node.Start);
-    Assert.Throws<InvalidOperationException>(node.Start, "already started");
+    Assert.That(node.Start, Throws.Nothing);
+    Assert.That(node.Start, Throws.InvalidOperationException, "already started");
 #pragma warning restore CS0618
 
     Assert.That(() => _ = node.EndPoint, Throws.Nothing, $"{nameof(node.EndPoint)} after start");
@@ -225,15 +225,15 @@ public partial class NodeBaseTests {
     await using var node = CreateNode();
 
 #pragma warning disable CS0618
-    Assert.DoesNotThrow(node.Start);
-    Assert.Throws<InvalidOperationException>(node.Start, "already started");
+    Assert.That(node.Start, Throws.Nothing);
+    Assert.That(node.Start, Throws.InvalidOperationException, "already started");
 #pragma warning restore CS0618
 
     Assert.That(async () => await node.StopAsync(default), Throws.Nothing);
 
 #pragma warning disable CS0618
-    Assert.DoesNotThrow(node.Start, "restart");
-    Assert.Throws<InvalidOperationException>(node.Start, "already restarted");
+    Assert.That(node.Start, Throws.Nothing, "restart");
+    Assert.That(node.Start, Throws.InvalidOperationException, "already restarted");
 #pragma warning restore CS0618
   }
 
@@ -603,7 +603,7 @@ public partial class NodeBaseTests {
       Throws
         .InstanceOf<NotImplementedException>()
         .With
-        .Property(nameof(NotImplementedException.Message))
+        .Message
         .EqualTo(ExpectedExceptionMessage)
     );
     Assert.That(
@@ -611,7 +611,7 @@ public partial class NodeBaseTests {
       Throws
         .InstanceOf<NotImplementedException>()
         .With
-        .Property(nameof(NotImplementedException.Message))
+        .Message
         .EqualTo(ExpectedExceptionMessage)
     );
 
@@ -735,7 +735,7 @@ public partial class NodeBaseTests {
       Throws
         .InstanceOf<NotImplementedException>()
         .With
-        .Property(nameof(NotImplementedException.Message))
+        .Message
         .EqualTo(ExpectedExceptionMessage)
     );
     Assert.That(
@@ -743,7 +743,7 @@ public partial class NodeBaseTests {
       Throws
         .InstanceOf<NotImplementedException>()
         .With
-        .Property(nameof(NotImplementedException.Message))
+        .Message
         .EqualTo(ExpectedExceptionMessage)
     );
 

@@ -199,8 +199,7 @@ public partial class PluginGraphAttributesBuilderTests {
         .WithHeight(height: height),
       Throws
         .TypeOf<ArgumentOutOfRangeException>()
-        .With
-        .Property(nameof(ArgumentOutOfRangeException.ParamName))
+        .ParamName
         .EqualTo("height")
     );
 
@@ -219,8 +218,7 @@ public partial class PluginGraphAttributesBuilderTests {
         .WithFieldOrder(order: null!),
       Throws
         .ArgumentNullException
-        .With
-        .Property(nameof(ArgumentNullException.ParamName))
+        .ParamName
         .EqualTo("order")
     );
 
@@ -368,8 +366,7 @@ public partial class PluginGraphAttributesBuilderTests {
         .WithWidth(width: width),
       Throws
         .TypeOf<ArgumentOutOfRangeException>()
-        .With
-        .Property(nameof(ArgumentOutOfRangeException.ParamName))
+        .ParamName
         .EqualTo("width")
     );
 
@@ -391,8 +388,7 @@ public partial class PluginGraphAttributesBuilderTests {
         .WithUpdateRate(updateRate: TimeSpan.FromMilliseconds(updateRateInMilliseconds)),
       Throws
         .TypeOf<ArgumentOutOfRangeException>()
-        .With
-        .Property(nameof(ArgumentOutOfRangeException.ParamName))
+        .ParamName
         .EqualTo("updateRate")
     );
 
@@ -517,8 +513,7 @@ public partial class PluginGraphAttributesBuilderTests {
         .WithSize(width: width, height: height),
       Throws
         .TypeOf<ArgumentOutOfRangeException>()
-        .With
-        .Property(nameof(ArgumentOutOfRangeException.ParamName))
+        .ParamName
         .EqualTo(expectedExceptionParamName)
     );
 

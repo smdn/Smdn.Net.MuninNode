@@ -38,7 +38,7 @@ public class MuninNodeOptionsTests {
 
     Assert.That(
       () => options.Address = null!,
-      Throws.ArgumentNullException.With.Property(nameof(ArgumentNullException.ParamName)).EqualTo(nameof(options.Address))
+      Throws.ArgumentNullException.ParamName.EqualTo(nameof(options.Address))
     );
   }
 
@@ -60,8 +60,7 @@ public class MuninNodeOptionsTests {
       () => options.Port = port,
       Throws
         .TypeOf<ArgumentOutOfRangeException>()
-        .With
-        .Property(nameof(ArgumentOutOfRangeException.ParamName))
+        .ParamName
         .EqualTo(nameof(options.Port))
         .And
         .Property(nameof(ArgumentOutOfRangeException.ActualValue))
@@ -86,7 +85,7 @@ public class MuninNodeOptionsTests {
 
     Assert.That(
       () => options.HostName = null!,
-      Throws.ArgumentNullException.With.Property(nameof(ArgumentNullException.ParamName)).EqualTo(nameof(options.HostName))
+      Throws.ArgumentNullException.ParamName.EqualTo(nameof(options.HostName))
     );
   }
 
@@ -97,7 +96,7 @@ public class MuninNodeOptionsTests {
 
     Assert.That(
       () => options.HostName = "",
-      Throws.ArgumentException.With.Property(nameof(ArgumentException.ParamName)).EqualTo(nameof(options.HostName))
+      Throws.ArgumentException.ParamName.EqualTo(nameof(options.HostName))
     );
   }
 
@@ -147,8 +146,7 @@ public class MuninNodeOptionsTests {
       () => options.UseAnyAddress(port: port),
       Throws
         .TypeOf<ArgumentOutOfRangeException>()
-        .With
-        .Property(nameof(ArgumentOutOfRangeException.ParamName))
+        .ParamName
         .EqualTo("port")
         .And
         .Property(nameof(ArgumentOutOfRangeException.ActualValue))
@@ -204,8 +202,7 @@ public class MuninNodeOptionsTests {
       () => options.UseLoopbackAddress(port: port),
       Throws
         .TypeOf<ArgumentOutOfRangeException>()
-        .With
-        .Property(nameof(ArgumentOutOfRangeException.ParamName))
+        .ParamName
         .EqualTo("port")
         .And
         .Property(nameof(ArgumentOutOfRangeException.ActualValue))
@@ -296,8 +293,7 @@ public class MuninNodeOptionsTests {
       () => Assert.That(options.AllowFrom(addresses: null!), Is.SameAs(options)),
       Throws
         .ArgumentNullException
-        .With
-        .Property(nameof(ArgumentNullException.ParamName))
+        .ParamName
         .EqualTo("addresses")
     );
 

@@ -110,8 +110,7 @@ public partial class MuninProtocolHandlerTests {
       async () => await handler.HandleTransactionStartAsync(client: null!),
       Throws
         .ArgumentNullException
-        .With
-        .Property(nameof(ArgumentNullException.ParamName))
+        .ParamName
         .EqualTo("client")
     );
 
@@ -167,8 +166,7 @@ public partial class MuninProtocolHandlerTests {
       async () => await handler.HandleTransactionEndAsync(client: null!),
       Throws
         .ArgumentNullException
-        .With
-        .Property(nameof(ArgumentNullException.ParamName))
+        .ParamName
         .EqualTo("client")
     );
 
@@ -208,8 +206,7 @@ public partial class MuninProtocolHandlerTests {
       async () => await handler.HandleCommandAsync(client: null!, commandLine: CreateCommandLineSequence(".")),
       Throws
         .ArgumentNullException
-        .With
-        .Property(nameof(ArgumentNullException.ParamName))
+        .ParamName
         .EqualTo("client")
     );
 
